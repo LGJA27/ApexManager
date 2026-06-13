@@ -29,7 +29,7 @@ function pageTitleSize(isMobile, isTablet, isWide) {
   return isWide ? 30 : 28;
 }
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import { supabase } from "./lib/supabase";
+import { supabase, supabaseConfigured } from "./lib/supabase";
 import Logo from "./components/Logo.jsx";
 import PricingPage from "./pages/PricingPage.jsx";
 import AnalyticsPage from "./pages/AnalyticsPage.jsx";
@@ -2750,10 +2750,32 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
 }
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
+function DeploymentConfigNotice() {
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ maxWidth: 520, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: "28px 32px" }}>
+        <div style={{ marginBottom: 16 }}><Logo size={28} /></div>
+        <h1 style={{ margin: "0 0 12px", fontSize: 20, fontWeight: 700 }}>Configuration required</h1>
+        <p style={{ margin: "0 0 16px", fontSize: 14, color: C.textSub, lineHeight: 1.6 }}>
+          The app works locally because your <code style={{ color: C.amber }}>.env</code> file is present, but Vercel does not upload that file. Add these environment variables in Vercel → Project → Settings → Environment Variables, then redeploy:
+        </p>
+        <ul style={{ margin: "0 0 16px", paddingLeft: 20, fontSize: 13, color: C.textSub, lineHeight: 1.9 }}>
+          <li><code>VITE_SUPABASE_URL</code></li>
+          <li><code>VITE_SUPABASE_ANON_KEY</code></li>
+          <li><code>VITE_APP_URL</code> (your Vercel URL, e.g. https://your-app.vercel.app)</li>
+          <li><code>VITE_STRIPE_PUBLISHABLE_KEY</code> + price IDs</li>
+          <li><code>STRIPE_SECRET_KEY</code>, <code>SUPABASE_SERVICE_ROLE_KEY</code>, <code>ANTHROPIC_API_KEY</code> (server)</li>
+        </ul>
+        <p style={{ margin: 0, fontSize: 12, color: C.textMuted }}>See <code>.env.example</code> in the repo for the full list.</p>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const location = useLocation();
   const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(supabaseConfigured);
   const [page, setPage] = useState("dashboard");
   const [invoicesInitialFilter, setInvoicesInitialFilter] = useState(null);
   const [venues, setVenues] = useState([]);
@@ -2769,6 +2791,10 @@ export default function App() {
   const [subscription, setSubscription] = useState(null);
 
   useEffect(() => {
+    if (!supabase) {
+      setAuthLoading(false);
+      return;
+    }
     // purge stale data saved to localStorage before the Supabase migration
     ["apex_sales", "apex_invoices", "apex_expenses", "apex_venues"].forEach(k =>
       localStorage.removeItem(k)
@@ -3130,6 +3156,8 @@ export default function App() {
       }
     `}</style>
   );
+
+  if (!supabaseConfigured) return <DeploymentConfigNotice />;
 
   if (authLoading || venuesLoading) {
     return (
