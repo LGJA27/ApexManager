@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, Fragment } from "react";
+import { buildReportHTML, buildExtendedInsights } from "./auditReport.js";
 
 const C = {
   bg: "#0D0D12", surface: "#16161E", surfaceL: "#1E1E28", border: "#2A2A36",
@@ -523,48 +524,71 @@ function getQuickRange(key, sales) {
   return { from: dates[0] || to, to };
 }
 
-function buildAuditHTML(data) {
-  const { venueName, from, to, metrics, monthly, dow, staffRows, supplierRows, pending, insights } = data;
-  const gen = new Date().toLocaleString("en-GB");
-  const row = cells => `<tr>${cells.map(c => `<td style="padding:8px 12px;border-bottom:1px solid #eee">${c}</td>`).join("")}</tr>`;
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>ApexManager Audit Report</title>
-<style>
-body{font-family:system-ui,sans-serif;margin:0;padding:32px;color:#111;background:#fff;font-size:13px}
-h1{font-size:24px;margin:0 0 8px}h2{font-size:16px;margin:32px 0 12px;border-bottom:2px solid #7C5CFC;padding-bottom:6px}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:16px 0}
-.metric{background:#f8f8fc;border-radius:8px;padding:16px;border:1px solid #e5e5ef}
-.metric .l{font-size:11px;color:#666;text-transform:uppercase}.metric .v{font-size:22px;font-weight:700;margin-top:4px}
-table{width:100%;border-collapse:collapse;margin:12px 0}th{text-align:left;padding:8px 12px;background:#f0f0f8;font-size:11px}
-.section{page-break-before:always}.section:first-of-type{page-break-before:auto}
-@media print{.noprint{display:none}body{padding:20px}}
-</style></head><body>
-<div class="noprint" style="margin-bottom:24px"><button onclick="window.print()" style="padding:10px 24px;background:#7C5CFC;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">🖨 Print Report</button></div>
-<h1>ApexManager — Business Audit Report</h1>
-<p><strong>Venue:</strong> ${venueName} &nbsp;|&nbsp; <strong>Period:</strong> ${from} → ${to}<br><strong>Generated:</strong> ${gen}</p>
-<h2>Executive Summary</h2>
-<div class="grid">
-${[["Total Revenue", metrics.revenue], ["Net Profit", metrics.profit], ["Profit Margin", metrics.margin], ["Total Costs", metrics.costs], ["Pending Payments", metrics.pending], ["Days Active", metrics.days], ["Avg Daily Revenue", metrics.avgDaily]].map(([l, v]) =>
-    `<div class="metric"><div class="l">${l}</div><div class="v">${v}</div></div>`).join("")}
-</div>
-<h2 class="section">Sales Summary</h2>
-<table><thead><tr><th>Month</th><th>Revenue</th><th>Costs</th><th>Profit</th><th>Margin</th></tr></thead><tbody>
-${monthly.map(m => row([m.month, m.revenue, m.costs, m.profit, m.margin])).join("")}
-</tbody></table>
-<h3>Day of Week</h3><table><thead><tr><th>Day</th><th>Avg Revenue</th><th>Entries</th></tr></thead><tbody>
-${dow.map(d => row([d.day, d.avg, d.count])).join("")}
-</tbody></table>
-<h2 class="section">Staff Report</h2>
-<table><thead><tr><th>Name</th><th>Days Worked</th><th>Attendance</th><th>Revenue on Shifts</th></tr></thead><tbody>
-${staffRows.map(s => row([s.name, s.worked, s.rate, s.rev])).join("")}
-</tbody></table>
-<h2 class="section">Supplier Summary</h2>
-<table><thead><tr><th>Supplier</th><th>Invoices</th><th>Total Spend</th><th>Pending</th></tr></thead><tbody>
-${supplierRows.map(s => row([s.name, s.count, s.spend, s.pending])).join("")}
-</tbody></table>
-${pending.length ? `<h3>Pending / Overdue</h3><ul>${pending.map(p => `<li>${p}</li>`).join("")}</ul>` : ""}
-<h2 class="section">Key Insights</h2><ul>${insights.map(i => `<li style="margin-bottom:8px">${i}</li>`).join("")}</ul>
-<p style="margin-top:48px;color:#888;font-size:11px">ApexManager · Confidential business report</p>
-</body></html>`;
+const AUDIT_OPTIONS = [
+  { id: "sales", icon: "💳", title: "Sales Report", description: "Revenue, daily breakdown, day-of-week performance, monthly trends, cash vs card analysis" },
+  { id: "expenses", icon: "💸", title: "Expenses Report", description: "Cost breakdown, supplier invoices, fixed expenses, pending payments, monthly cost trends" },
+  { id: "staff", icon: "👥", title: "Staff Report", description: "Attendance tracking, days worked, revenue per shift, performance ranking, absence log" },
+  { id: "full", icon: "📋", title: "Full Audit", description: "Complete business report — all sections above plus executive summary and key insights", fullHighlight: true },
+];
+
+function AuditModal({ open, onClose, sections, onToggle, onGenerate }) {
+  if (!open) return null;
+  const isFull = sections.includes("full");
+  const individual = ["sales", "expenses", "staff"].filter(s => sections.includes(s));
+  const allThree = individual.length === 3;
+
+  let summary;
+  if (!sections.length) summary = { text: "Select at least one section to continue", color: C.textMuted };
+  else if (isFull || allThree) summary = { text: "Will include: Executive Summary + All Sections + Key Insights", color: C.accent };
+  else summary = { text: "Will include: " + individual.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", "), color: C.accent };
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#16161E", border: "1px solid #2A2A36", borderRadius: 16, padding: 28, position: "relative" }}>
+        <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: C.textSub, fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
+        <div style={{ fontSize: 18, fontWeight: 700, color: "#F0F0F8", marginBottom: 6 }}>Generate Audit Report</div>
+        <div style={{ fontSize: 13, color: "#8A8A9A", marginBottom: 24 }}>Select the sections to include in your report</div>
+
+        {AUDIT_OPTIONS.map(opt => {
+          const selected = sections.includes(opt.id) || (opt.id !== "full" && isFull);
+          return (
+            <div key={opt.id} onClick={() => onToggle(opt.id)}
+              style={{
+                width: "100%", padding: 16, borderRadius: 10, marginBottom: 10, cursor: "pointer",
+                border: `1px solid ${selected ? C.accent : opt.fullHighlight ? C.accent + "44" : C.border}`,
+                background: selected ? C.accentDim : "transparent",
+                display: "flex", alignItems: "center", gap: 14, position: "relative",
+              }}>
+              {selected && <span style={{ position: "absolute", top: 10, right: 12, color: C.accent, fontWeight: 700, fontSize: 14 }}>✓</span>}
+              <span style={{ fontSize: 32, lineHeight: 1, flexShrink: 0 }}>{opt.icon}</span>
+              <div>
+                <div style={{ fontWeight: 700, color: C.text, fontSize: 14, marginBottom: 4 }}>{opt.title}</div>
+                <div style={{ fontSize: 12, color: C.textSub, lineHeight: 1.45 }}>{opt.description}</div>
+              </div>
+            </div>
+          );
+        })}
+
+        {allThree && !isFull && (
+          <div style={{ fontSize: 12, color: C.accent, marginBottom: 12 }}>All sections selected — switching to Full Audit</div>
+        )}
+
+        <div style={{ fontSize: 12, color: summary.color, marginBottom: 20, minHeight: 18 }}>{summary.text}</div>
+
+        <button
+          disabled={!sections.length}
+          onClick={onGenerate}
+          style={{
+            width: "100%", padding: "12px 20px", borderRadius: 10, border: "none",
+            background: C.accent, color: "#fff", fontSize: 14, fontWeight: 600, cursor: sections.length ? "pointer" : "not-allowed",
+            opacity: sections.length ? 1 : 0.4,
+          }}
+        >
+          Generate Report →
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function AnalyticsPage({ sales, expenses, invoices, venues, staff = [], suppliers = [], ingredients = [] }) {
@@ -578,6 +602,8 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
   const [showAllSales, setShowAllSales] = useState(false);
   const [expandedStaff, setExpandedStaff] = useState(null);
   const [showMonthlyTable, setShowMonthlyTable] = useState(false);
+  const [auditModal, setAuditModal] = useState(false);
+  const [auditSections, setAuditSections] = useState([]);
 
   const matchVenue = item => !venueId || item.venue_id === venueId;
   const inDate = d => d && d >= from && d <= to;
@@ -779,21 +805,53 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
     return list;
   }, [bestDow, monthlyTrend, staffReport, supplierRankings, totalCosts, totalRevenue, profitMargin, pendingInv]);
 
-  const openAudit = () => {
-    const venueName = venueId ? venues.find(v => v.id === venueId)?.name || "Selected Venue" : "All Venues";
-    const html = buildAuditHTML({
-      venueName, from, to,
-      metrics: { revenue: fmtEur(totalRevenue), profit: fmtEur(netProfit), margin: profitMargin.toFixed(1) + "%", costs: fmtEur(totalCosts), pending: fmtEur(pendingInvoiceTotal), days: uniqueDays, avgDaily: fmtEur(avgDaily) },
-      monthly: monthlyTrend.map(m => ({ month: m.month, revenue: fmtEur(m.revenue), costs: fmtEur(m.costs), profit: fmtEur(m.profit), margin: m.margin })),
-      dow: dowStats.map(d => ({ day: d.day, avg: fmtEur(d.avg), count: d.count })),
-      staffRows: staffReport.map(s => ({ name: s.name, worked: s.worked, rate: s.rate.toFixed(0) + "%", rev: fmtEur(s.rev) })),
-      supplierRows: supplierRankings.slice(0, 15).map(s => ({ name: s.name, count: s.count, spend: fmtEur(s.spend), pending: fmtEur(s.pendingAmt) })),
-      pending: pendingInv.filter(i => i.due_date && i.due_date < today()).map(i => `${i.supplier_name}: ${fmtEur(i.total)} due ${i.due_date}`),
-      insights,
+  const toggleAuditSection = (id) => {
+    if (id === "full") {
+      setAuditSections(prev => (prev.includes("full") ? [] : ["full"]));
+      return;
+    }
+    setAuditSections(prev => {
+      let next = prev.filter(s => s !== "full");
+      if (next.includes(id)) next = next.filter(s => s !== id);
+      else next = [...next, id];
+      if (["sales", "expenses", "staff"].every(s => next.includes(s))) return ["full"];
+      return next;
     });
+  };
+
+  const generateAudit = (sections) => {
+    const includeSales = sections.includes("sales") || sections.includes("full");
+    const includeExpenses = sections.includes("expenses") || sections.includes("full");
+    const includeStaff = sections.includes("staff") || sections.includes("full");
+    const includeFull = sections.includes("full");
+
+    const titles = [];
+    if (includeSales && !includeFull) titles.push("Sales");
+    if (includeExpenses && !includeFull) titles.push("Expenses");
+    if (includeStaff && !includeFull) titles.push("Staff");
+    const reportTitle = includeFull ? "Full Business Audit" : titles.join(" & ") + " Report";
+
+    const venueName = venueId ? venues.find(v => v.id === venueId)?.name || "Selected Venue" : "All Venues";
+    const reportInsights = includeFull
+      ? buildExtendedInsights(insights, {
+          paidAmt, totalRevenue, monthlyTrend, filteredSales, filteredExp, totalCash, totalCard,
+        }, fmtEur, monthLabel)
+      : insights;
+
+    const html = buildReportHTML({
+      reportTitle, venueName, from, to, today,
+      includeSales, includeExpenses, includeStaff, includeFull,
+      totalRevenue, totalCash, totalCard, totalCosts, netProfit, profitMargin,
+      avgDaily, uniqueDays, dailyCosts, fixedExp, paidAmt, pendingAmt,
+      paidInv, pendingInv, dowStats, bestDow, worstDow, monthlyTrend, monthlySales,
+      monthlyCosts, staffReport, filteredStaff, fullTeamDays, supplierRankings,
+      filteredExp, filteredInv, filteredSales, suppliers, insights: reportInsights,
+      bestDayEntry, worstDayEntry, monthLabel,
+    }, fmtEur, dowShort);
+
     const win = window.open("", "_blank");
-    win.document.write(html);
-    win.document.close();
+    if (win) { win.document.write(html); win.document.close(); }
+    setAuditModal(false);
   };
 
   const tabs = [
@@ -981,8 +1039,16 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
               style={{ padding: `${pick(7, 8)}px ${pick(12, 16)}px`, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", color: C.textSub, fontSize: pick(12, 13), cursor: "pointer", whiteSpace: "nowrap" }}>{l}</button>
           ))}
         </div>
-        <Btn onClick={openAudit} style={{ marginLeft: "auto", flexShrink: 0 }}>📋 Audit Report</Btn>
+        <Btn onClick={() => { setAuditSections([]); setAuditModal(true); }} style={{ marginLeft: "auto", flexShrink: 0 }}>📋 Audit Report</Btn>
       </div>
+
+      <AuditModal
+        open={auditModal}
+        onClose={() => setAuditModal(false)}
+        sections={auditSections}
+        onToggle={toggleAuditSection}
+        onGenerate={() => generateAudit(auditSections)}
+      />
 
       {/* Tabs */}
       <div className="scroll-x" style={{ display: "flex", gap: 6, marginBottom: 20, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 4 }}>
