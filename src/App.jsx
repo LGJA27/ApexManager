@@ -2089,15 +2089,19 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
 }
 
 // ─── EXPENSES PAGE ───────────────────────────────────────────────────────────
-function ExpensesPage({ expenses, addExpense, deleteExpense, venue }) {
+function ExpensesPage({ expenses, addExpense, updateExpense, deleteExpense, venue }) {
   const w = useWindowWidth();
   const isMobile = w < 768;
   const isWide = w >= 1280;
   const [showAdd, setShowAdd] = useState(false);
+  const [editId, setEditId] = useState(null);
   const [form, setForm] = useState({ name: "", amount: "", type: "OTHER", recurring: "ONE_TIME", date: today() });
   const [filter, setFilter] = useState("ALL");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const emptyForm = () => ({ name: "", amount: "", type: "OTHER", recurring: "ONE_TIME", date: today() });
+  const closeModal = () => { setShowAdd(false); setEditId(null); setError(""); setForm(emptyForm()); };
 
   const filtered = (venue ? expenses.filter(e => e.venue_id === venue.id) : expenses).filter(e => filter === "ALL" || e.type === filter);
 
@@ -2108,10 +2112,25 @@ function ExpensesPage({ expenses, addExpense, deleteExpense, venue }) {
     if (!form.name.trim()) return;
     setError("");
     setSaving(true);
-    await addExpense({ venue_id: venue?.id || null, ...form });
+    if (editId) {
+      await updateExpense(editId, { venue_id: venue?.id || null, ...form });
+    } else {
+      await addExpense({ venue_id: venue?.id || null, ...form });
+    }
     setSaving(false);
-    setShowAdd(false);
-    setForm({ name: "", amount: "", type: "OTHER", recurring: "ONE_TIME", date: today() });
+    closeModal();
+  };
+
+  const edit = (e) => {
+    setForm({
+      name: e.name || "",
+      amount: e.amount?.toString() || "",
+      type: e.type || "OTHER",
+      recurring: e.recurring || "ONE_TIME",
+      date: e.date || today(),
+    });
+    setEditId(e.id);
+    setShowAdd(true);
   };
 
   const allExpenses = venue ? expenses.filter(e => e.venue_id === venue.id) : expenses;
@@ -2127,8 +2146,8 @@ function ExpensesPage({ expenses, addExpense, deleteExpense, venue }) {
     <div style={{ padding: pagePad(isMobile, w >= 768 && w < 1024), width: "100%", boxSizing: "border-box" }}>
       <AllVenuesBanner venue={venue} />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isMobile ? 16 : 24, flexWrap: "wrap", gap: 10 }}>
-        <h1 style={{ margin: 0, fontSize: pageTitleSize(isMobile, w >= 768 && w < 1024, isWide), color: C.text }}>Fixed Expenses</h1>
-        <Btn onClick={() => setShowAdd(true)}>+ Add Expense</Btn>
+        <h1 style={{ margin: 0, fontSize: pageTitleSize(isMobile, w >= 768 && w < 1024, isWide), color: C.text }}>Expenses</h1>
+        <Btn onClick={() => { setEditId(null); setForm(emptyForm()); setShowAdd(true); }}>+ Add Expense</Btn>
       </div>
 
       <div className="scroll-x" style={{ display: "flex", gap: 6, marginBottom: isMobile ? 16 : 20 }}>
@@ -2141,7 +2160,7 @@ function ExpensesPage({ expenses, addExpense, deleteExpense, venue }) {
         <div style={{ marginLeft: "auto", fontSize: 13, color: C.text, display: "flex", alignItems: "center", flexShrink: 0 }}>Total: <strong style={{ marginLeft: 6, color: C.red }}>{fmtEur(total)}</strong></div>
       </div>
 
-      <Modal open={showAdd} onClose={() => { setShowAdd(false); setError(""); }} title="Add Fixed Expense">
+      <Modal open={showAdd} onClose={closeModal} title={editId ? "Edit Expense" : "Add Expense"}>
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
           <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label="Expense Name" value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="e.g. Electricity bill" /></div>
           <Input label="Amount (€)" type="number" value={form.amount} onChange={v => setForm(p => ({ ...p, amount: v }))} prefix="€" />
@@ -2152,15 +2171,15 @@ function ExpensesPage({ expenses, addExpense, deleteExpense, venue }) {
         </div>
         {error && <div style={{ color: C.red, fontSize: 12, marginTop: 10 }}>⚠ {error}</div>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
-          <Btn variant="ghost" onClick={() => { setShowAdd(false); setError(""); }}>Cancel</Btn>
-          <Btn loading={saving} disabled={!venue} title={!venue ? "Select a venue first" : undefined} onClick={save}>Save Expense</Btn>
+          <Btn variant="ghost" onClick={closeModal}>Cancel</Btn>
+          <Btn loading={saving} disabled={!editId && !venue} title={!editId && !venue ? "Select a venue first" : undefined} onClick={save}>{editId ? "Update" : "Save Expense"}</Btn>
         </div>
       </Modal>
 
       <div style={{ display: isWide ? "flex" : "block", gap: 24, alignItems: "flex-start" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           {filtered.length === 0
-            ? <EmptyState icon="💸" title="No expenses yet" sub="Track fixed costs like rent, wages, utilities and services." action={<Btn onClick={() => setShowAdd(true)}>+ Add First Expense</Btn>} />
+            ? <EmptyState icon="💸" title="No expenses yet" sub="Track costs like rent, wages, utilities and services." action={<Btn onClick={() => { setEditId(null); setForm(emptyForm()); setShowAdd(true); }}>+ Add First Expense</Btn>} />
             : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {[...filtered].sort((a, b) => b.date.localeCompare(a.date)).map(e => (
@@ -2170,8 +2189,9 @@ function ExpensesPage({ expenses, addExpense, deleteExpense, venue }) {
                         <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{e.name}</div>
                         <div style={{ fontSize: 12, color: C.textSub, marginTop: 2 }}>{e.date} · <Badge color={typeColors[e.type] || C.textSub}>{e.type}</Badge> · {e.recurring}</div>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ fontSize: 16, fontWeight: 700, color: C.red }}>{fmtEur(e.amount)}</div>
+                        <button onClick={() => edit(e)} style={{ background: C.accentDim, border: `1px solid ${C.accent}44`, color: C.accent, borderRadius: 7, padding: "5px 10px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>✏ Edit</button>
                         <button onClick={() => deleteExpense(e.id)} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 16 }}>🗑</button>
                       </div>
                     </div>
@@ -2210,14 +2230,18 @@ function ExpensesPage({ expenses, addExpense, deleteExpense, venue }) {
 }
 
 // ─── SUPPLIERS PAGE ──────────────────────────────────────────────────────────
-function SuppliersPage({ suppliers, addSupplier }) {
+function SuppliersPage({ suppliers, addSupplier, updateSupplier }) {
   const w = useWindowWidth();
   const isMobile = w < 768;
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
+  const [editId, setEditId] = useState(null);
   const [form, setForm] = useState({ name: "", nif: "", iban: "", address: "", phone: "", email: "", category: "" });
   const [saving, setSaving] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
+
+  const emptyForm = () => ({ name: "", nif: "", iban: "", address: "", phone: "", email: "", category: "" });
+  const closeModal = () => { setShowAdd(false); setEditId(null); setForm(emptyForm()); };
 
   const filtered = suppliers.filter(s =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -2228,24 +2252,43 @@ function SuppliersPage({ suppliers, addSupplier }) {
   const save = async () => {
     if (!form.name.trim()) return;
     setSaving(true);
-    await addSupplier(form);
+    if (editId) {
+      await updateSupplier(editId, form);
+    } else {
+      await addSupplier(form);
+    }
     setSaving(false);
-    setShowAdd(false);
-    setForm({ name: "", nif: "", iban: "", address: "", phone: "", email: "", category: "" });
+    closeModal();
   };
+
+  const edit = (s) => {
+    setForm({
+      name: s.name || "",
+      nif: s.nif || "",
+      iban: s.iban || "",
+      address: s.address || "",
+      phone: s.phone || "",
+      email: s.email || "",
+      category: s.category || "",
+    });
+    setEditId(s.id);
+    setShowAdd(true);
+  };
+
+  const rowGrid = "minmax(0, 1fr) auto minmax(0, 1fr)";
 
   return (
     <div style={{ padding: pagePad(isMobile, w >= 768 && w < 1024), width: "100%", boxSizing: "border-box" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isMobile ? 16 : 24, flexWrap: "wrap", gap: 10 }}>
         <h1 style={{ margin: 0, fontSize: pageTitleSize(isMobile, w >= 768 && w < 1024, false), color: C.text }}>Suppliers</h1>
-        <Btn onClick={() => setShowAdd(true)}>+ Add Supplier</Btn>
+        <Btn onClick={() => { setEditId(null); setForm(emptyForm()); setShowAdd(true); }}>+ Add Supplier</Btn>
       </div>
 
       <div style={{ marginBottom: 18 }}>
         <Input value={search} onChange={setSearch} placeholder="Search by name, NIF or category…" prefix="🔍" />
       </div>
 
-      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add Supplier">
+      <Modal open={showAdd} onClose={closeModal} title={editId ? "Edit Supplier" : "Add Supplier"}>
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
           <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label="Supplier Name *" value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="Empresa Lda." /></div>
           <Input label="NIF / Tax ID" value={form.nif} onChange={v => setForm(p => ({ ...p, nif: v }))} placeholder="PT123456789" />
@@ -2256,28 +2299,42 @@ function SuppliersPage({ suppliers, addSupplier }) {
           <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label="Address" value={form.address} onChange={v => setForm(p => ({ ...p, address: v }))} placeholder="Rua…" /></div>
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
-          <Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn>
-          <Btn loading={saving} onClick={save}>Save Supplier</Btn>
+          <Btn variant="ghost" onClick={closeModal}>Cancel</Btn>
+          <Btn loading={saving} onClick={save}>{editId ? "Update" : "Save Supplier"}</Btn>
         </div>
       </Modal>
 
       {filtered.length === 0
         ? <EmptyState icon="🏭" title="No suppliers yet" sub="Suppliers are auto-created when you scan invoices, or add them manually." action={<Btn onClick={() => setShowAdd(true)}>+ Add Supplier</Btn>} />
         : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {filtered.map(s => {
+          <Card style={{ padding: 0, overflow: "hidden" }}>
+            <div style={{ display: "grid", gridTemplateColumns: rowGrid, alignItems: "center", gap: 8, padding: "10px 16px", background: C.surfaceL, borderBottom: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 600 }}>Supplier</span>
+              <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 600, textAlign: "center", justifySelf: "center" }}>Category</span>
+              <span />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+            {filtered.map((s, idx) => {
               const isOpen = expandedId === s.id;
               const hasDetails = s.nif || s.iban || s.phone || s.email || s.address;
               return (
-                <div key={s.id} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
+                <div key={s.id} style={{ borderBottom: idx < filtered.length - 1 ? `1px solid ${C.border}` : "none" }}>
                   {/* ── COLLAPSED ROW ── */}
                   <div onClick={() => setExpandedId(id => id === s.id ? null : s.id)}
-                    style={{ display: "flex", alignItems: "center", padding: "12px 16px", cursor: "pointer", userSelect: "none" }}>
-                    <span style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: "0 0 auto", maxWidth: "45%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
-                    <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
-                      {s.category && <Badge color={C.accent}>{s.category}</Badge>}
+                    style={{ display: "grid", gridTemplateColumns: rowGrid, alignItems: "center", padding: "12px 16px", cursor: "pointer", userSelect: "none", gap: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: 14, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{s.name}</span>
+                    <div style={{ display: "flex", justifyContent: "center", justifySelf: "center", minWidth: isMobile ? 88 : 120 }}>
+                      {s.category
+                        ? <Badge color={C.accent}>{s.category}</Badge>
+                        : <span style={{ fontSize: 12, color: C.textMuted }}>—</span>}
                     </div>
-                    <span style={{ fontSize: 11, color: C.textMuted, transition: "transform .2s", display: "inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", flexShrink: 0 }}>▾</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "flex-end" }}>
+                    <button
+                      onClick={ev => { ev.stopPropagation(); edit(s); }}
+                      style={{ background: C.accentDim, border: `1px solid ${C.accent}44`, color: C.accent, borderRadius: 7, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
+                    >✏ Edit</button>
+                    <span style={{ fontSize: 11, color: C.textMuted, transition: "transform .2s", display: "inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                    </div>
                   </div>
 
                   {/* ── EXPANDED DETAIL ── */}
@@ -2323,7 +2380,8 @@ function SuppliersPage({ suppliers, addSupplier }) {
                 </div>
               );
             })}
-          </div>
+            </div>
+          </Card>
         )}
     </div>
   );
@@ -2962,6 +3020,16 @@ export default function App() {
     setExpenses(prev => prev.filter(e => e.id !== id));
   };
 
+  const updateExpense = async (id, { venue_id, name, amount, type, recurring, date }) => {
+    const { data, error } = await supabase
+      .from("expenses")
+      .update({ venue_id: venue_id || null, name, amount: parseFloat(amount) || 0, type, recurring, date })
+      .eq("id", id)
+      .select().single();
+    if (!error && data) setExpenses(prev => prev.map(e => e.id === id ? data : e));
+    return { data, error };
+  };
+
   // ── Supplier helpers ─────────────────────────────────────────────────────────
   const addSupplier = async ({ name, nif, iban, address, phone, email, category }) => {
     const { data, error } = await supabase
@@ -2970,6 +3038,19 @@ export default function App() {
       .select().single();
     if (!error && data) {
       setSuppliers(prev => [...prev, data]);
+      return data;
+    }
+    return null;
+  };
+
+  const updateSupplier = async (id, { name, nif, iban, address, phone, email, category }) => {
+    const { data, error } = await supabase
+      .from("suppliers")
+      .update({ name, nif: nif || null, iban: iban || null, address: address || null, phone: phone || null, email: email || null, category: category || null })
+      .eq("id", id)
+      .select().single();
+    if (!error && data) {
+      setSuppliers(prev => prev.map(s => s.id === id ? data : s));
       return data;
     }
     return null;
@@ -3226,8 +3307,8 @@ export default function App() {
           {page === "dashboard" && <DashboardPage {...pageProps} subscription={subscription} setPage={setPage} setInvoicesInitialFilter={setInvoicesInitialFilter} />}
           {page === "sales" && <SalesPage sales={sales} addSale={addSale} updateSale={updateSale} deleteSale={deleteSale} salesLoading={salesLoading} venues={venues} venue={venue} subscription={subscription} setSubscription={setSubscription} staffList={staff} />}
           {page === "invoices" && <InvoicesPage invoices={invoices} addInvoice={addInvoice} updateInvoice={updateInvoice} markInvoicePaid={markInvoicePaid} suppliers={suppliers} addSupplier={addSupplier} upsertIngredient={upsertIngredient} venue={venue} subscription={subscription} setSubscription={setSubscription} initialStatusFilter={invoicesInitialFilter} />}
-          {page === "expenses" && <ExpensesPage expenses={expenses} addExpense={addExpense} deleteExpense={deleteExpense} venue={venue} />}
-          {page === "suppliers" && <SuppliersPage suppliers={suppliers} addSupplier={addSupplier} />}
+          {page === "expenses" && <ExpensesPage expenses={expenses} addExpense={addExpense} updateExpense={updateExpense} deleteExpense={deleteExpense} venue={venue} />}
+          {page === "suppliers" && <SuppliersPage suppliers={suppliers} addSupplier={addSupplier} updateSupplier={updateSupplier} />}
           {page === "ingredients" && <IngredientsPage ingredients={ingredients} addIngredient={addIngredient} updateIngredient={updateIngredient} />}
           {page === "staff" && <StaffPage staff={staff} addStaff={addStaff} updateStaff={updateStaff} deleteStaff={deleteStaff} venue={venue} />}
           {page === "analytics" && <AnalyticsPage sales={sales} expenses={expenses} invoices={invoices} venues={venues} staff={staff} suppliers={suppliers} ingredients={ingredients} />}
