@@ -2656,6 +2656,31 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
   const [supportSaving, setSupportSaving] = useState(false);
   const [supportSuccess, setSupportSuccess] = useState(false);
 
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError] = useState("");
+
+  const handleManageSubscription = async () => {
+    setPortalLoading(true);
+    setPortalError("");
+    try {
+      const res = await fetch("/api/create-portal-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setPortalError(data.error || "Could not open billing portal.");
+        setPortalLoading(false);
+      }
+    } catch {
+      setPortalError("Connection error. Please try again.");
+      setPortalLoading(false);
+    }
+  };
+
   const sendSupport = () => {
     if (!supportForm.message.trim()) return;
     setSupportSaving(true);
@@ -2699,6 +2724,25 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
 
   const venueLimit = subscription?.venue_limit ?? 1;
   const tier = subscription?.tier ?? "free";
+  const isFreeTier = tier === "free";
+  const scansUsed = subscription?.scans_used_this_month ?? 0;
+  const scanLimit = subscription?.scan_limit ?? 10;
+  const scanPct = scanLimit ? Math.min((scansUsed / scanLimit) * 100, 100) : 0;
+
+  const formatRenewal = (iso) => {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  };
+
+  const statusLabel = (status) => {
+    const s = (status || "active").toLowerCase();
+    if (s === "active" || s === "trialing") return { label: "Active", color: C.green };
+    if (s === "past_due" || s === "unpaid") return { label: "Past Due", color: C.amber };
+    if (s === "canceled" || s === "cancelled") return { label: "Canceled", color: C.red };
+    return { label: status || "Active", color: C.textSub };
+  };
+
+  const tierDisplayName = tier.charAt(0).toUpperCase() + tier.slice(1);
 
   const handleAddVenueClick = () => {
     if (venues.length >= venueLimit) {
@@ -2744,6 +2788,67 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
               <div style={{ fontSize: 13, color: C.textSub }}>{user?.email}</div>
             </div>
           </div>
+        </Card>
+      </div>
+
+      <div style={{ marginBottom: 28 }}>
+        <h2 style={{ fontSize: 15, color: C.text, margin: "0 0 14px", fontWeight: 600 }}>Subscription</h2>
+        <Card>
+          <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 14 }}>Current Plan</div>
+          {isFreeTier ? (
+            <>
+              <span style={{ display: "inline-block", fontSize: 11, fontWeight: 700, background: C.amber + "22", color: C.amber, padding: "4px 12px", borderRadius: 99, border: `1px solid ${C.amber}44`, marginBottom: 14 }}>
+                Free
+              </span>
+              <p style={{ margin: "0 0 20px", fontSize: 13, color: C.textSub, lineHeight: 1.65 }}>
+                You are on the free plan — 7 days of data, 10 AI scans/month, 1 venue.
+              </p>
+              <Btn onClick={() => setPage("pricing")}>⚡ Upgrade to Starter</Btn>
+            </>
+          ) : (
+            <>
+              <span style={{ display: "inline-block", fontSize: 11, fontWeight: 700, background: C.greenDim, color: C.green, padding: "4px 12px", borderRadius: 99, border: `1px solid ${C.green}44`, marginBottom: 18, textTransform: "capitalize" }}>
+                {tierDisplayName}
+              </span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 20 }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Plan</div>
+                  <div style={{ fontSize: 14, color: C.text, fontWeight: 500 }}>{tierDisplayName}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Status</div>
+                  {(() => {
+                    const st = statusLabel(subscription?.status);
+                    return (
+                      <span style={{ display: "inline-block", fontSize: 11, fontWeight: 700, background: `${st.color}22`, color: st.color, padding: "3px 10px", borderRadius: 99, border: `1px solid ${st.color}44` }}>
+                        {st.label}
+                      </span>
+                    );
+                  })()}
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Renews</div>
+                  <div style={{ fontSize: 14, color: C.text }}>{formatRenewal(subscription?.current_period_end)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>AI Scans this month</div>
+                  <div style={{ fontSize: 14, color: C.text }}>{scansUsed} / {scanLimit}</div>
+                  <div style={{ height: 4, background: C.border, borderRadius: 2, marginTop: 4 }}>
+                    <div style={{ height: "100%", borderRadius: 2, background: C.accent, width: `${scanPct}%` }} />
+                  </div>
+                </div>
+              </div>
+              <Btn variant="ghost" onClick={handleManageSubscription} loading={portalLoading}>
+                Manage Billing →
+              </Btn>
+              {portalError && (
+                <div style={{ color: C.red, fontSize: 12, marginTop: 8 }}>⚠ {portalError}</div>
+              )}
+              <p style={{ margin: "12px 0 0", fontSize: 11, color: C.textMuted, lineHeight: 1.55 }}>
+                Update payment method, download invoices, change or cancel your plan — powered by Stripe
+              </p>
+            </>
+          )}
         </Card>
       </div>
 
