@@ -107,6 +107,118 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const fmt = (n, dec = 2) => (typeof n === "number" ? n : parseFloat(n) || 0).toLocaleString("pt-PT", { minimumFractionDigits: dec, maximumFractionDigits: dec });
 const fmtEur = n => `€${fmt(n)}`;
 const today = () => new Date().toISOString().split("T")[0];
+
+function getTierBadgeStyle(tier) {
+  const tiers = {
+    free: {
+      background: "linear-gradient(135deg, #2A2A36, #1E1E28)",
+      color: "#8A8A9A",
+      border: "1px solid #3A3A48",
+      icon: "🔓",
+      label: "Free",
+    },
+    starter: {
+      background: "linear-gradient(135deg, #1a2744, #0f1a33)",
+      color: "#3B9EFF",
+      border: "1px solid #3B9EFF55",
+      icon: "⚡",
+      label: "Starter",
+    },
+    growth: {
+      background: "linear-gradient(135deg, #2d1f5e, #1a1040)",
+      color: "#7C5CFC",
+      border: "1px solid #7C5CFC77",
+      icon: "🚀",
+      label: "Growth",
+    },
+    pro: {
+      background: "linear-gradient(135deg, #2d1f0f, #1a1200)",
+      color: "#F5A623",
+      border: "1px solid #F5A62366",
+      icon: "👑",
+      label: "Pro",
+    },
+  };
+  return tiers[tier] || tiers.free;
+}
+
+function SubscriptionTierBadge({ subscription, onUpgrade }) {
+  const tierStyle = getTierBadgeStyle(subscription?.tier || "free");
+  const isFree = !subscription || subscription.tier === "free";
+  const scansUsed = subscription?.scans_used_this_month || 0;
+  const scansTotal = subscription?.scan_limit || 10;
+  const scanPct = scansTotal ? Math.min((scansUsed / scansTotal) * 100, 100) : 0;
+
+  return (
+    <div
+      style={{
+        background: tierStyle.background,
+        border: tierStyle.border,
+        borderRadius: 10,
+        padding: "8px 10px",
+        marginTop: 8,
+        cursor: isFree && onUpgrade ? "pointer" : "default",
+      }}
+      onClick={isFree && onUpgrade ? onUpgrade : undefined}
+      role={isFree && onUpgrade ? "button" : undefined}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: tierStyle.color, letterSpacing: ".3px" }}>
+          <span>{tierStyle.icon}</span>
+          <span>{tierStyle.label}</span>
+        </div>
+        {isFree && (
+          <span style={{ fontSize: 10, color: C.accent, fontWeight: 600, letterSpacing: ".3px" }}>UPGRADE</span>
+        )}
+      </div>
+      <div style={{ fontSize: 10, color: tierStyle.color, opacity: 0.8, marginBottom: 4 }}>
+        {scansUsed}/{scansTotal === 999999 ? "∞" : scansTotal} AI scans
+      </div>
+      <div style={{ height: 3, background: "#ffffff11", borderRadius: 99, overflow: "hidden" }}>
+        <div style={{ height: "100%", borderRadius: 99, background: tierStyle.color, width: `${scansTotal === 999999 ? 15 : scanPct}%`, transition: "width 0.3s ease" }} />
+      </div>
+    </div>
+  );
+}
+
+function SidebarUpgradeButton({ onClick, embedded = false }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        margin: embedded ? 0 : "8px 8px 4px",
+        padding: "11px 14px",
+        borderRadius: 10,
+        background: "linear-gradient(135deg, #7C5CFC, #5B2FD4)",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        boxShadow: "0 4px 16px rgba(124, 92, 252, 0.35)",
+        transition: "all 0.2s ease",
+        position: "relative",
+        overflow: "hidden",
+      }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 24px rgba(124,92,252,0.5)"; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 4px 16px rgba(124,92,252,0.35)"; }}
+    >
+      <div style={{
+        position: "absolute",
+        top: 0,
+        left: "-100%",
+        width: "60%",
+        height: "100%",
+        background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)",
+        animation: "shimmer 2.5s infinite",
+      }} />
+      <span style={{ fontSize: 16, position: "relative", zIndex: 1 }}>⚡</span>
+      <div style={{ position: "relative", zIndex: 1 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", letterSpacing: ".2px" }}>Upgrade Plan</div>
+        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", marginTop: 1 }}>14-day free trial</div>
+      </div>
+    </div>
+  );
+}
 const monthLabel = d => { const [y, m] = d.split("-"); return `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m-1]} ${y}`; };
 
 function fileToBase64(file) {
@@ -541,17 +653,7 @@ function NavDrawer({ open, onClose, page, setPage, venue, venues, onVenueChange,
             <Logo size={24} />
             <div style={{ fontSize: 11, color: C.textSub, marginTop: 5 }}>{user?.user_metadata?.name}</div>
             {subscription && (
-              <div style={{ marginTop: 5 }}>
-                {subscription.tier === "free" ? (
-                  <span style={{ fontSize: 10, fontWeight: 700, background: C.amber + "22", color: C.amber, padding: "2px 8px", borderRadius: 99, border: `1px solid ${C.amber}44` }}>
-                    Free · {subscription.scans_used_this_month ?? 0}/{subscription.scan_limit ?? 10} scans
-                  </span>
-                ) : (
-                  <span style={{ fontSize: 10, fontWeight: 700, background: C.greenDim, color: C.green, padding: "2px 8px", borderRadius: 99, border: `1px solid ${C.green}44`, textTransform: "capitalize" }}>
-                    {subscription.tier}
-                  </span>
-                )}
-              </div>
+              <SubscriptionTierBadge subscription={subscription} onUpgrade={() => go("pricing")} />
             )}
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", color: C.textSub, cursor: "pointer", fontSize: 22, lineHeight: 1, padding: "4px 6px", minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
@@ -599,11 +701,7 @@ function NavDrawer({ open, onClose, page, setPage, venue, venues, onVenueChange,
         </nav>
         <div style={{ flexShrink: 0, borderTop: `1px solid ${C.border}` }}>
           {(subscription?.tier ?? "free") === "free" && (
-            <div style={{ padding: "8px 8px 4px" }}>
-              <button onClick={() => go("pricing")} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, height: 48, padding: "0 14px", borderRadius: 10, border: `1px solid ${C.accent}55`, cursor: "pointer", fontWeight: 700, fontSize: 14, background: `linear-gradient(135deg, ${C.accent}18, ${C.accent}28)`, color: C.accent }}>
-                <span style={{ fontSize: 18 }}>⚡</span> Upgrade
-              </button>
-            </div>
+            <SidebarUpgradeButton onClick={() => go("pricing")} />
           )}
           <div style={{ padding: "8px 14px 14px" }}>
             <button onClick={() => { onLogout(); onClose(); }} style={{ background: "none", border: "none", color: C.textSub, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", gap: 6, minHeight: 44 }}>🚪 Sign Out</button>
@@ -640,17 +738,7 @@ function Sidebar({ page, setPage, venue, venues, onVenueChange, user, onLogout, 
         <Logo size={27.5} />
         <div style={{ fontSize: 10, color: C.textSub, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.user_metadata?.name}</div>
         {subscription && (
-          <div style={{ marginTop: 5 }}>
-            {(subscription.tier === "free") ? (
-              <span style={{ fontSize: pick(9, 12), fontWeight: 700, background: C.amber + "22", color: C.amber, padding: "1px 6px", borderRadius: 99, border: `1px solid ${C.amber}44` }}>
-                Free · {subscription.scans_used_this_month ?? 0}/{subscription.scan_limit ?? 10} scans
-              </span>
-            ) : (
-              <span style={{ fontSize: 9, fontWeight: 700, background: C.greenDim, color: C.green, padding: "1px 6px", borderRadius: 99, border: `1px solid ${C.green}44`, textTransform: "capitalize" }}>
-                {subscription.tier}
-              </span>
-            )}
-          </div>
+          <SubscriptionTierBadge subscription={subscription} onUpgrade={() => setPage("pricing")} />
         )}
       </div>
       {venues.length > 0 && (
@@ -747,12 +835,7 @@ function Sidebar({ page, setPage, venue, venues, onVenueChange, user, onLogout, 
       {/* Bottom actions */}
       <div style={{ flexShrink: 0, borderTop: `1px solid ${C.border}` }}>
         {(subscription?.tier ?? "free") === "free" && (
-          <div style={{ padding: "6px 5px 4px" }}>
-            <button onClick={() => setPage("pricing")}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 7, border: `1px solid ${C.accent}55`, cursor: "pointer", fontWeight: 700, fontSize: 12, background: page === "pricing" ? C.accentDim : `linear-gradient(135deg, ${C.accent}18, ${C.accent}28)`, color: C.accent }}>
-              <span style={{ fontSize: 13 }}>⚡</span> Upgrade
-            </button>
-          </div>
+          <SidebarUpgradeButton onClick={() => setPage("pricing")} />
         )}
         <div style={{ padding: "6px 10px 10px" }}>
           <button onClick={onLogout} style={{ background: "none", border: "none", color: C.textSub, cursor: "pointer", fontSize: 11, display: "flex", alignItems: "center", gap: 5 }}>🚪 Sign Out</button>
@@ -2725,24 +2808,14 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
   const venueLimit = subscription?.venue_limit ?? 1;
   const tier = subscription?.tier ?? "free";
   const isFreeTier = tier === "free";
+  const tierStyle = getTierBadgeStyle(tier);
   const scansUsed = subscription?.scans_used_this_month ?? 0;
   const scanLimit = subscription?.scan_limit ?? 10;
-  const scanPct = scanLimit ? Math.min((scansUsed / scanLimit) * 100, 100) : 0;
-
-  const formatRenewal = (iso) => {
-    if (!iso) return "—";
-    return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-  };
-
-  const statusLabel = (status) => {
-    const s = (status || "active").toLowerCase();
-    if (s === "active" || s === "trialing") return { label: "Active", color: C.green };
-    if (s === "past_due" || s === "unpaid") return { label: "Past Due", color: C.amber };
-    if (s === "canceled" || s === "cancelled") return { label: "Canceled", color: C.red };
-    return { label: status || "Active", color: C.textSub };
-  };
-
-  const tierDisplayName = tier.charAt(0).toUpperCase() + tier.slice(1);
+  const scanLimitDisplay = scanLimit === 999999 ? "∞" : scanLimit;
+  const scanBarWidth = scanLimit === 999999
+    ? "15%"
+    : `${Math.min((scansUsed / (scanLimit || 10)) * 100, 100)}%`;
+  const isActiveStatus = subscription?.status === "active" || subscription?.status === "trialing";
 
   const handleAddVenueClick = () => {
     if (venues.length >= venueLimit) {
@@ -2793,51 +2866,89 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
 
       <div style={{ marginBottom: 28 }}>
         <h2 style={{ fontSize: 15, color: C.text, margin: "0 0 14px", fontWeight: 600 }}>Subscription</h2>
-        <Card>
-          <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 14 }}>Current Plan</div>
-          {isFreeTier ? (
-            <>
-              <span style={{ display: "inline-block", fontSize: 11, fontWeight: 700, background: C.amber + "22", color: C.amber, padding: "4px 12px", borderRadius: 99, border: `1px solid ${C.amber}44`, marginBottom: 14 }}>
-                Free
+        <Card style={{ background: tierStyle.background, border: tierStyle.border, position: "relative", overflow: "hidden" }}>
+          <div style={{
+            position: "absolute",
+            top: -40,
+            right: -40,
+            width: 120,
+            height: 120,
+            background: tierStyle.color,
+            opacity: 0.06,
+            borderRadius: "50%",
+            pointerEvents: "none",
+          }} />
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, position: "relative" }}>
+            <div>
+              <div style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 6 }}>Current Plan</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 28 }}>{tierStyle.icon}</span>
+                <span style={{ fontSize: 24, fontWeight: 800, color: tierStyle.color, letterSpacing: "-0.3px" }}>{tierStyle.label}</span>
+              </div>
+            </div>
+            <div style={{
+              padding: "4px 12px",
+              borderRadius: 99,
+              background: isActiveStatus ? "#22C97A22" : isFreeTier ? "#8A8A9A22" : "#F5A62322",
+              color: isActiveStatus ? "#22C97A" : isFreeTier ? "#8A8A9A" : "#F5A623",
+              fontSize: 11,
+              fontWeight: 700,
+              border: isActiveStatus ? "1px solid #22C97A44" : isFreeTier ? "1px solid #3A3A4844" : "1px solid #F5A62344",
+              letterSpacing: ".3px",
+              textTransform: "uppercase",
+              flexShrink: 0,
+            }}>
+              {isActiveStatus ? "● Active" : isFreeTier ? "Free" : (subscription?.status || "—")}
+            </div>
+          </div>
+
+          {!isFreeTier && subscription?.current_period_end && (
+            <div style={{
+              fontSize: 12,
+              color: C.textSub,
+              marginBottom: 16,
+              padding: "10px 12px",
+              background: "rgba(255,255,255,0.03)",
+              borderRadius: 8,
+              display: "flex",
+              justifyContent: "space-between",
+              position: "relative",
+            }}>
+              <span>Renews</span>
+              <span style={{ color: C.text, fontWeight: 500 }}>
+                {new Date(subscription.current_period_end).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
               </span>
-              <p style={{ margin: "0 0 20px", fontSize: 13, color: C.textSub, lineHeight: 1.65 }}>
-                You are on the free plan — 7 days of data, 10 AI scans/month, 1 venue.
-              </p>
-              <Btn onClick={() => setPage("pricing")}>⚡ Upgrade to Starter</Btn>
-            </>
+            </div>
+          )}
+
+          {isFreeTier && (
+            <p style={{ margin: "0 0 16px", fontSize: 13, color: C.textSub, lineHeight: 1.65, position: "relative" }}>
+              You are on the free plan — 7 days of data, 10 AI scans/month, 1 venue.
+            </p>
+          )}
+
+          <div style={{ marginBottom: 16, position: "relative" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.textSub, marginBottom: 6 }}>
+              <span>AI Scans this month</span>
+              <span style={{ color: tierStyle.color, fontWeight: 600 }}>{scansUsed}/{scanLimitDisplay}</span>
+            </div>
+            <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+              <div style={{
+                height: "100%",
+                borderRadius: 99,
+                background: tierStyle.color,
+                width: scanBarWidth,
+                boxShadow: `0 0 8px ${tierStyle.color}66`,
+                transition: "width 0.4s ease",
+              }} />
+            </div>
+          </div>
+
+          {isFreeTier ? (
+            <SidebarUpgradeButton embedded onClick={() => setPage("pricing")} />
           ) : (
             <>
-              <span style={{ display: "inline-block", fontSize: 11, fontWeight: 700, background: C.greenDim, color: C.green, padding: "4px 12px", borderRadius: 99, border: `1px solid ${C.green}44`, marginBottom: 18, textTransform: "capitalize" }}>
-                {tierDisplayName}
-              </span>
-              <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 20 }}>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Plan</div>
-                  <div style={{ fontSize: 14, color: C.text, fontWeight: 500 }}>{tierDisplayName}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Status</div>
-                  {(() => {
-                    const st = statusLabel(subscription?.status);
-                    return (
-                      <span style={{ display: "inline-block", fontSize: 11, fontWeight: 700, background: `${st.color}22`, color: st.color, padding: "3px 10px", borderRadius: 99, border: `1px solid ${st.color}44` }}>
-                        {st.label}
-                      </span>
-                    );
-                  })()}
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Renews</div>
-                  <div style={{ fontSize: 14, color: C.text }}>{formatRenewal(subscription?.current_period_end)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>AI Scans this month</div>
-                  <div style={{ fontSize: 14, color: C.text }}>{scansUsed} / {scanLimit}</div>
-                  <div style={{ height: 4, background: C.border, borderRadius: 2, marginTop: 4 }}>
-                    <div style={{ height: "100%", borderRadius: 2, background: C.accent, width: `${scanPct}%` }} />
-                  </div>
-                </div>
-              </div>
               <Btn variant="ghost" onClick={handleManageSubscription} loading={portalLoading}>
                 Manage Billing →
               </Btn>
@@ -3435,6 +3546,7 @@ export default function App() {
       img, table { max-width: 100%; }
       * { -webkit-tap-highlight-color: transparent; }
       button, a, [role="button"], select { touch-action: manipulation; user-select: none; }
+      @keyframes shimmer { 0% { left: -100%; } 100% { left: 200%; } }
       @keyframes spin { to { transform: rotate(360deg); } }
       @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
       @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
