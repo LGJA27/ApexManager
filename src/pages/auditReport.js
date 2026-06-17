@@ -94,8 +94,40 @@ function cell(text, style) {
   return { html: typeof text === "string" ? esc(text) : text, style };
 }
 
-function badge(text, cls) {
-  return `<span class="badge badge-${cls}">${esc(text)}</span>`;
+function htmlCell(html, style) {
+  return { html: html ?? "", style };
+}
+
+const TYPE_COLOR_MAP = {
+  SERVICES: "#3B9EFF",
+  WAGES: "#F5A623",
+  RENT: "#F04060",
+  OTHER: "#8A8A9A",
+};
+
+function typeBadge(type) {
+  const color = TYPE_COLOR_MAP[type] || "#8A8A9A";
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:${color}22;color:${color}">${esc(type)}</span>`;
+}
+
+function statusBadge(status, dueDate, todayFn) {
+  const isOverdue = status !== "paid" && dueDate && dueDate < todayFn();
+  const config = isOverdue
+    ? { color: "#F04060", label: "OVERDUE" }
+    : status === "paid"
+      ? { color: "#22C97A", label: "PAID" }
+      : { color: "#F5A623", label: "PENDING" };
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:${config.color}22;color:${config.color}">${esc(config.label)}</span>`;
+}
+
+function staffStatusBadge(status) {
+  const config = {
+    active: { color: "#22C97A", label: "Active" },
+    part_time: { color: "#3B9EFF", label: "Part-Time" },
+    holidays: { color: "#F5A623", label: "On Holidays" },
+    sick_leave: { color: "#F04060", label: "Sick Leave" },
+  }[status] || { color: "#8A8A9A", label: status };
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:${config.color}22;color:${config.color}">${esc(config.label)}</span>`;
 }
 
 function buildExecutiveSummary(d, fmtEur) {
@@ -224,25 +256,21 @@ function buildExpensesSection(d, fmtEur, today) {
   const expRows = d.filteredExp.map(e => [
     cell(e.date),
     cell(e.name),
-    cell(badge(e.type, e.type === "SERVICES" ? "blue" : e.type === "WAGES" ? "amber" : e.type === "RENT" ? "red" : "green")),
+    htmlCell(typeBadge(e.type)),
     cell(fmtEur(e.amount), "color:#F04060;font-weight:600"),
     cell(e.recurring ? "Yes" : "No"),
   ]);
 
-  const invRows = d.filteredInv.map(i => {
-    const overdue = i.status !== "paid" && i.due_date && i.due_date < today();
-    const status = i.status === "paid" ? badge("PAID", "green") : overdue ? badge("OVERDUE", "red") : badge("PENDING", "amber");
-    return [
-      cell(i.date),
-      cell(i.due_date || "—"),
-      cell(i.supplier_name),
-      cell(i.invoice_number ? "#" + i.invoice_number : "—"),
-      cell(fmtEur(i.subtotal || 0)),
-      cell(fmtEur(i.tax || 0)),
-      cell(fmtEur(i.total || 0), "font-weight:600"),
-      cell(status),
-    ];
-  });
+  const invRows = d.filteredInv.map(i => [
+    cell(i.date),
+    cell(i.due_date || "—"),
+    cell(i.supplier_name),
+    cell(i.invoice_number ? "#" + i.invoice_number : "—"),
+    cell(fmtEur(i.subtotal || 0)),
+    cell(fmtEur(i.tax || 0)),
+    cell(fmtEur(i.total || 0), "font-weight:600"),
+    htmlCell(statusBadge(i.status, i.due_date, today)),
+  ]);
 
   const pendingAlert = d.pendingInv.length > 0 ? `
     <div class="alert-box">
@@ -258,7 +286,7 @@ function buildExpensesSection(d, fmtEur, today) {
   return `
     <h2 class="section-break">Expenses Report</h2>
     ${metricsGrid([
-      metricCard("Fixed Expenses", fmtEur(d.fixedExp), null, "#F04060"),
+      metricCard("Expenses", fmtEur(d.fixedExp), null, "#F04060"),
       metricCard("Paid Invoices", fmtEur(d.paidAmt), null, "#3B9EFF"),
       metricCard("Pending Invoices", fmtEur(d.pendingAmt), null, "#F5A623"),
       metricCard("Daily Costs", fmtEur(d.dailyCosts), null, "#F5A623"),
@@ -278,7 +306,7 @@ function buildExpensesSection(d, fmtEur, today) {
           </div>
         </div>`).join("") || "<p style='color:#888'>No monthly data.</p>"}
     </div>
-    <h3>Fixed Expenses</h3>
+    <h3>Expenses</h3>
     ${table(["Date", "Name", "Type", "Amount", "Recurring"], expRows)}
     <h3>Invoices</h3>
     ${table(["Date", "Due", "Supplier", "Invoice #", "Net", "Tax", "Total", "Status"], invRows)}
@@ -308,7 +336,7 @@ function buildStaffSection(d, fmtEur) {
   const staffRows = d.staffReport.map(s => [
     cell(s.name, "font-weight:600"),
     cell(s.job_title || "—"),
-    cell(s.status || "active"),
+    htmlCell(staffStatusBadge(s.status || "active")),
     cell(String(s.worked)),
     cell(String(s.missed)),
     cell(s.rate.toFixed(0) + "%", `color:${s.rate >= 90 ? "#22C97A" : s.rate >= 70 ? "#F5A623" : "#F04060"};font-weight:600`),
@@ -331,10 +359,9 @@ function buildStaffSection(d, fmtEur) {
     const dur = s.status_from && s.status_until
       ? Math.ceil((new Date(s.status_until) - new Date(s.status_from)) / 86400000) + 1 + " days"
       : "—";
-    const badgeCls = s.status === "sick_leave" ? "red" : s.status === "holidays" ? "amber" : "blue";
     return [
       cell(s.name),
-      cell(badge(s.status, badgeCls)),
+      htmlCell(staffStatusBadge(s.status)),
       cell(s.status_from || "—"),
       cell(s.status_until || "—"),
       cell(dur),

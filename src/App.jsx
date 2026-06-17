@@ -34,6 +34,8 @@ import Logo from "./components/Logo.jsx";
 import PricingPage from "./pages/PricingPage.jsx";
 import AnalyticsPage from "./pages/AnalyticsPage.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
+import UpgradePrompt from "./components/UpgradePrompt.jsx";
+import { useSubscriptionGate } from "./hooks/useSubscriptionGate.js";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage.jsx";
 import TermsOfServicePage from "./pages/TermsOfServicePage.jsx";
 import CookiePolicyPage from "./pages/CookiePolicyPage.jsx";
@@ -512,13 +514,12 @@ function BottomNav({ page, setPage, onOpenDrawer }) {
 
 // ─── NAV DRAWER (mobile) ─────────────────────────────────────────────────────
 function NavDrawer({ open, onClose, page, setPage, venue, venues, onVenueChange, user, onLogout, subscription }) {
-  const navItems = [
+  const mainNavItems = [
     { id: "dashboard", icon: "📊", label: "Dashboard" },
     { id: "sales",       icon: "💳", label: "Daily Sales" },
     { id: "invoices",    icon: "🧾", label: "Invoices" },
     { id: "expenses",    icon: "💸", label: "Expenses" },
     { id: "analytics",   icon: "📈", label: "Analytics & Reports" },
-    { id: "settings",    icon: "⚙️", label: "Settings" },
   ];
   const dbItems = [
     { id: "suppliers",   icon: "🏭", label: "Suppliers" },
@@ -566,7 +567,7 @@ function NavDrawer({ open, onClose, page, setPage, venue, venues, onVenueChange,
           </div>
         )}
         <nav style={{ flex: 1, padding: "8px", overflowY: "auto", WebkitOverflowScrolling: "touch", display: "flex", flexDirection: "column", gap: 1 }}>
-          {navItems.map(n => {
+          {mainNavItems.map(n => {
             const active = page === n.id;
             return (
               <button key={n.id} onClick={() => go(n.id)}
@@ -591,6 +592,10 @@ function NavDrawer({ open, onClose, page, setPage, venue, venues, onVenueChange,
               </button>
             );
           })}
+          <button onClick={() => go("settings")}
+            style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 14px", height: 48, borderRadius: 10, border: "none", cursor: "pointer", textAlign: "left", background: page === "settings" ? C.accentDim : "transparent", color: page === "settings" ? C.accent : C.textSub, fontWeight: page === "settings" ? 600 : 400, fontSize: 14, width: "100%" }}>
+            <span style={{ fontSize: 18, flexShrink: 0 }}>⚙️</span>Settings
+          </button>
         </nav>
         <div style={{ flexShrink: 0, borderTop: `1px solid ${C.border}` }}>
           {(subscription?.tier ?? "free") === "free" && (
@@ -612,13 +617,12 @@ function NavDrawer({ open, onClose, page, setPage, venue, venues, onVenueChange,
 // ─── SIDEBAR NAV ─────────────────────────────────────────────────────────────
 function Sidebar({ page, setPage, venue, venues, onVenueChange, user, onLogout, subscription }) {
   const { pick } = useTypeScale();
-  const navItems = [
+  const mainNavItems = [
     { id: "dashboard", icon: "📊", label: "Dashboard" },
     { id: "sales", icon: "💳", label: "Daily Sales" },
     { id: "invoices", icon: "🧾", label: "Invoices" },
     { id: "expenses", icon: "💸", label: "Expenses" },
     { id: "analytics", icon: "📈", label: "Analytics & Reports" },
-    { id: "settings", icon: "⚙️", label: "Settings" },
   ];
   const dbItems = [
     { id: "suppliers",   icon: "🏭", label: "Suppliers" },
@@ -665,7 +669,7 @@ function Sidebar({ page, setPage, venue, venues, onVenueChange, user, onLogout, 
         </div>
       )}
       <nav style={{ flex: 1, padding: "6px 5px", display: "flex", flexDirection: "column", gap: 1 }}>
-        {navItems.map(n => {
+        {mainNavItems.map(n => {
           const active = page === n.id;
           return (
             <button key={n.id} onClick={() => setPage(n.id)}
@@ -724,6 +728,21 @@ function Sidebar({ page, setPage, venue, venues, onVenueChange, user, onLogout, 
             );
           })}
         </div>
+        <button onClick={() => setPage("settings")}
+          onMouseEnter={e => { if (page !== "settings") e.currentTarget.style.background = C.surfaceL; }}
+          onMouseLeave={e => { if (page !== "settings") e.currentTarget.style.background = "transparent"; }}
+          style={{
+            display: "flex", alignItems: "center", gap: 8, width: "100%",
+            padding: `${pick(7, 10)}px ${pick(10, 13)}px ${pick(7, 10)}px ${pick(8, 10)}px`, borderRadius: 7, cursor: "pointer", textAlign: "left",
+            border: "none", borderLeft: page === "settings" ? `3px solid ${C.accent}` : "3px solid transparent",
+            background: page === "settings" ? C.accentDim : "transparent",
+            color: page === "settings" ? C.accent : C.textSub,
+            fontWeight: page === "settings" ? 600 : 400, fontSize: pick(12.5, 14),
+            transition: "background .12s, color .12s", whiteSpace: "nowrap", overflow: "hidden",
+          }}>
+          <span style={{ fontSize: 14, flexShrink: 0 }}>⚙️</span>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>Settings</span>
+        </button>
       </nav>
       {/* Bottom actions */}
       <div style={{ flexShrink: 0, borderTop: `1px solid ${C.border}` }}>
@@ -750,7 +769,9 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
   const isTablet = w >= 768 && w < 1024;
   const isWide = w >= 1280;
   const { pick } = useTypeScale();
-  const [range, setRange] = useState("month");
+  const { isFree } = useSubscriptionGate(subscription);
+  const [upgradePrompt, setUpgradePrompt] = useState(null);
+  const [range, setRange] = useState(isFree ? "7days" : "month");
   const [upgradeBanner, setUpgradeBanner] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("upgraded") === "true") {
@@ -760,10 +781,14 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
     return false;
   });
 
+  useEffect(() => {
+    if (isFree && range !== "7days") setRange("7days");
+  }, [isFree, range]);
+
   const now = new Date();
   const filtered = sales.filter(s => {
     const d = new Date(s.date);
-    if (range === "week") return (now - d) / 86400000 <= 7;
+    if (range === "7days") return (now - d) / 86400000 <= 7;
     if (range === "month") return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     if (range === "year") return d.getFullYear() === now.getFullYear();
     return true;
@@ -834,17 +859,32 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
     return { label: `${mNames[m]} ${y}`, rev, costs, net, margin: rev ? (net / rev) * 100 : 0 };
   }) : [];
 
-  const ranges = [{ v: "week", l: "7 Days" }, { v: "month", l: "This Month" }, { v: "year", l: "This Year" }, { v: "all", l: "All Time" }];
+  const ranges = [{ v: "7days", l: "7 Days" }, { v: "month", l: "This Month" }, { v: "year", l: "This Year" }, { v: "all", l: "All Time" }];
   const pad = pagePad(isMobile, isTablet);
   const chartH = isWide ? 120 : 90;
   const heroBig = pick(26, 32);
   const heroNet = pick(28, 36);
 
-  const heroCol = (label, children) => (
-    <div style={{ flex: 1, padding: isMobile ? "16px 12px" : "20px 16px", minWidth: 0, textAlign: "center", alignItems: "center", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+  const heroCol = (label, children, mobileTint) => (
+    <div style={{
+      flex: 1,
+      minWidth: 0,
+      textAlign: "center",
+      alignItems: "center",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      ...(isMobile
+        ? { paddingTop: 16, paddingBottom: 16, paddingLeft: 12, paddingRight: 12, width: "100%", ...mobileTint }
+        : { padding: "20px 16px" }),
+    }}>
       <div style={{ fontSize: pick(11, 12), fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>{label}</div>
       {children}
     </div>
+  );
+
+  const heroSep = (
+    <div style={{ height: 1, background: C.border, margin: "16px 0", width: "100%" }} />
   );
 
   return (
@@ -863,12 +903,40 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
         {!isMobile && <h1 style={{ margin: "0 0 16px", fontSize: pageTitleSize(isMobile, isTablet, isWide), color: C.text }}>Dashboard</h1>}
         <div className="scroll-x" style={{ display: "flex", gap: 6 }}>
           {ranges.map(r => (
-            <button key={r.v} onClick={() => setRange(r.v)}
+            <button key={r.v} onClick={() => {
+              if (isFree && r.v !== "7days") {
+                setUpgradePrompt("range");
+                return;
+              }
+              setRange(r.v);
+            }}
               style={{ padding: `${pick(7, 8)}px ${pick(14, 16)}px`, borderRadius: 8, border: `1px solid ${range === r.v ? C.accent : C.border}`, background: range === r.v ? C.accentDim : "transparent", color: range === r.v ? C.accent : C.textSub, fontSize: pick(12, 13), cursor: "pointer", fontWeight: range === r.v ? 600 : 400, whiteSpace: "nowrap", flexShrink: 0 }}>
-              {r.l}
+              {r.l}{isFree && r.v !== "7days" ? " 🔒" : ""}
             </button>
           ))}
         </div>
+        {isFree && (
+          <div style={{
+            background: "#7C5CFC11",
+            border: "1px solid #7C5CFC33",
+            borderRadius: 8,
+            padding: "8px 14px",
+            fontSize: 12,
+            color: C.textSub,
+            marginTop: 12,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+          }}>
+            <span>🔒 Free plan shows last 7 days only</span>
+            <button type="button" onClick={() => setPage("pricing")} style={{
+              background: "none", border: "none", color: C.accent,
+              cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0,
+            }}>Upgrade to unlock →</button>
+          </div>
+        )}
       </div>
 
       {/* SECTION 1 — Money In vs Money Out */}
@@ -884,23 +952,31 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
             </div>
           </>)}
 
-          {!isMobile && <div style={{ width: 1, background: C.border, margin: "8px 0" }} />}
+          {isMobile ? heroSep : <div style={{ width: 1, background: C.border, margin: "8px 0" }} />}
 
           {heroCol("Net Position", <>
             <div style={{ fontSize: heroNet, fontWeight: 800, color: profit >= 0 ? C.green : C.red, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{fmtEur(profit)}</div>
             <div style={{ fontSize: pick(12, 13), color: profit >= 0 ? C.green : C.red, marginTop: 8, fontWeight: 600 }}>
               {totalSales ? `${margin.toFixed(1)}% margin` : "—"}
             </div>
-          </>)}
+          </>, isMobile ? {
+            background: profit >= 0 ? "rgba(34, 201, 122, 0.04)" : "rgba(240, 64, 96, 0.04)",
+            borderRadius: 8,
+            padding: 16,
+          } : undefined)}
 
-          {!isMobile && <div style={{ width: 1, background: C.border, margin: "8px 0" }} />}
+          {isMobile ? heroSep : <div style={{ width: 1, background: C.border, margin: "8px 0" }} />}
 
           {heroCol("Money Out", <>
             <div style={{ fontSize: heroBig, fontWeight: 800, color: C.red, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{fmtEur(totalCosts)}</div>
             <div style={{ fontSize: pick(12, 13), color: C.textSub, marginTop: 8 }}>
               Daily {fmtEur(totalDailyCosts)} · Fixed {fmtEur(totalFixedExp)} · Paid inv. {fmtEur(paidInvoices)}
             </div>
-          </>)}
+          </>, isMobile ? {
+            background: "rgba(240, 64, 96, 0.04)",
+            borderRadius: 8,
+            padding: 16,
+          } : undefined)}
         </div>
       </Card>
 
@@ -1045,6 +1121,12 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
           </table>
         </div>
       )}
+      <UpgradePrompt
+        open={!!upgradePrompt}
+        onClose={() => setUpgradePrompt(null)}
+        feature={upgradePrompt}
+        setPage={setPage}
+      />
     </div>
   );
 }
@@ -2570,6 +2652,22 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
+  const [supportForm, setSupportForm] = useState({ subject: "Bug Report", message: "" });
+  const [supportSaving, setSupportSaving] = useState(false);
+  const [supportSuccess, setSupportSuccess] = useState(false);
+
+  const sendSupport = () => {
+    if (!supportForm.message.trim()) return;
+    setSupportSaving(true);
+    const body = `From: ${user?.email || "unknown"}\nUser: ${user?.user_metadata?.name || "unknown"}\n\n${supportForm.message}`;
+    window.location.href = `mailto:support@apexmanager.com?subject=${encodeURIComponent(supportForm.subject)}&body=${encodeURIComponent(body)}`;
+    setTimeout(() => {
+      setSupportSaving(false);
+      setSupportSuccess(true);
+      setSupportForm({ subject: "Bug Report", message: "" });
+    }, 500);
+  };
+
   // account deletion state
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -2743,6 +2841,32 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
           <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.7 }}>
             <strong style={{ color: C.text }}>ApexManager</strong> — Restaurant intelligence platform<br />
             AI-powered invoice scanning · Daily sales tracking · Cost analytics
+          </div>
+        </Card>
+      </div>
+
+      <div style={{ marginTop: 28 }}>
+        <h2 style={{ fontSize: 15, color: C.text, margin: "0 0 14px", fontWeight: 600 }}>Support</h2>
+        <Card>
+          <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 4 }}>Contact Support</div>
+          <div style={{ fontSize: 13, color: C.textSub, marginBottom: 16 }}>Report an issue or send us feedback</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <Select label="Subject" value={supportForm.subject} onChange={v => setSupportForm(p => ({ ...p, subject: v }))}
+              options={["Bug Report", "Feature Request", "Billing", "Other"].map(s => ({ value: s, label: s }))} />
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>Message</div>
+              <textarea
+                value={supportForm.message}
+                onChange={e => setSupportForm(p => ({ ...p, message: e.target.value }))}
+                placeholder="Describe your issue or feedback…"
+                rows={4}
+                style={{ width: "100%", minHeight: 100, background: C.surfaceL, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px", fontSize: 14, color: C.text, fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box" }}
+              />
+            </div>
+            {supportSuccess && <div style={{ fontSize: 13, color: C.green, fontWeight: 600 }}>Message sent! We'll get back to you within 24 hours.</div>}
+            <div>
+              <Btn onClick={sendSupport} loading={supportSaving} disabled={!supportForm.message.trim()}>Send →</Btn>
+            </div>
           </div>
         </Card>
       </div>
@@ -3311,7 +3435,7 @@ export default function App() {
           {page === "suppliers" && <SuppliersPage suppliers={suppliers} addSupplier={addSupplier} updateSupplier={updateSupplier} />}
           {page === "ingredients" && <IngredientsPage ingredients={ingredients} addIngredient={addIngredient} updateIngredient={updateIngredient} />}
           {page === "staff" && <StaffPage staff={staff} addStaff={addStaff} updateStaff={updateStaff} deleteStaff={deleteStaff} venue={venue} />}
-          {page === "analytics" && <AnalyticsPage sales={sales} expenses={expenses} invoices={invoices} venues={venues} staff={staff} suppliers={suppliers} ingredients={ingredients} />}
+          {page === "analytics" && <AnalyticsPage sales={sales} expenses={expenses} invoices={invoices} venues={venues} staff={staff} suppliers={suppliers} ingredients={ingredients} subscription={subscription} setPage={setPage} />}
           {page === "settings" && <SettingsPage venues={venues} addVenue={addVenue} deleteVenue={deleteVenue} user={user} subscription={subscription} setPage={setPage} />}
           {page === "pricing" && <PricingPage user={user} subscription={subscription} />}
         </div>

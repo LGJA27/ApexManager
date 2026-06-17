@@ -2,7 +2,6 @@
 // hero-dashboard         — Full dashboard screenshot with real data, displayed in browser frame
 // feature-invoice-scan   — Phone camera pointed at a paper invoice (portrait)
 // feature-dashboard      — Dashboard analytics view with charts and real data
-// feature-ingredients    — Ingredients table with prices and supplier data
 // feature-sales          — Mobile daily sales form with numbers filled in
 // feature-multivenue     — Venue switcher dropdown showing 3 venues
 // testimonial-avatar-1   — Miguel Santos portrait photo
@@ -206,6 +205,124 @@ function StatPill({ target, format, label, active }) {
   );
 }
 
+// ─── Feature cards ─────────────────────────────────────────────────────────────
+const FEATURE_CARDS = [
+  {
+    icon: '🧾',
+    title: 'Smart Invoice Management',
+    description: 'Photograph any supplier invoice. AI extracts every line item, price, tax, NIF and IBAN automatically. Build your supplier database without typing a single character.',
+  },
+  {
+    icon: '💳',
+    title: 'Daily Sales Tracking',
+    description: 'Log cash and card sales in seconds. Scan your POS daily report with AI. Track staff attendance. See your day\'s performance the moment you close.',
+  },
+  {
+    icon: '📊',
+    title: 'Business Analytics',
+    description: 'Revenue trends, cost breakdowns, profit margins and supplier spend — filtered by venue, date range or custom period. Know your numbers without an accountant.',
+  },
+  {
+    icon: '📋',
+    title: 'Audit Reports',
+    description: 'Generate professional PDF-ready business reports. Sales, expenses, staff attendance or full audit — export exactly what you need, when you need it.',
+  },
+  {
+    icon: '🏢',
+    title: 'Multi-Venue Management',
+    description: 'One account for all your locations. Switch between venues instantly. Data always separated, overview always unified.',
+  },
+];
+
+function FeatureCard({ icon, title, description, delay = 0 }) {
+  const isDesktop = useWindowWidth() >= 1024;
+  return (
+    <RevealItem delay={delay} y={24}>
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: isDesktop ? '28px 26px' : '24px 20px', height: '100%' }}>
+        <div style={{ fontSize: 32, marginBottom: 14 }}>{icon}</div>
+        <h3 style={{ fontSize: 17, fontWeight: 700, color: C.text, margin: '0 0 12px', lineHeight: 1.3 }}>{title}</h3>
+        <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.75, margin: 0 }}>{description}</p>
+      </div>
+    </RevealItem>
+  );
+}
+
+// ─── Contact form ───────────────────────────────────────────────────────────────
+function ContactSection({ isMobile, inner }) {
+  const [form, setForm] = useState({ name: '', email: '', subject: 'General Question', message: '' });
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  const inputStyle = {
+    width: '100%',
+    background: C.surfaceL,
+    border: `1px solid ${C.border}`,
+    borderRadius: 10,
+    padding: '12px 14px',
+    fontSize: 14,
+    color: C.text,
+    fontFamily: 'inherit',
+    outline: 'none',
+    boxSizing: 'border-box',
+  };
+
+  const submit = (e) => {
+    e.preventDefault();
+    setError('');
+    if (!form.name.trim() || !form.email.trim() || !form.subject || !form.message.trim()) {
+      setError('Please fill in all fields.');
+      return;
+    }
+    setSaving(true);
+    const body = `Name: ${form.name}\nEmail: ${form.email}\n\n${form.message}`;
+    window.location.href = `mailto:support@apexmanager.com?subject=${encodeURIComponent(form.subject)}&body=${encodeURIComponent(body)}`;
+    setTimeout(() => {
+      setSaving(false);
+      setSuccess(true);
+      setForm({ name: '', email: '', subject: 'General Question', message: '' });
+    }, 500);
+  };
+
+  return (
+    <section id="contact" style={{ padding: isMobile ? '64px 0' : '88px 0', background: C.surface }}>
+      <div style={{ ...inner(600), textAlign: 'center' }}>
+        <RevealItem y={24}>
+          <h2 style={{ fontSize: 28, fontWeight: 800, color: C.text, margin: '0 0 12px' }}>Get in touch</h2>
+          <p style={{ fontSize: 16, color: C.textSub, margin: '0 0 32px', lineHeight: 1.6 }}>Have a question or need help? Send us a message.</p>
+        </RevealItem>
+        <RevealItem y={20} delay={0.08}>
+          <form onSubmit={submit} style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>Name *</label>
+              <input required value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Your name" style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>Email *</label>
+              <input required type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="you@restaurant.com" style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>Subject *</label>
+              <select required value={form.subject} onChange={e => setForm(p => ({ ...p, subject: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+                {['General Question', 'Support', 'Billing', 'Partnership'].map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>Message *</label>
+              <textarea required value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} placeholder="How can we help?" rows={5} style={{ ...inputStyle, minHeight: 120, resize: 'vertical' }} />
+            </div>
+            {error && <div style={{ fontSize: 13, color: C.red }}>{error}</div>}
+            {success && <div style={{ fontSize: 14, color: C.green, fontWeight: 600 }}>Message sent! We'll get back to you within 24 hours.</div>}
+            <button type="submit" disabled={saving} style={{ width: '100%', padding: '14px 0', borderRadius: 10, border: 'none', cursor: saving ? 'wait' : 'pointer', fontWeight: 700, fontSize: 15, background: C.accent, color: '#fff', marginTop: 4, opacity: saving ? 0.7 : 1 }}>
+              {saving ? 'Sending…' : 'Send Message →'}
+            </button>
+          </form>
+        </RevealItem>
+      </div>
+    </section>
+  );
+}
+
 // ─── Feature badge ─────────────────────────────────────────────────────────────
 function FeatureBadge({ label }) {
   return (
@@ -266,6 +383,7 @@ const FAQS = [
   { q: 'Do I need a credit card to start?', a: 'No. The 14-day free trial is completely free. A card is only needed when you choose to upgrade to a paid plan.' },
   { q: 'Is my data secure?', a: 'Yes. All data is encrypted at rest and in transit, stored on European servers. We are fully GDPR compliant and never sell your data.' },
   { q: 'Can I use it for multiple restaurants?', a: 'Yes. The Growth plan supports up to 3 venues and the Pro plan supports unlimited locations. Switch between them instantly from the sidebar.' },
+  { q: 'Can I export my reports?', a: 'Yes. Subscribers can export Sales, Expenses, Staff and full Audit reports as print-ready documents. Free accounts have access to weekly data.' },
   { q: 'What languages are supported?', a: 'Currently English and Portuguese. More languages are on the roadmap.' },
   { q: 'Can I cancel anytime?', a: 'Yes, cancel from your account settings at any time. No lock-in contracts, no cancellation fees. Your data is always yours to export.' },
 ];
@@ -366,7 +484,7 @@ function LandingPricingCards() {
 // ─── Testimonials data ────────────────────────────────────────────────────────
 const TESTIMONIALS = [
   {
-    quote: 'Finally I know my actual food cost without spending hours in Excel. The invoice scanning alone is worth every cent.',
+    quote: 'Finally I know my actual costs without spending hours in Excel. The invoice scanning alone is worth every cent.',
     name: 'Miguel Santos', role: 'Head Chef', restaurant: 'Tasca do Mercado, Lisboa',
   },
   {
@@ -429,114 +547,6 @@ export default function LandingPage() {
   const inner = (maxW = 1100) => ({ maxWidth: maxW, margin: '0 auto', padding: `0 ${hp}` });
   const vPad = isMobile ? '64px 0' : '88px 0';
 
-  // ── Invoice scan mockup ──────────────────────────────────────────────────────
-  const invoiceScanMockup = (
-    <PhoneMockup
-      imageId="feature-invoice-scan"
-      label="Camera viewfinder pointed at paper invoice"
-      overlay={
-        <>
-          <div style={{ fontSize: 10, fontWeight: 700, color: C.green, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.6px' }}>✓ Extracted successfully</div>
-          <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 6, fontWeight: 600 }}>Fornecedor XYZ Lda.</div>
-          {[['Bacalhau da Noruega', '€12.40'], ['Batata Doce 5kg', '€8.50'], ['Azeite Extra Virgem', '€18.90']].map(([name, price]) => (
-            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderTop: `1px solid ${C.border}`, fontSize: 11, color: C.textSub }}>
-              <span>{name}</span>
-              <span style={{ color: C.amber, fontWeight: 600 }}>{price}</span>
-            </div>
-          ))}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 7, borderTop: `1px solid ${C.border}`, paddingTop: 7, fontWeight: 700, fontSize: 12, color: C.text }}>
-            <span>Total</span><span>€63.50</span>
-          </div>
-        </>
-      }
-    />
-  );
-
-  // ── Dashboard feature mockup ─────────────────────────────────────────────────
-  const dashboardMockup = (
-    <BrowserFrame
-      imageId="feature-dashboard"
-      label="Dashboard with revenue chart, metric cards and cost breakdown"
-      overlay={
-        <div style={{ position: 'absolute', bottom: 16, right: 16, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', fontSize: 12 }}>
-          <span style={{ color: C.green, fontWeight: 700, marginRight: 6 }}>↑ +12%</span>
-          <span style={{ color: C.textSub }}>vs last month</span>
-        </div>
-      }
-    />
-  );
-
-  // ── Ingredients CSS mockup ───────────────────────────────────────────────────
-  const ingredientsMockup = (
-    <div data-image-id="feature-ingredients" style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 0.8fr 1fr 1.5fr 1.2fr', padding: '10px 16px', background: C.surfaceL, borderBottom: `1px solid ${C.border}`, fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.5px' }}>
-        {['Ingredient', 'Unit', 'Last Price', 'Supplier', 'Updated'].map(h => <div key={h}>{h}</div>)}
-      </div>
-      {[
-        ['Bacalhau Seco', 'kg', '€12.40', 'Pesca Mar', 'Today', true],
-        ['Batata Doce', '5 kg bag', '€8.50', 'Horta Verde', 'Today', true],
-        ['Azeite Virgem', '5 L', '€18.90', 'Quinta Sol', '5d ago', false],
-        ['Frango Inteiro', 'kg', '€3.20', 'Aves PT', 'Today', true],
-        ['Arroz Carolino', '5 kg', '€6.80', 'Distribuidor', '1wk ago', false],
-        ['Sal Marinho', 'kg', '€0.80', 'Salinas Sul', '2wk ago', false],
-      ].map(([name, unit, price, supplier, updated, fresh], i) => (
-        <div key={name} style={{ display: 'grid', gridTemplateColumns: '2fr 0.8fr 1fr 1.5fr 1.2fr', padding: '10px 16px', borderBottom: i < 5 ? `1px solid ${C.border}` : 'none', fontSize: 12, background: i % 2 !== 0 ? `${C.bg}55` : 'transparent' }}>
-          <div style={{ color: C.text, fontWeight: 500 }}>{name}</div>
-          <div style={{ color: C.textMuted }}>{unit}</div>
-          <div style={{ color: fresh ? C.green : C.amber, fontWeight: 600 }}>{price}</div>
-          <div style={{ color: C.textSub }}>{supplier}</div>
-          <div style={{ color: C.textMuted, fontSize: 11 }}>{updated}</div>
-        </div>
-      ))}
-    </div>
-  );
-
-  // ── Sales phone mockup ───────────────────────────────────────────────────────
-  const salesMockup = (
-    <PhoneMockup
-      imageId="feature-sales"
-      label="Daily sales form with cash/card fields filled in"
-    />
-  );
-
-  // ── Multi-venue CSS mockup ───────────────────────────────────────────────────
-  const multivenueMockup = (
-    <div data-image-id="feature-multivenue" style={{ width: '100%', maxWidth: 380, position: 'relative' }}>
-      {/* Simulated sidebar context */}
-      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
-        <div style={{ padding: '16px 16px 12px', borderBottom: `1px solid ${C.border}` }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Venue</div>
-          {/* Dropdown trigger */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: `${C.accent}18`, border: `1px solid ${C.accent}55`, borderRadius: 8, padding: '8px 12px', cursor: 'pointer' }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.accent, flexShrink: 0 }} />
-            <span style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>Tasca do Mercado</span>
-            <span style={{ color: C.textMuted, marginLeft: 'auto', fontSize: 10 }}>▾</span>
-          </div>
-        </div>
-        {/* Dropdown open */}
-        <div style={{ background: C.surfaceL }}>
-          {[
-            { name: 'Tasca do Mercado', loc: 'Lisboa', active: true },
-            { name: 'O Petisco',         loc: 'Faro',   active: false },
-            { name: 'Cantina Central',   loc: 'Porto',  active: false },
-          ].map(({ name, loc, active }, i) => (
-            <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: active ? C.accentDim : 'transparent', borderBottom: i < 2 ? `1px solid ${C.border}` : 'none', cursor: 'pointer' }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: active ? C.accent : C.textMuted, flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, color: active ? C.accent : C.textSub, fontWeight: active ? 600 : 400 }}>{name}</div>
-                <div style={{ fontSize: 10, color: C.textMuted }}>{loc}</div>
-              </div>
-              {active && <span style={{ fontSize: 10, background: C.accentDim, color: C.accent, padding: '2px 8px', borderRadius: 99, fontWeight: 700, letterSpacing: '.3px', border: `1px solid ${C.accent}44` }}>Active</span>}
-            </div>
-          ))}
-        </div>
-        <div style={{ padding: '12px 16px', fontSize: 11, color: C.textMuted, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ color: C.accent }}>+</span> Add venue
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div style={{ background: C.bg, color: C.text, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", minHeight: '100vh', overflowX: 'hidden' }}>
       <style>{`
@@ -564,12 +574,20 @@ export default function LandingPage() {
         transition={{ duration: 0.4, ease: 'easeOut' }}
         style={{ position: 'sticky', top: 0, zIndex: 100, width: '100%', background: scrolled ? 'rgba(13,13,18,0.92)' : 'rgba(13,13,18,0.85)', backdropFilter: 'blur(12px)', borderBottom: scrolled ? `1px solid ${C.border}` : '1px solid transparent', transition: 'border-color 0.3s ease, background 0.3s ease', height: isMobile ? 54 : 64 }}
       >
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '0 16px' : '0 40px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link to="/"><Logo size={isMobile ? 26 : 30} /></Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {!isMobile && <button className="lp-navlink" onClick={() => scrollTo('pricing')} style={{ padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: isDesktop ? 15 : 13, background: 'transparent', color: C.textSub, border: `1px solid ${C.border}`, cursor: 'pointer' }}>Pricing</button>}
-            {!isMobile && <Link to="/signin" className="lp-navlink" style={{ padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: isDesktop ? 15 : 13, color: C.textSub, border: `1px solid ${C.border}` }}>Sign In</Link>}
-            <Link to="/register" className="cta-btn" style={{ padding: '9px 22px', borderRadius: 10, fontWeight: 700, fontSize: 13, background: C.accent, color: '#fff', display: 'inline-block' }}>Start Free Trial</Link>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '0 12px' : '0 40px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+          <Link to="/" style={{ flexShrink: 0 }}><Logo size={isMobile ? 28 : 30} showText={!isMobile} /></Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 8, flexShrink: 0 }}>
+            {!isMobile && (
+              <>
+                <button className="lp-navlink" onClick={() => scrollTo('pricing')} style={{ padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: isDesktop ? 15 : 13, background: 'transparent', color: C.textSub, border: `1px solid ${C.border}`, cursor: 'pointer' }}>Pricing</button>
+                <button className="lp-navlink" onClick={() => scrollTo('contact')} style={{ padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: isDesktop ? 15 : 13, background: 'transparent', color: C.textSub, border: `1px solid ${C.border}`, cursor: 'pointer' }}>Contact</button>
+                <Link to="/signin" className="lp-navlink" style={{ padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: isDesktop ? 15 : 13, color: C.textSub, border: `1px solid ${C.border}` }}>Sign In</Link>
+              </>
+            )}
+            {isMobile && (
+              <Link to="/signin" className="lp-navlink" style={{ padding: '8px 12px', borderRadius: 10, fontWeight: 600, fontSize: 13, color: C.textSub, border: `1px solid ${C.border}`, flexShrink: 0, whiteSpace: 'nowrap' }}>Sign In</Link>
+            )}
+            <Link to="/register" className="cta-btn" style={{ padding: isMobile ? '8px 14px' : '9px 22px', borderRadius: 10, fontWeight: 700, fontSize: isMobile ? 12 : 13, background: C.accent, color: '#fff', display: 'inline-block', flexShrink: 0, whiteSpace: 'nowrap' }}>Start Free Trial</Link>
           </div>
         </div>
       </motion.nav>
@@ -597,7 +615,7 @@ export default function LandingPage() {
             </span>
           </motion.div>
           <motion.p variants={fadeIn} style={{ fontSize: isMobile ? 15 : 18, color: C.textSub, lineHeight: 1.75, margin: isMobile ? '0 0 28px' : '0 0 36px' }}>
-            Scan supplier invoices with AI, track daily sales, control costs and understand your business — all in one place.
+            Manage supplier invoices, track daily sales, control costs and understand your business — all in one place.
           </motion.p>
           <motion.div variants={scaleFade} style={{ display: 'flex', gap: 12, justifyContent: 'center', flexDirection: isMobile ? 'column' : 'row', alignItems: 'center', marginBottom: 16 }}>
             <Link to="/register" className="cta-btn" style={{ display: 'inline-block', padding: isMobile ? '13px 24px' : '15px 36px', borderRadius: 12, fontWeight: 700, fontSize: isMobile ? 15 : 17, background: C.accent, color: '#fff', width: isMobile ? '100%' : undefined, textAlign: 'center' }}>
@@ -651,9 +669,9 @@ export default function LandingPage() {
           />
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16 }}>
             {[
-              { icon: '💸', text: "You don't know your real food cost until month end" },
+              { icon: '💸', text: "You don't know your real margins until month end" },
               { icon: '📦', text: 'Supplier invoices pile up and never get digitised' },
-              { icon: '📉', text: 'You have no idea which days or dishes make the most money' },
+              { icon: '📉', text: 'You have no idea which days make the most money' },
             ].map(({ icon, text }, i) => (
               <RevealItem key={text} delay={i * 0.13} y={36}>
                 <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.accent}`, borderRadius: 14, padding: '28px 24px', textAlign: 'left' }}>
@@ -695,65 +713,15 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── ALTERNATING FEATURE ROWS ──────────────────────────────────────────── */}
-      <section id="features" style={{ padding: `${isMobile ? 48 : 80}px 0 0` }}>
+      {/* ── FEATURE CARDS ─────────────────────────────────────────────────────── */}
+      <section id="features" style={{ padding: vPad }}>
         <div style={{ ...inner(1100) }}>
           <SectionHeader title={<>Everything you need.<br />Nothing you don't.</>} sub="Built for small restaurant operators — not enterprise software in disguise." />
-
-          {/* ROW 1 — AI Invoice Scanning */}
-          <FeatureRow
-            badge="AI-POWERED"
-            headline="Point. Shoot. Done."
-            description="Photograph any supplier invoice. Our AI extracts every line item, unit price, tax rate, supplier NIF and IBAN in seconds. No typing required."
-            bullets={['Works with handwritten invoices', 'Supports Portuguese and Spanish invoices', 'Auto-creates supplier profile', 'Updates ingredient costs automatically']}
-            imageContent={invoiceScanMockup}
-            imageLeft
-            delay={0}
-          />
-
-          {/* ROW 2 — Dashboard & Analytics */}
-          <FeatureRow
-            badge="REAL-TIME"
-            headline="Your restaurant's vital signs. At a glance."
-            description="Revenue trends, cost breakdowns, profit margins and supplier spend — all updated the moment you log a sale or scan an invoice."
-            bullets={['Daily, weekly, monthly and yearly views', 'Cash vs card split', 'Estimated profit margin', 'Compare venues side by side']}
-            imageContent={dashboardMockup}
-            imageLeft={false}
-            delay={0.05}
-          />
-
-          {/* ROW 3 — Ingredient Cost Database */}
-          <FeatureRow
-            badge="COST CONTROL"
-            headline="Know your food cost down to the gram."
-            description="Every invoice scan automatically updates your ingredient price database. Export to your food cost sheets and technical recipe cards."
-            bullets={['Price history tracked over time', 'Export to CSV for food cost sheets', 'Know instantly when a supplier raises prices', 'Compare costs across suppliers']}
-            imageContent={ingredientsMockup}
-            imageLeft
-            delay={0.05}
-          />
-
-          {/* ROW 4 — Daily Sales Log */}
-          <FeatureRow
-            badge="DAILY TRACKING"
-            headline="Log your day in 30 seconds."
-            description="Cash sales, card sales, expenses, staff attendance. Log it manually or photograph your POS daily report and let AI fill it in for you."
-            bullets={['Scan POS ticket with AI', 'Track staff attendance per day', 'Cash vs card breakdown', 'Instant profit visibility']}
-            imageContent={salesMockup}
-            imageLeft={false}
-            delay={0.05}
-          />
-
-          {/* ROW 5 — Multi-venue */}
-          <FeatureRow
-            badge="MULTI-VENUE"
-            headline="One account. All your locations."
-            description="Switch between venues instantly. Data is always separated but your view is always unified. Perfect for restaurant groups and owners expanding."
-            bullets={['Unlimited venues on Pro plan', 'Consolidated analytics across all venues', 'Per-venue staff and supplier management', 'Compare performance between locations']}
-            imageContent={multivenueMockup}
-            imageLeft
-            delay={0.05}
-          />
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 16 }}>
+            {FEATURE_CARDS.map((card, i) => (
+              <FeatureCard key={card.title} {...card} delay={i * 0.08} />
+            ))}
+          </div>
         </div>
       </section>
 
@@ -826,6 +794,9 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── CONTACT ───────────────────────────────────────────────────────────── */}
+      <ContactSection isMobile={isMobile} inner={inner} />
+
       {/* ── FOOTER ────────────────────────────────────────────────────────────── */}
       <footer style={{ borderTop: `1px solid ${C.border}`, background: C.bg, padding: isMobile ? '36px 20px 28px' : '52px 0 32px' }}>
         <div style={{ ...inner(1100) }}>
@@ -840,7 +811,7 @@ export default function LandingPage() {
               <div style={{ display: 'flex', gap: 48, justifyContent: 'center' }}>
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 14 }}>Product</div>
-                  {[{ label: 'Features', anchor: '#features' }, { label: 'Pricing', anchor: '#pricing' }].map(({ label, anchor }) => (
+                  {[{ label: 'Features', anchor: '#features' }, { label: 'Pricing', anchor: '#pricing' }, { label: 'Contact', anchor: '#contact' }].map(({ label, anchor }) => (
                     <div key={label} style={{ marginBottom: 9 }}><a href={anchor} className="lp-navlink" style={{ fontSize: isDesktop ? 14 : 13, color: C.textSub }}>{label}</a></div>
                   ))}
                 </div>
@@ -853,7 +824,7 @@ export default function LandingPage() {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 14 }}>Company</div>
-                <div style={{ marginBottom: 9 }}><a href="mailto:hello@apexmanager.app" className="lp-navlink" style={{ fontSize: isDesktop ? 14 : 13, color: C.textSub }}>Contact</a></div>
+                <div style={{ marginBottom: 9 }}><a href="#contact" className="lp-navlink" style={{ fontSize: isDesktop ? 14 : 13, color: C.textSub }}>Contact</a></div>
                 <div style={{ fontSize: 12, color: C.textMuted, marginTop: 24 }}>© 2026 ApexManager. All rights reserved.</div>
                 <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>[Your Company] · NIF: [NIF]</div>
               </div>
@@ -867,7 +838,7 @@ export default function LandingPage() {
               <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap', marginBottom: 16 }}>
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>Product</div>
-                  {[{ label: 'Features', anchor: '#features' }, { label: 'Pricing', anchor: '#pricing' }].map(({ label, anchor }) => (
+                  {[{ label: 'Features', anchor: '#features' }, { label: 'Pricing', anchor: '#pricing' }, { label: 'Contact', anchor: '#contact' }].map(({ label, anchor }) => (
                     <div key={label} style={{ marginBottom: 8 }}><a href={anchor} style={{ fontSize: 13, color: C.textSub }}>{label}</a></div>
                   ))}
                 </div>

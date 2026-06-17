@@ -799,7 +799,7 @@ function ExpensesPage({ expenses, setExpenses, venue }) {
   return (
     <div style={{ padding: "28px 32px", maxWidth: 900 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-        <h1 style={{ margin: 0, fontSize: 22, color: C.text }}>Fixed Expenses</h1>
+        <h1 style={{ margin: 0, fontSize: 22, color: C.text }}>Expenses</h1>
         <Btn onClick={() => setShowAdd(true)}>+ Add Expense</Btn>
       </div>
 
@@ -813,7 +813,7 @@ function ExpensesPage({ expenses, setExpenses, venue }) {
         <div style={{ marginLeft: "auto", fontSize: 13, color: C.text, display: "flex", alignItems: "center" }}>Total: <strong style={{ marginLeft: 6, color: C.red }}>{fmtEur(total)}</strong></div>
       </div>
 
-      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add Fixed Expense">
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add Expense">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           <div style={{ gridColumn: "1/-1" }}><Input label="Expense Name" value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="e.g. Electricity bill" /></div>
           <Input label="Amount (€)" type="number" value={form.amount} onChange={v => setForm(p => ({ ...p, amount: v }))} prefix="€" />

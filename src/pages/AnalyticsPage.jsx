@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect, useRef, Fragment } from "react";
 import { buildReportHTML, buildExtendedInsights } from "./auditReport.js";
+import UpgradePrompt from "../components/UpgradePrompt.jsx";
+import { useSubscriptionGate } from "../hooks/useSubscriptionGate.js";
 
 const C = {
   bg: "#0D0D12", surface: "#16161E", surfaceL: "#1E1E28", border: "#2A2A36",
@@ -85,12 +87,12 @@ function Btn({ onClick, children, variant = "primary", size = "md", style = {} }
   );
 }
 
-function Input({ label, value, onChange, type = "text", style = {} }) {
+function Input({ label, value, onChange, type = "text", style = {}, disabled = false }) {
   const { pick } = useTypeScale();
   return (
     <div style={style}>
       {label && <div style={{ fontSize: pick(12, 13), color: C.textSub, marginBottom: 5 }}>{label}</div>}
-      <input type={type} value={value} onChange={e => onChange(e.target.value)} style={{ width: "100%", background: C.surfaceL, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "8px 10px", fontSize: pick(14, 15), outline: "none", boxSizing: "border-box" }} />
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} disabled={disabled} style={{ width: "100%", background: C.surfaceL, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "8px 10px", fontSize: pick(14, 15), outline: "none", boxSizing: "border-box", opacity: disabled ? 0.6 : 1, cursor: disabled ? "not-allowed" : "text" }} />
     </div>
   );
 }
@@ -531,7 +533,7 @@ const AUDIT_OPTIONS = [
   { id: "full", icon: "📋", title: "Full Audit", description: "Complete business report — all sections above plus executive summary and key insights", fullHighlight: true },
 ];
 
-function AuditModal({ open, onClose, sections, onToggle, onGenerate }) {
+function AuditModal({ open, onClose, sections, onToggle, onGenerate, isFree, onUpgradeAudit }) {
   if (!open) return null;
   const isFull = sections.includes("full");
   const individual = ["sales", "expenses", "staff"].filter(s => sections.includes(s));
@@ -575,9 +577,20 @@ function AuditModal({ open, onClose, sections, onToggle, onGenerate }) {
 
         <div style={{ fontSize: 12, color: summary.color, marginBottom: 20, minHeight: 18 }}>{summary.text}</div>
 
+        {isFree && (
+          <div style={{ fontSize: 12, color: C.amber, marginBottom: 12 }}>📋 Audit reports require a subscription</div>
+        )}
+
         <button
           disabled={!sections.length}
-          onClick={onGenerate}
+          onClick={() => {
+            if (isFree) {
+              onClose();
+              onUpgradeAudit();
+              return;
+            }
+            onGenerate();
+          }}
           style={{
             width: "100%", padding: "12px 20px", borderRadius: 10, border: "none",
             background: C.accent, color: "#fff", fontSize: 14, fontWeight: 600, cursor: sections.length ? "pointer" : "not-allowed",
@@ -591,8 +604,10 @@ function AuditModal({ open, onClose, sections, onToggle, onGenerate }) {
   );
 }
 
-export default function AnalyticsPage({ sales, expenses, invoices, venues, staff = [], suppliers = [], ingredients = [] }) {
+export default function AnalyticsPage({ sales, expenses, invoices, venues, staff = [], suppliers = [], ingredients = [], subscription, setPage }) {
   const { isMobile, isTablet, pick } = useTypeScale();
+  const { isFree } = useSubscriptionGate(subscription);
+  const [upgradePrompt, setUpgradePrompt] = useState(null);
   const [from, setFrom] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 1); return d.toISOString().split("T")[0]; });
   const [to, setTo] = useState(today);
   const [venueId, setVenueId] = useState("");
@@ -604,6 +619,23 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
   const [showMonthlyTable, setShowMonthlyTable] = useState(false);
   const [auditModal, setAuditModal] = useState(false);
   const [auditSections, setAuditSections] = useState([]);
+
+  useEffect(() => {
+    if (isFree) {
+      const d = new Date();
+      setTo(d.toISOString().split("T")[0]);
+      d.setDate(d.getDate() - 7);
+      setFrom(d.toISOString().split("T")[0]);
+    }
+  }, [isFree]);
+
+  const tryExport = (filename, rows) => {
+    if (isFree) {
+      setUpgradePrompt("export");
+      return;
+    }
+    exportCSV(filename, rows);
+  };
 
   const matchVenue = item => !venueId || item.venue_id === venueId;
   const inDate = d => d && d >= from && d <= to;
@@ -1025,8 +1057,20 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
 
       {/* Filter bar */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: pick(12, 14), alignItems: "flex-end", marginBottom: pick(16, 20), width: "100%" }}>
-        <Input label="From" type="date" value={from} onChange={setFrom} style={{ flex: isMobile ? "1 1 100%" : "0 0 140px" }} />
-        <Input label="To" type="date" value={to} onChange={setTo} style={{ flex: isMobile ? "1 1 100%" : "0 0 140px" }} />
+        <div
+          style={{ flex: isMobile ? "1 1 100%" : "0 0 140px", ...(isFree ? { cursor: "pointer" } : {}) }}
+          onClick={isFree ? () => setUpgradePrompt("range") : undefined}
+          title={isFree ? "Upgrade to unlock custom date ranges" : undefined}
+        >
+          <Input label="From" type="date" value={from} onChange={setFrom} disabled={isFree} style={{ flex: isMobile ? "1 1 100%" : "0 0 140px" }} />
+        </div>
+        <div
+          style={{ flex: isMobile ? "1 1 100%" : "0 0 140px", ...(isFree ? { cursor: "pointer" } : {}) }}
+          onClick={isFree ? () => setUpgradePrompt("range") : undefined}
+          title={isFree ? "Upgrade to unlock custom date ranges" : undefined}
+        >
+          <Input label="To" type="date" value={to} onChange={setTo} disabled={isFree} style={{ flex: isMobile ? "1 1 100%" : "0 0 140px" }} />
+        </div>
         {venues.length > 0 && (
           <div style={{ flex: isMobile ? "1 1 100%" : "0 0 160px" }}>
             <Select label="Venue" value={venueId} onChange={setVenueId}
@@ -1035,12 +1079,45 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
         )}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", flex: 1 }}>
           {[["week", "This Week"], ["month", "This Month"], ["lastmonth", "Last Month"], ["year", "This Year"], ["all", "All Time"]].map(([k, l]) => (
-            <button key={k} onClick={() => { const r = getQuickRange(k, sales); setFrom(r.from); setTo(r.to); }}
-              style={{ padding: `${pick(7, 8)}px ${pick(12, 16)}px`, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", color: C.textSub, fontSize: pick(12, 13), cursor: "pointer", whiteSpace: "nowrap" }}>{l}</button>
+            <button key={k} onClick={() => {
+              if (isFree && k !== "week") {
+                setUpgradePrompt("range");
+                return;
+              }
+              const r = getQuickRange(k, sales);
+              setFrom(r.from);
+              setTo(r.to);
+            }}
+              style={{ padding: `${pick(7, 8)}px ${pick(12, 16)}px`, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", color: C.textSub, fontSize: pick(12, 13), cursor: "pointer", whiteSpace: "nowrap" }}>
+              {l}{isFree && k !== "week" ? " 🔒" : ""}
+            </button>
           ))}
         </div>
         <Btn onClick={() => { setAuditSections([]); setAuditModal(true); }} style={{ marginLeft: "auto", flexShrink: 0 }}>📋 Audit Report</Btn>
       </div>
+
+      {isFree && (
+        <div style={{
+          background: "#7C5CFC11",
+          border: "1px solid #7C5CFC33",
+          borderRadius: 8,
+          padding: "8px 14px",
+          fontSize: 12,
+          color: C.textSub,
+          marginBottom: 16,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 10,
+          flexWrap: "wrap",
+        }}>
+          <span>🔒 Free plan shows last 7 days only</span>
+          <button type="button" onClick={() => setPage("pricing")} style={{
+            background: "none", border: "none", color: C.accent,
+            cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0,
+          }}>Upgrade to unlock →</button>
+        </div>
+      )}
 
       <AuditModal
         open={auditModal}
@@ -1048,6 +1125,8 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
         sections={auditSections}
         onToggle={toggleAuditSection}
         onGenerate={() => generateAudit(auditSections)}
+        isFree={isFree}
+        onUpgradeAudit={() => setUpgradePrompt("audit")}
       />
 
       {/* Tabs */}
@@ -1125,10 +1204,10 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
       {hasData && tab === "sales" && (
         <>
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-            <Btn variant="ghost" size="sm" onClick={() => exportCSV("sales-report.csv", [
+            <Btn variant="ghost" size="sm" onClick={() => tryExport("sales-report.csv", [
               ["Date", "Day", "Cash", "Card", "Total", "Daily Costs", "POS", "XPTO", "Staff", "Notes"],
               ...filteredSales.map(s => [s.date, dowShort(s.date), s.cash, s.card, (s.cash || 0) + (s.card || 0), s.cash_expenses, s.pos, s.xpto, (s.staff || []).join("; "), s.note || ""]),
-            ])}>📥 Export Sales CSV</Btn>
+            ])}>{isFree ? "📥 Export 🔒" : "📥 Export Sales CSV"}</Btn>
           </div>
           <div style={metricsGrid}>
             <MetricCard label="Total Sales" value={fmtEur(totalRevenue)} color={C.green} hideIcon={isMobile} />
@@ -1177,10 +1256,10 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
       {tab === "expenses" && (
         <>
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-            <Btn variant="ghost" size="sm" onClick={() => exportCSV("expenses-report.csv", [
+            <Btn variant="ghost" size="sm" onClick={() => tryExport("expenses-report.csv", [
               ["Date", "Name", "Type", "Amount", "Recurring", "Venue"],
               ...filteredExp.map(e => [e.date, e.name, e.type, e.amount, e.recurring ? "Yes" : "No", venues.find(v => v.id === e.venue_id)?.name || ""]),
-            ])}>📥 Export Expenses CSV</Btn>
+            ])}>{isFree ? "📥 Export 🔒" : "📥 Export Expenses CSV"}</Btn>
           </div>
           <div style={metricsGrid}>
             <MetricCard label="Expenses" value={fmtEur(fixedExp)} color={C.red} hideIcon={isMobile} />
@@ -1212,14 +1291,14 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
               rows={filteredExp.map(e => [{ content: e.name }, { content: <Badge color={typeColors[e.type] || C.textSub}>{e.type}</Badge> }, { content: fmtEur(e.amount), color: C.red }, { content: e.recurring ? "Yes" : "No" }, { content: e.date }])} />
           </Card>
           <SectionHeading action={
-            <Btn variant="ghost" size="sm" onClick={() => exportCSV("supplier-report.csv", [
+            <Btn variant="ghost" size="sm" onClick={() => tryExport("supplier-report.csv", [
               ["Supplier", "NIF", "IBAN", "Total Invoices", "Total Spend", "Pending Amount", "Paid Amount", "Last Invoice Date"],
               ...supplierRankings.map(s => {
                 const sup = suppliers.find(x => x.name === s.name);
                 const paidAmtS = filteredInv.filter(i => i.supplier_name === s.name && i.status === "paid").reduce((a, i) => a + (i.total || 0), 0);
                 return [s.name, sup?.nif || "", sup?.iban || "", s.count, s.spend.toFixed(2), s.pendingAmt.toFixed(2), paidAmtS.toFixed(2), s.lastDate];
               }),
-            ])}>📥 Export Suppliers CSV</Btn>
+            ])}>{isFree ? "📥 Export 🔒" : "📥 Export Suppliers CSV"}</Btn>
           }>Supplier Invoices</SectionHeading>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(3,1fr)", gap: pick(10, 12), marginBottom: pick(14, 16) }}>
             <MetricCard label="Total Suppliers" value={suppliers.length} color={C.accent} hideIcon={isMobile} />
@@ -1356,10 +1435,10 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
       {tab === "staff" && (
         <>
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-            <Btn variant="ghost" size="sm" onClick={() => exportCSV("staff-report.csv", [
+            <Btn variant="ghost" size="sm" onClick={() => tryExport("staff-report.csv", [
               ["Name", "Job Title", "Status", "Phone", "Days Worked", "Days Missed", "Attendance %", "Revenue on Shifts", "Avg per Shift"],
               ...staffReport.map(s => [s.name, s.job_title || "", s.status, s.phone || "", s.worked, s.missed, s.rate.toFixed(1), s.rev.toFixed(2), s.avgShift.toFixed(2)]),
-            ])}>📥 Export Staff Report CSV</Btn>
+            ])}>{isFree ? "📥 Export 🔒" : "📥 Export Staff Report CSV"}</Btn>
           </div>
           <div style={metricsGrid}>
             <MetricCard label="Total Staff" value={filteredStaff.length} color={C.accent} hideIcon={isMobile} />
@@ -1444,6 +1523,12 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
         </>
       )}
 
+      <UpgradePrompt
+        open={!!upgradePrompt}
+        onClose={() => setUpgradePrompt(null)}
+        feature={upgradePrompt}
+        setPage={setPage}
+      />
     </div>
   );
 }
