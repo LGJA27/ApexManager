@@ -66,22 +66,28 @@ const C = {
 };
 
 // ─── CLAUDE API (proxied through /api/scan) ──────────────────────────────────
-async function callClaude(messages, systemPrompt, imageBase64 = null, imageType = "image/jpeg") {
-  const prompt = messages[messages.length - 1].content;
-
+async function callClaude(prompt, systemPrompt, imageBase64, imageType = "image/jpeg") {
   const res = await fetch("/api/scan", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ imageBase64, imageType, prompt, systemPrompt }),
+    body: JSON.stringify({ prompt, systemPrompt, imageBase64, imageType }),
   });
 
   if (!res.ok) {
-    const { error } = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(error || "Scan API error");
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || "Scan failed");
   }
 
-  const { result } = await res.json();
-  return result ?? "";
+  const data = await res.json();
+  return data.result;
+}
+
+function getScanErrorMessage(error) {
+  const msg = error?.message || "";
+  if (msg.includes("429")) return "Too many requests. Please wait a moment and try again.";
+  if (msg.includes("401")) return "API configuration error. Please contact support.";
+  if (msg.includes("JSON")) return "Could not read document clearly. Try a sharper photo with better lighting.";
+  return "Scan failed. Try a clearer photo or use manual entry.";
 }
 
 // ─── LOCAL STORAGE HELPERS ───────────────────────────────────────────────────
@@ -1312,6 +1318,7 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
   const [scanMode, setScanMode] = useState(false);
   const [scanLoading, setScanLoading] = useState(false);
   const [scanResult, setScanResult] = useState(null);
+  const [scanError, setScanError] = useState("");
   const [scanLimitReached, setScanLimitReached] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -1389,14 +1396,13 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
     const limit = subscription?.scan_limit ?? 10;
     if (used >= limit) { setScanLimitReached(true); return; }
 
+    setScanError("");
     setScanLoading(true);
     try {
       const b64 = await fileToBase64(file);
-      const result = await callClaude(
-        [{ role: "user", content: "Extract daily sales data from this receipt/ticket. Return ONLY valid JSON with fields: cash (number), card (number), total (number), date (YYYY-MM-DD or null), notes (string)." }],
-        "You are a data extraction assistant for restaurant management. Extract financial data from receipt images precisely. Return only valid JSON, no markdown.",
-        b64, file.type
-      );
+      const prompt = "Extract daily sales data from this receipt/ticket. Return ONLY valid JSON with fields: cash (number), card (number), total (number), date (YYYY-MM-DD or null), notes (string).";
+      const systemPrompt = "You are a data extraction assistant for restaurant management. Extract financial data from receipt images precisely. Return only valid JSON, no markdown.";
+      const result = await callClaude(prompt, systemPrompt, b64, file.type);
       const clean = result.replace(/```json|```/g, "").trim();
       const data = JSON.parse(clean);
       setScanResult(data);
@@ -1412,7 +1418,7 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
       supabase.from("subscriptions").update({ scans_used_this_month: newCount }).eq("user_id", subscription.user_id);
       setSubscription(prev => ({ ...prev, scans_used_this_month: newCount }));
     } catch (e) {
-      alert("Could not parse receipt. Please fill in manually.");
+      setScanError(getScanErrorMessage(e));
     }
     setScanLoading(false);
   };
@@ -1462,6 +1468,32 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title={scanMode ? "Scan Daily Receipt" : "Add Sales Log"}>
         {scanMode && !scanResult && (
           <div style={{ marginBottom: 20 }}>
+            {scanError && (
+              <div style={{
+                background: "#F0406022",
+                border: "1px solid #F0406044",
+                borderRadius: 9,
+                padding: "10px 14px",
+                color: "#F04060",
+                fontSize: 13,
+                marginBottom: 16,
+                display: "flex",
+                gap: 8,
+                alignItems: "center",
+              }}>
+                <span>⚠</span>
+                <span>{scanError}</span>
+              </div>
+            )}
+            {scanError && (
+              <button
+                type="button"
+                onClick={() => { setScanError(""); setScanMode(false); }}
+                style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, marginBottom: 16, padding: 0, textDecoration: "underline" }}
+              >
+                Try manual entry instead
+              </button>
+            )}
             <UploadZone onFile={scanReceipt} loading={scanLoading} label="Upload photo of daily sales ticket" />
           </div>
         )}
@@ -1872,6 +1904,7 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
   const isWide = w >= 1280;
   const [showScan, setShowScan] = useState(false);
   const [scanLoading, setScanLoading] = useState(false);
+  const [scanError, setScanError] = useState("");
   const [extracted, setExtracted] = useState(null);
   const [editItems, setEditItems] = useState([]);
   const [showManual, setShowManual] = useState(false);
@@ -1912,11 +1945,13 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
     const limit = subscription?.scan_limit ?? 10;
     if (used >= limit) { setScanLimitReached(true); return; }
 
+    setScanError("");
     setScanLoading(true);
     try {
       const b64 = await fileToBase64(file);
-      const raw = await callClaude(
-        [{ role: "user", content: `Analyse this supplier invoice image and extract ALL data. Return ONLY valid JSON with exactly these fields:
+      const prompt = `You are analyzing a supplier invoice image for a restaurant management system. Extract ALL visible data precisely.
+
+Return ONLY a valid JSON object with exactly this structure (use null for any field not visible):
 {
   "supplierName": "string",
   "supplierNIF": "string or null",
@@ -1925,29 +1960,44 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
   "supplierPhone": "string or null",
   "date": "YYYY-MM-DD or null",
   "invoiceNumber": "string or null",
-  "items": [{"name":"string","qty":number,"unit":"string","unitPrice":number,"total":number}],
+  "dueDate": "YYYY-MM-DD or null",
+  "items": [
+    {
+      "name": "string",
+      "qty": number,
+      "unit": "string (kg/L/un/g/etc)",
+      "unitPrice": number,
+      "total": number
+    }
+  ],
   "subtotal": number,
-  "tax": number,
   "taxRate": number,
+  "tax": number,
   "total": number,
   "currency": "EUR"
-}` }],
-        "You are a precise invoice data extraction engine for a restaurant management system. Extract every line item with accuracy. Return ONLY valid JSON.",
-        b64, file.type
-      );
+}
+
+Rules:
+- All monetary values as numbers without currency symbols
+- Dates in YYYY-MM-DD format only
+- If items are not itemized, return an empty array []
+- taxRate as percentage (e.g. 23 for 23% VAT)
+- Return ONLY the JSON object, no explanation, no markdown`;
+
+      const systemPrompt = `You are a precise OCR and data extraction engine specialized in Portuguese and Spanish supplier invoices. Extract data exactly as shown. Return only valid JSON.`;
+
+      const raw = await callClaude(prompt, systemPrompt, b64, file.type);
       const clean = raw.replace(/```json|```/g, "").trim();
       const data = JSON.parse(clean);
       setExtracted(data);
       setEditItems(data.items || []);
-      setScanLoading(false);
-      // increment usage counter
       const newCount = used + 1;
       supabase.from("subscriptions").update({ scans_used_this_month: newCount }).eq("user_id", subscription.user_id);
       setSubscription(prev => ({ ...prev, scans_used_this_month: newCount }));
     } catch (e) {
-      setScanLoading(false);
-      alert("Could not parse invoice. Try manual entry.");
+      setScanError(getScanErrorMessage(e));
     }
+    setScanLoading(false);
   };
 
   const saveExtracted = async () => {
@@ -1973,7 +2023,7 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
       supplierNif: extracted.supplierNIF || null,
       supplierIban: extracted.supplierIBAN || null,
       date: extracted.date || today(),
-      dueDate: null,
+      dueDate: extracted.dueDate || null,
       invoiceNumber: extracted.invoiceNumber || "",
       items: editItems,
       subtotal: extracted.subtotal || 0,
@@ -2110,9 +2160,37 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
       </div>
 
       {/* SCAN MODAL */}
-      <Modal open={showScan} onClose={() => { setShowScan(false); setExtracted(null); setEditItems([]); }} title="Scan Supplier Invoice" width={700}>
+      <Modal open={showScan} onClose={() => { setShowScan(false); setExtracted(null); setEditItems([]); setScanError(""); }} title="Scan Supplier Invoice" width={700}>
         {!extracted ? (
-          <UploadZone onFile={scanInvoice} loading={scanLoading} label="Upload photo or PDF of supplier invoice" />
+          <>
+            {scanError && (
+              <div style={{
+                background: "#F0406022",
+                border: "1px solid #F0406044",
+                borderRadius: 9,
+                padding: "10px 14px",
+                color: "#F04060",
+                fontSize: 13,
+                marginBottom: 16,
+                display: "flex",
+                gap: 8,
+                alignItems: "center",
+              }}>
+                <span>⚠</span>
+                <span>{scanError}</span>
+              </div>
+            )}
+            {scanError && (
+              <button
+                type="button"
+                onClick={() => { setShowScan(false); setScanError(""); setShowManual(true); }}
+                style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, marginBottom: 16, padding: 0, textDecoration: "underline" }}
+              >
+                Try manual entry instead
+              </button>
+            )}
+            <UploadZone onFile={scanInvoice} loading={scanLoading} label="Upload photo or PDF of supplier invoice" />
+          </>
         ) : (
           <div>
             <div style={{ background: C.greenDim, border: `1px solid ${C.green}44`, borderRadius: 9, padding: 12, marginBottom: 16, fontSize: 13, color: C.green }}>✓ Invoice extracted. Review before saving.</div>
