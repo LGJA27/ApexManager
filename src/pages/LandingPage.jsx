@@ -1,5 +1,6 @@
-// IMAGES NEEDED — replace each <ImagePlaceholder imageId="X" /> with <img src="/images/X.png" alt="..." />
-// hero-dashboard         — Full dashboard screenshot with real data, displayed in browser frame
+// IMAGES NEEDED — add paths to LANDING_IMAGES below as assets become available
+// hero-dashboard         ✓ /images/hero-dashboard.png
+// after-dashboard        ✓ /images/after-dashboard.png
 // feature-invoice-scan   — Phone camera pointed at a paper invoice (portrait)
 // feature-dashboard      — Dashboard analytics view with charts and real data
 // feature-sales          — Mobile daily sales form with numbers filled in
@@ -8,7 +9,7 @@
 // testimonial-avatar-2   — Ana Rodrigues portrait photo
 // testimonial-avatar-3   — Carlos Ferreira portrait photo
 // before-chaos           — Scattered paper invoices / messy Excel screenshot
-// after-dashboard        — Clean dashboard screenshot with organised data
+// after-dashboard        ✓ /images/after-dashboard.png
 
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -88,8 +89,25 @@ const fadeUp   = { hidden: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0, tran
 const fadeIn   = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { duration: 0.5, ease: 'easeOut' } } };
 const scaleFade = { hidden: { opacity: 0, scale: 0.95 }, show: { opacity: 1, scale: 1, transition: { duration: 0.5, ease: 'easeOut' } } };
 
+const LANDING_IMAGES = {
+  'hero-dashboard': '/images/hero-dashboard.png',
+  'after-dashboard': '/images/after-dashboard.png',
+};
+
 // ─── ImagePlaceholder ─────────────────────────────────────────────────────────
 function ImagePlaceholder({ imageId, aspectRatio = '16/9', label }) {
+  const src = LANDING_IMAGES[imageId];
+  if (src) {
+    return (
+      <div data-image-id={imageId} style={{ aspectRatio, overflow: 'hidden', background: C.bg }}>
+        <img
+          src={src}
+          alt={label || imageId}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
+        />
+      </div>
+    );
+  }
   return (
     <div
       data-image-id={imageId}
