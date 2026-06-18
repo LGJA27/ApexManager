@@ -12,6 +12,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
 import { motion } from 'framer-motion';
 import { PLANS } from '../config/plans.js';
 import Logo from '../components/Logo.jsx';
@@ -249,6 +251,7 @@ function FeatureCard({ icon, title, description, delay = 0 }) {
 
 // ─── Contact form ───────────────────────────────────────────────────────────────
 function ContactSection({ isMobile, inner }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState({ name: '', email: '', subject: 'General Question', message: '' });
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -271,7 +274,7 @@ function ContactSection({ isMobile, inner }) {
     e.preventDefault();
     setError('');
     if (!form.name.trim() || !form.email.trim() || !form.subject || !form.message.trim()) {
-      setError('Please fill in all fields.');
+      setError(t('auth.fillFields'));
       return;
     }
     setSaving(true);
@@ -288,8 +291,8 @@ function ContactSection({ isMobile, inner }) {
     <section id="contact" style={{ padding: isMobile ? '64px 0' : '88px 0', background: C.surface }}>
       <div style={{ ...inner(600), textAlign: 'center' }}>
         <RevealItem y={24}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: C.text, margin: '0 0 12px' }}>Get in touch</h2>
-          <p style={{ fontSize: 16, color: C.textSub, margin: '0 0 32px', lineHeight: 1.6 }}>Have a question or need help? Send us a message.</p>
+          <h2 style={{ fontSize: 28, fontWeight: 800, color: C.text, margin: '0 0 12px' }}>{t('landing.getInTouch')}</h2>
+          <p style={{ fontSize: 16, color: C.textSub, margin: '0 0 32px', lineHeight: 1.6 }}>{t('landing.contactSub')}</p>
         </RevealItem>
         <RevealItem y={20} delay={0.08}>
           <form onSubmit={submit} style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -312,9 +315,9 @@ function ContactSection({ isMobile, inner }) {
               <textarea required value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} placeholder="How can we help?" rows={5} style={{ ...inputStyle, minHeight: 120, resize: 'vertical' }} />
             </div>
             {error && <div style={{ fontSize: 13, color: C.red }}>{error}</div>}
-            {success && <div style={{ fontSize: 14, color: C.green, fontWeight: 600 }}>Message sent! We'll get back to you within 24 hours.</div>}
+            {success && <div style={{ fontSize: 14, color: C.green, fontWeight: 600 }}>{t('landing.messageSent')}</div>}
             <button type="submit" disabled={saving} style={{ width: '100%', padding: '14px 0', borderRadius: 10, border: 'none', cursor: saving ? 'wait' : 'pointer', fontWeight: 700, fontSize: 15, background: C.accent, color: '#fff', marginTop: 4, opacity: saving ? 0.7 : 1 }}>
-              {saving ? 'Sending…' : 'Send Message →'}
+              {saving ? t('common.loading') : t('landing.sendMessage')}
             </button>
           </form>
         </RevealItem>
@@ -417,6 +420,7 @@ function FaqItem({ q, a, index }) {
 const PAID_PLANS = ['starter', 'growth', 'pro'];
 
 function LandingPricingCards() {
+  const { t } = useTranslation();
   const [billing, setBilling] = useState('monthly');
   const [hovered, setHovered] = useState(null);
   const navigate = useNavigate();
@@ -468,7 +472,7 @@ function LandingPricingCards() {
                     ))}
                   </ul>
                   <button onClick={() => navigate('/register')} style={{ width: '100%', padding: '13px 0', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14, background: plan.popular ? C.accent : C.accentDim, color: plan.popular ? '#fff' : C.accent, transition: 'all .18s', transform: isH ? 'scale(1.03)' : 'scale(1)' }}>
-                    Start free trial
+                    {t('landing.startTrial')}
                   </button>
                 </div>
               </div>
@@ -476,7 +480,7 @@ function LandingPricingCards() {
           );
         })}
       </div>
-      <p style={{ textAlign: 'center', marginTop: 28, fontSize: 13, color: C.textMuted }}>14-day free trial on all plans · Cancel anytime · Prices in EUR</p>
+      <p style={{ textAlign: 'center', marginTop: 28, fontSize: 13, color: C.textMuted }}>{t('landing.trustLine')}</p>
     </div>
   );
 }
@@ -519,6 +523,7 @@ function SectionHeader({ title, sub }) {
 
 // ─── Main landing page ────────────────────────────────────────────────────────
 export default function LandingPage() {
+  const { t } = useTranslation();
   const w = useWindowWidth();
   const isMobile = w < 768;
   const isTablet = w >= 768;
@@ -579,15 +584,19 @@ export default function LandingPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 8, flexShrink: 0 }}>
             {!isMobile && (
               <>
-                <button className="lp-navlink" onClick={() => scrollTo('pricing')} style={{ padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: isDesktop ? 15 : 13, background: 'transparent', color: C.textSub, border: `1px solid ${C.border}`, cursor: 'pointer' }}>Pricing</button>
-                <button className="lp-navlink" onClick={() => scrollTo('contact')} style={{ padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: isDesktop ? 15 : 13, background: 'transparent', color: C.textSub, border: `1px solid ${C.border}`, cursor: 'pointer' }}>Contact</button>
-                <Link to="/signin" className="lp-navlink" style={{ padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: isDesktop ? 15 : 13, color: C.textSub, border: `1px solid ${C.border}` }}>Sign In</Link>
+                <button className="lp-navlink" onClick={() => scrollTo('pricing')} style={{ padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: isDesktop ? 15 : 13, background: 'transparent', color: C.textSub, border: `1px solid ${C.border}`, cursor: 'pointer' }}>{t('landing.pricing')}</button>
+                <LanguageSwitcher />
+                <Link to="/signin" className="lp-navlink" style={{ padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: isDesktop ? 15 : 13, color: C.textSub, border: `1px solid ${C.border}` }}>{t('landing.signIn')}</Link>
+                <button className="lp-navlink" onClick={() => scrollTo('contact')} style={{ padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: isDesktop ? 15 : 13, background: 'transparent', color: C.textSub, border: `1px solid ${C.border}`, cursor: 'pointer' }}>{t('landing.contact')}</button>
               </>
             )}
             {isMobile && (
-              <Link to="/signin" className="lp-navlink" style={{ padding: '8px 12px', borderRadius: 10, fontWeight: 600, fontSize: 13, color: C.textSub, border: `1px solid ${C.border}`, flexShrink: 0, whiteSpace: 'nowrap' }}>Sign In</Link>
+              <>
+                <LanguageSwitcher />
+                <Link to="/signin" className="lp-navlink" style={{ padding: '8px 12px', borderRadius: 10, fontWeight: 600, fontSize: 13, color: C.textSub, border: `1px solid ${C.border}`, flexShrink: 0, whiteSpace: 'nowrap' }}>{t('landing.signIn')}</Link>
+              </>
             )}
-            <Link to="/register" className="cta-btn" style={{ padding: isMobile ? '8px 14px' : '9px 22px', borderRadius: 10, fontWeight: 700, fontSize: isMobile ? 12 : 13, background: C.accent, color: '#fff', display: 'inline-block', flexShrink: 0, whiteSpace: 'nowrap' }}>Start Free Trial</Link>
+            <Link to="/register" className="cta-btn" style={{ padding: isMobile ? '8px 14px' : '9px 22px', borderRadius: 10, fontWeight: 700, fontSize: isMobile ? 12 : 13, background: C.accent, color: '#fff', display: 'inline-block', flexShrink: 0, whiteSpace: 'nowrap' }}>{t('landing.startTrial')}</Link>
           </div>
         </div>
       </motion.nav>
@@ -606,27 +615,27 @@ export default function LandingPage() {
           </motion.div>
           <motion.div variants={fadeUp}>
             <span style={{ display: 'block', fontSize: isMobile ? '36px' : isTablet ? '52px' : '68px', fontWeight: 900, lineHeight: 1.1, color: C.text }}>
-              Run your restaurant.
+              {t('landing.hero1')}
             </span>
           </motion.div>
           <motion.div variants={fadeUp} style={{ marginBottom: isMobile ? 18 : 20 }}>
             <span style={{ display: 'block', fontSize: isMobile ? '36px' : isTablet ? '52px' : '68px', fontWeight: 900, lineHeight: 1.1, color: C.accent }}>
-              Not your spreadsheets.
+              {t('landing.hero2')}
             </span>
           </motion.div>
           <motion.p variants={fadeIn} style={{ fontSize: isMobile ? 15 : 18, color: C.textSub, lineHeight: 1.75, margin: isMobile ? '0 0 28px' : '0 0 36px' }}>
-            Manage supplier invoices, track daily sales, control costs and understand your business — all in one place.
+            {t('landing.heroSub')}
           </motion.p>
           <motion.div variants={scaleFade} style={{ display: 'flex', gap: 12, justifyContent: 'center', flexDirection: isMobile ? 'column' : 'row', alignItems: 'center', marginBottom: 16 }}>
             <Link to="/register" className="cta-btn" style={{ display: 'inline-block', padding: isMobile ? '13px 24px' : '15px 36px', borderRadius: 12, fontWeight: 700, fontSize: isMobile ? 15 : 17, background: C.accent, color: '#fff', width: isMobile ? '100%' : undefined, textAlign: 'center' }}>
-              Start free — no card needed
+              {t('landing.startFree')}
             </Link>
             <button onClick={() => scrollTo('features')} style={{ padding: isMobile ? '13px 24px' : '15px 36px', borderRadius: 12, fontWeight: 700, fontSize: isMobile ? 15 : 17, background: 'transparent', color: C.textSub, border: `1px solid ${C.border}`, cursor: 'pointer', width: isMobile ? '100%' : undefined, transition: 'opacity .15s' }}>
-              See how it works
+              {t('landing.seeHow')}
             </button>
           </motion.div>
           <motion.div variants={fadeIn} style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.8 }}>
-            14-day free trial · Cancel anytime · GDPR compliant · Made for European restaurants
+            {t('landing.trustLine')}
           </motion.div>
         </motion.div>
 
@@ -651,7 +660,7 @@ export default function LandingPage() {
       <section style={{ borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, background: C.surface, padding: isMobile ? '28px 0' : '36px 0' }}>
         <div style={{ ...inner(1100) }}>
           <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 20, fontWeight: 500, letterSpacing: '.4px', textTransform: 'uppercase', textAlign: 'center' }}>
-            Trusted by restaurant owners across Portugal
+            {t('landing.trustedBy')}
           </div>
           <div ref={statsRef} style={{ display: 'flex', justifyContent: isDesktop ? 'space-evenly' : 'center', gap: 16, flexWrap: 'wrap' }}>
             <RevealItem delay={0} y={20}><StatPill target={2300} format={v => `€${(v/1000).toFixed(1)}M`} label="invoices scanned" active={statsActive} /></RevealItem>
@@ -785,10 +794,10 @@ export default function LandingPage() {
               Join hundreds of restaurant owners who stopped guessing and started knowing.
             </p>
             <Link to="/register" className="cta-btn" style={{ display: 'inline-block', padding: '15px 40px', borderRadius: 12, fontWeight: 700, fontSize: 17, background: C.accent, color: '#fff' }}>
-              Start your free trial
+              {t('landing.startTrial')}
             </Link>
             <div style={{ fontSize: 13, color: C.textMuted, marginTop: 20 }}>
-              No credit card required · 14-day free trial · Cancel anytime
+              {t('landing.trustLine')}
             </div>
           </RevealItem>
         </div>
@@ -805,13 +814,13 @@ export default function LandingPage() {
               <div>
                 <div style={{ marginBottom: 14 }}><Logo size={26} /></div>
                 <p style={{ fontSize: isDesktop ? 14 : 13, color: C.textMuted, margin: 0, lineHeight: 1.75, maxWidth: 220 }}>
-                  Restaurant intelligence platform for small operators across Europe.
+                  {t('auth.tagline')}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 48, justifyContent: 'center' }}>
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 14 }}>Product</div>
-                  {[{ label: 'Features', anchor: '#features' }, { label: 'Pricing', anchor: '#pricing' }, { label: 'Contact', anchor: '#contact' }].map(({ label, anchor }) => (
+                  {[{ label: t('landing.features'), anchor: '#features' }, { label: t('landing.pricing'), anchor: '#pricing' }, { label: t('landing.contact'), anchor: '#contact' }].map(({ label, anchor }) => (
                     <div key={label} style={{ marginBottom: 9 }}><a href={anchor} className="lp-navlink" style={{ fontSize: isDesktop ? 14 : 13, color: C.textSub }}>{label}</a></div>
                   ))}
                 </div>
@@ -824,7 +833,7 @@ export default function LandingPage() {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 14 }}>Company</div>
-                <div style={{ marginBottom: 9 }}><a href="#contact" className="lp-navlink" style={{ fontSize: isDesktop ? 14 : 13, color: C.textSub }}>Contact</a></div>
+                <div style={{ marginBottom: 9 }}><a href="#contact" className="lp-navlink" style={{ fontSize: isDesktop ? 14 : 13, color: C.textSub }}>{t('landing.contact')}</a></div>
                 <div style={{ fontSize: 12, color: C.textMuted, marginTop: 24 }}>© 2026 ApexManager. All rights reserved.</div>
                 <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>[Your Company] · NIF: [NIF]</div>
               </div>
@@ -833,12 +842,12 @@ export default function LandingPage() {
             <div style={{ marginBottom: 24 }}>
               <div style={{ marginBottom: 14 }}><Logo size={24} /></div>
               <p style={{ fontSize: 13, color: C.textMuted, margin: '0 0 20px', lineHeight: 1.65 }}>
-                Restaurant intelligence platform for small operators across Europe.
+                {t('auth.tagline')}
               </p>
               <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap', marginBottom: 16 }}>
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>Product</div>
-                  {[{ label: 'Features', anchor: '#features' }, { label: 'Pricing', anchor: '#pricing' }, { label: 'Contact', anchor: '#contact' }].map(({ label, anchor }) => (
+                  {[{ label: t('landing.features'), anchor: '#features' }, { label: t('landing.pricing'), anchor: '#pricing' }, { label: t('landing.contact'), anchor: '#contact' }].map(({ label, anchor }) => (
                     <div key={label} style={{ marginBottom: 8 }}><a href={anchor} style={{ fontSize: 13, color: C.textSub }}>{label}</a></div>
                   ))}
                 </div>

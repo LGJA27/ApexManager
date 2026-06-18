@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, Fragment } from "react";
+import { useTranslation } from "react-i18next";
 import { buildReportHTML, buildExtendedInsights } from "./auditReport.js";
 import UpgradePrompt from "../components/UpgradePrompt.jsx";
 import { useSubscriptionGate } from "../hooks/useSubscriptionGate.js";
@@ -526,32 +527,33 @@ function getQuickRange(key, sales) {
   return { from: dates[0] || to, to };
 }
 
-const AUDIT_OPTIONS = [
-  { id: "sales", icon: "💳", title: "Sales Report", description: "Revenue, daily breakdown, day-of-week performance, monthly trends, cash vs card analysis" },
-  { id: "expenses", icon: "💸", title: "Expenses Report", description: "Cost breakdown, supplier invoices, fixed expenses, pending payments, monthly cost trends" },
-  { id: "staff", icon: "👥", title: "Staff Report", description: "Attendance tracking, days worked, revenue per shift, performance ranking, absence log" },
-  { id: "full", icon: "📋", title: "Full Audit", description: "Complete business report — all sections above plus executive summary and key insights", fullHighlight: true },
+const AUDIT_OPTION_KEYS = [
+  { id: "sales", icon: "💳", titleKey: "audit.salesReport", descKey: "audit.salesDesc" },
+  { id: "expenses", icon: "💸", titleKey: "audit.expensesReport", descKey: "audit.expensesDesc" },
+  { id: "staff", icon: "👥", titleKey: "audit.staffReport", descKey: "audit.staffDesc" },
+  { id: "full", icon: "📋", titleKey: "audit.fullAudit", descKey: "audit.fullAuditDesc", fullHighlight: true },
 ];
 
 function AuditModal({ open, onClose, sections, onToggle, onGenerate, isFree, onUpgradeAudit }) {
+  const { t, i18n } = useTranslation();
   if (!open) return null;
   const isFull = sections.includes("full");
   const individual = ["sales", "expenses", "staff"].filter(s => sections.includes(s));
   const allThree = individual.length === 3;
 
   let summary;
-  if (!sections.length) summary = { text: "Select at least one section to continue", color: C.textMuted };
-  else if (isFull || allThree) summary = { text: "Will include: Executive Summary + All Sections + Key Insights", color: C.accent };
-  else summary = { text: "Will include: " + individual.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(", "), color: C.accent };
+  if (!sections.length) summary = { text: t("audit.selectOne"), color: C.textMuted };
+  else if (isFull || allThree) summary = { text: `${t("audit.willInclude")} Executive Summary + All Sections + Key Insights`, color: C.accent };
+  else summary = { text: `${t("audit.willInclude")} ` + individual.map(s => t(`analytics.${s}`)).join(", "), color: C.accent };
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#16161E", border: "1px solid #2A2A36", borderRadius: 16, padding: 28, position: "relative" }}>
         <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: C.textSub, fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
-        <div style={{ fontSize: 18, fontWeight: 700, color: "#F0F0F8", marginBottom: 6 }}>Generate Audit Report</div>
-        <div style={{ fontSize: 13, color: "#8A8A9A", marginBottom: 24 }}>Select the sections to include in your report</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: "#F0F0F8", marginBottom: 6 }}>{t("audit.title")}</div>
+        <div style={{ fontSize: 13, color: "#8A8A9A", marginBottom: 24 }}>{t("audit.subtitle")}</div>
 
-        {AUDIT_OPTIONS.map(opt => {
+        {AUDIT_OPTION_KEYS.map(opt => {
           const selected = sections.includes(opt.id) || (opt.id !== "full" && isFull);
           return (
             <div key={opt.id} onClick={() => onToggle(opt.id)}
@@ -564,21 +566,21 @@ function AuditModal({ open, onClose, sections, onToggle, onGenerate, isFree, onU
               {selected && <span style={{ position: "absolute", top: 10, right: 12, color: C.accent, fontWeight: 700, fontSize: 14 }}>✓</span>}
               <span style={{ fontSize: 32, lineHeight: 1, flexShrink: 0 }}>{opt.icon}</span>
               <div>
-                <div style={{ fontWeight: 700, color: C.text, fontSize: 14, marginBottom: 4 }}>{opt.title}</div>
-                <div style={{ fontSize: 12, color: C.textSub, lineHeight: 1.45 }}>{opt.description}</div>
+                <div style={{ fontWeight: 700, color: C.text, fontSize: 14, marginBottom: 4 }}>{t(opt.titleKey)}</div>
+                <div style={{ fontSize: 12, color: C.textSub, lineHeight: 1.45 }}>{t(opt.descKey)}</div>
               </div>
             </div>
           );
         })}
 
         {allThree && !isFull && (
-          <div style={{ fontSize: 12, color: C.accent, marginBottom: 12 }}>All sections selected — switching to Full Audit</div>
+          <div style={{ fontSize: 12, color: C.accent, marginBottom: 12 }}>All sections selected — switching to {t("audit.fullAudit")}</div>
         )}
 
         <div style={{ fontSize: 12, color: summary.color, marginBottom: 20, minHeight: 18 }}>{summary.text}</div>
 
         {isFree && (
-          <div style={{ fontSize: 12, color: C.amber, marginBottom: 12 }}>📋 Audit reports require a subscription</div>
+          <div style={{ fontSize: 12, color: C.amber, marginBottom: 12 }}>📋 {t("audit.subscribeTounlock")}</div>
         )}
 
         <button
@@ -597,7 +599,7 @@ function AuditModal({ open, onClose, sections, onToggle, onGenerate, isFree, onU
             opacity: sections.length ? 1 : 0.4,
           }}
         >
-          Generate Report →
+          {t("audit.generate")}
         </button>
       </div>
     </div>
@@ -605,6 +607,7 @@ function AuditModal({ open, onClose, sections, onToggle, onGenerate, isFree, onU
 }
 
 export default function AnalyticsPage({ sales, expenses, invoices, venues, staff = [], suppliers = [], ingredients = [], subscription, setPage }) {
+  const { t, i18n } = useTranslation();
   const { isMobile, isTablet, pick } = useTypeScale();
   const { isFree } = useSubscriptionGate(subscription);
   const [upgradePrompt, setUpgradePrompt] = useState(null);
@@ -852,18 +855,23 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
   };
 
   const generateAudit = (sections) => {
+    const lang = i18n.language?.startsWith("pt") ? "pt" : "en";
     const includeSales = sections.includes("sales") || sections.includes("full");
     const includeExpenses = sections.includes("expenses") || sections.includes("full");
     const includeStaff = sections.includes("staff") || sections.includes("full");
     const includeFull = sections.includes("full");
 
     const titles = [];
-    if (includeSales && !includeFull) titles.push("Sales");
-    if (includeExpenses && !includeFull) titles.push("Expenses");
-    if (includeStaff && !includeFull) titles.push("Staff");
-    const reportTitle = includeFull ? "Full Business Audit" : titles.join(" & ") + " Report";
+    if (includeSales && !includeFull) titles.push(t("analytics.sales"));
+    if (includeExpenses && !includeFull) titles.push(t("analytics.expenses"));
+    if (includeStaff && !includeFull) titles.push(t("analytics.staff"));
+    const reportTitle = includeFull
+      ? (lang === "pt" ? "Auditoria Empresarial Completa" : "Full Business Audit")
+      : `${titles.join(" & ")} ${lang === "pt" ? "" : "Report"}`.trim();
 
-    const venueName = venueId ? venues.find(v => v.id === venueId)?.name || "Selected Venue" : "All Venues";
+    const venueName = venueId
+      ? venues.find(v => v.id === venueId)?.name || (lang === "pt" ? "Estabelecimento Selecionado" : "Selected Venue")
+      : t("analytics.allVenues");
     const reportInsights = includeFull
       ? buildExtendedInsights(insights, {
           paidAmt, totalRevenue, monthlyTrend, filteredSales, filteredExp, totalCash, totalCard,
@@ -879,7 +887,7 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
       monthlyCosts, staffReport, filteredStaff, fullTeamDays, supplierRankings,
       filteredExp, filteredInv, filteredSales, suppliers, insights: reportInsights,
       bestDayEntry, worstDayEntry, monthLabel,
-    }, fmtEur, dowShort);
+    }, fmtEur, dowShort, lang);
 
     const win = window.open("", "_blank");
     if (win) { win.document.write(html); win.document.close(); }
@@ -887,10 +895,10 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
   };
 
   const tabs = [
-    { id: "overview", label: "Overview" },
-    { id: "sales", label: "Sales" },
-    { id: "expenses", label: "Expenses" },
-    { id: "staff", label: "Staff" },
+    { id: "overview", label: t("analytics.overview") },
+    { id: "sales", label: t("analytics.sales") },
+    { id: "expenses", label: t("analytics.expenses") },
+    { id: "staff", label: t("analytics.staff") },
   ];
 
   const metricsGrid = { display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(140px,1fr))", gap: isMobile ? 10 : pick(12, 14), marginBottom: pick(16, 20), width: "100%" };
@@ -939,11 +947,11 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
   }, [dayTotals]);
 
   const revenueStackSegments = useMemo(() => [
-    { label: "Daily costs", value: dailyCosts, color: C.amber },
-    { label: "Fixed expenses", value: fixedExp, color: C.red },
-    { label: "Paid invoices", value: paidInvoiceTotal, color: C.blue },
-    { label: "Net profit", value: Math.max(0, netProfit), color: C.green },
-  ], [dailyCosts, fixedExp, paidInvoiceTotal, netProfit]);
+    { label: t("dashboard.dailyCosts"), value: dailyCosts, color: C.amber },
+    { label: t("dashboard.fixedExpenses"), value: fixedExp, color: C.red },
+    { label: t("dashboard.paidInvoices"), value: paidInvoiceTotal, color: C.blue },
+    { label: t("dashboard.netProfit"), value: Math.max(0, netProfit), color: C.green },
+  ], [dailyCosts, fixedExp, paidInvoiceTotal, netProfit, t]);
 
   const monthlyChartData = useMemo(() =>
     [...monthlyTrend].reverse().map(m => ({ label: m.month.slice(0, 3), values: [m.revenue, m.costs] })),
@@ -1053,32 +1061,32 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
 
   return (
     <div style={{ padding: pagePad(isMobile, isTablet), width: "100%", boxSizing: "border-box" }}>
-      {!isMobile && <h1 style={{ margin: "0 0 20px", fontSize: pick(22, 28), color: C.text }}>Analytics & Reports</h1>}
+      {!isMobile && <h1 style={{ margin: "0 0 20px", fontSize: pick(22, 28), color: C.text }}>{t("analytics.title")}</h1>}
 
       {/* Filter bar */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: pick(12, 14), alignItems: "flex-end", marginBottom: pick(16, 20), width: "100%" }}>
         <div
           style={{ flex: isMobile ? "1 1 100%" : "0 0 140px", ...(isFree ? { cursor: "pointer" } : {}) }}
           onClick={isFree ? () => setUpgradePrompt("range") : undefined}
-          title={isFree ? "Upgrade to unlock custom date ranges" : undefined}
+          title={isFree ? t("common.upgradeToUnlock") : undefined}
         >
-          <Input label="From" type="date" value={from} onChange={setFrom} disabled={isFree} style={{ flex: isMobile ? "1 1 100%" : "0 0 140px" }} />
+          <Input label={t("analytics.from")} type="date" value={from} onChange={setFrom} disabled={isFree} style={{ flex: isMobile ? "1 1 100%" : "0 0 140px" }} />
         </div>
         <div
           style={{ flex: isMobile ? "1 1 100%" : "0 0 140px", ...(isFree ? { cursor: "pointer" } : {}) }}
           onClick={isFree ? () => setUpgradePrompt("range") : undefined}
-          title={isFree ? "Upgrade to unlock custom date ranges" : undefined}
+          title={isFree ? t("common.upgradeToUnlock") : undefined}
         >
-          <Input label="To" type="date" value={to} onChange={setTo} disabled={isFree} style={{ flex: isMobile ? "1 1 100%" : "0 0 140px" }} />
+          <Input label={t("analytics.to")} type="date" value={to} onChange={setTo} disabled={isFree} style={{ flex: isMobile ? "1 1 100%" : "0 0 140px" }} />
         </div>
         {venues.length > 0 && (
           <div style={{ flex: isMobile ? "1 1 100%" : "0 0 160px" }}>
-            <Select label="Venue" value={venueId} onChange={setVenueId}
-              options={[{ value: "", label: "All Venues" }, ...venues.map(v => ({ value: v.id, label: v.name }))]} />
+            <Select label={t("analytics.venue")} value={venueId} onChange={setVenueId}
+              options={[{ value: "", label: t("analytics.allVenues") }, ...venues.map(v => ({ value: v.id, label: v.name }))]} />
           </div>
         )}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", flex: 1 }}>
-          {[["week", "This Week"], ["month", "This Month"], ["lastmonth", "Last Month"], ["year", "This Year"], ["all", "All Time"]].map(([k, l]) => (
+          {[["week", t("analytics.thisWeek")], ["month", t("analytics.thisMonth")], ["lastmonth", t("analytics.lastMonth")], ["year", t("analytics.thisYear")], ["all", t("analytics.allTime")]].map(([k, l]) => (
             <button key={k} onClick={() => {
               if (isFree && k !== "week") {
                 setUpgradePrompt("range");
@@ -1093,7 +1101,7 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
             </button>
           ))}
         </div>
-        <Btn onClick={() => { setAuditSections([]); setAuditModal(true); }} style={{ marginLeft: "auto", flexShrink: 0 }}>📋 Audit Report</Btn>
+        <Btn onClick={() => { setAuditSections([]); setAuditModal(true); }} style={{ marginLeft: "auto", flexShrink: 0 }}>📋 {t("analytics.auditReport")}</Btn>
       </div>
 
       {isFree && (
@@ -1111,11 +1119,11 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
           gap: 10,
           flexWrap: "wrap",
         }}>
-          <span>🔒 Free plan shows last 7 days only</span>
+          <span>🔒 {t("dashboard.freePlanBanner")}</span>
           <button type="button" onClick={() => setPage("pricing")} style={{
             background: "none", border: "none", color: C.accent,
             cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0,
-          }}>Upgrade to unlock →</button>
+          }}>{t("dashboard.upgradeUnlock")}</button>
         </div>
       )}
 
@@ -1139,18 +1147,18 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
         ))}
       </div>
 
-      {!hasData && <EmptyState icon="📈" title="No data in this range" sub="Adjust the date range or log sales and expenses." />}
+      {!hasData && <EmptyState icon="📈" title={t("analytics.noData")} sub={t("dashboard.noDataSub")} />}
 
       {/* OVERVIEW TAB */}
       {hasData && tab === "overview" && (
         <>
           <div style={metricsGrid}>
-            <MetricCard label="Total Revenue" value={fmtEur(totalRevenue)} color={C.green} icon="💰" hideIcon={isMobile} />
-            <MetricCard label="Total Costs" value={fmtEur(totalCosts)} color={C.red} icon="💸" hideIcon={isMobile} />
-            <MetricCard label="Net Profit" value={fmtEur(netProfit)} color={netProfit >= 0 ? C.green : C.red} icon="📈" hideIcon={isMobile} />
-            <MetricCard label="Profit Margin" value={totalRevenue ? profitMargin.toFixed(1) + "%" : "—"} color={C.accent} hideIcon={isMobile} />
-            <MetricCard label="Avg Daily Revenue" value={fmtEur(avgDaily)} sub={`${uniqueDays} days`} color={C.blue} hideIcon={isMobile} />
-            <MetricCard label="Best Single Day" value={bestDayEntry ? fmtEur(bestDayEntry[1]) : "—"} sub={bestDayEntry?.[0]} color={C.amber} hideIcon={isMobile} />
+            <MetricCard label={t("analytics.totalRevenue")} value={fmtEur(totalRevenue)} color={C.green} icon="💰" hideIcon={isMobile} />
+            <MetricCard label={t("analytics.totalCosts")} value={fmtEur(totalCosts)} color={C.red} icon="💸" hideIcon={isMobile} />
+            <MetricCard label={t("analytics.netProfit")} value={fmtEur(netProfit)} color={netProfit >= 0 ? C.green : C.red} icon="📈" hideIcon={isMobile} />
+            <MetricCard label={t("analytics.profitMargin")} value={totalRevenue ? profitMargin.toFixed(1) + "%" : "—"} color={C.accent} hideIcon={isMobile} />
+            <MetricCard label={t("analytics.avgDaily")} value={fmtEur(avgDaily)} sub={`${uniqueDays} ${t("dashboard.activeDays")}`} color={C.blue} hideIcon={isMobile} />
+            <MetricCard label={t("analytics.bestDay")} value={bestDayEntry ? fmtEur(bestDayEntry[1]) : "—"} sub={bestDayEntry?.[0]} color={C.amber} hideIcon={isMobile} />
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 340px", gap: pick(14, 16), marginBottom: pick(16, 20) }}>
             <Card style={{ padding: pick(16, 20) }}>
@@ -1207,15 +1215,15 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
             <Btn variant="ghost" size="sm" onClick={() => tryExport("sales-report.csv", [
               ["Date", "Day", "Cash", "Card", "Total", "Daily Costs", "POS", "XPTO", "Staff", "Notes"],
               ...filteredSales.map(s => [s.date, dowShort(s.date), s.cash, s.card, (s.cash || 0) + (s.card || 0), s.cash_expenses, s.pos, s.xpto, (s.staff || []).join("; "), s.note || ""]),
-            ])}>{isFree ? "📥 Export 🔒" : "📥 Export Sales CSV"}</Btn>
+            ])}>{isFree ? `📥 ${t("common.export")} 🔒` : t("analytics.exportCSV")}</Btn>
           </div>
           <div style={metricsGrid}>
-            <MetricCard label="Total Sales" value={fmtEur(totalRevenue)} color={C.green} hideIcon={isMobile} />
-            <MetricCard label="Cash Sales" value={fmtEur(totalCash)} sub={totalRevenue ? ((totalCash / totalRevenue) * 100).toFixed(1) + "%" : ""} color={C.amber} hideIcon={isMobile} />
-            <MetricCard label="Card Sales" value={fmtEur(totalCard)} sub={totalRevenue ? ((totalCard / totalRevenue) * 100).toFixed(1) + "%" : ""} color={C.blue} hideIcon={isMobile} />
-            <MetricCard label="Daily Costs" value={fmtEur(dailyCosts)} color={C.red} hideIcon={isMobile} />
-            <MetricCard label="Days Logged" value={uniqueDays} color={C.accent} hideIcon={isMobile} />
-            <MetricCard label="Average / Day" value={fmtEur(avgDaily)} color={C.blue} hideIcon={isMobile} />
+            <MetricCard label={t("analytics.totalRevenue")} value={fmtEur(totalRevenue)} color={C.green} hideIcon={isMobile} />
+            <MetricCard label={t("sales.cash")} value={fmtEur(totalCash)} sub={totalRevenue ? ((totalCash / totalRevenue) * 100).toFixed(1) + "%" : ""} color={C.amber} hideIcon={isMobile} />
+            <MetricCard label={t("sales.card")} value={fmtEur(totalCard)} sub={totalRevenue ? ((totalCard / totalRevenue) * 100).toFixed(1) + "%" : ""} color={C.blue} hideIcon={isMobile} />
+            <MetricCard label={t("dashboard.dailyCosts")} value={fmtEur(dailyCosts)} color={C.red} hideIcon={isMobile} />
+            <MetricCard label={t("analytics.daysActive")} value={uniqueDays} color={C.accent} hideIcon={isMobile} />
+            <MetricCard label={t("analytics.avgDaily")} value={fmtEur(avgDaily)} color={C.blue} hideIcon={isMobile} />
             <MetricCard label="Highest Day" value={bestDayEntry ? fmtEur(bestDayEntry[1]) : "—"} sub={bestDayEntry?.[0]} color={C.green} hideIcon={isMobile} />
             <MetricCard label="Lowest Day" value={worstDayEntry ? fmtEur(worstDayEntry[1]) : "—"} sub={worstDayEntry?.[0]} color={C.red} hideIcon={isMobile} />
           </div>
@@ -1259,14 +1267,14 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
             <Btn variant="ghost" size="sm" onClick={() => tryExport("expenses-report.csv", [
               ["Date", "Name", "Type", "Amount", "Recurring", "Venue"],
               ...filteredExp.map(e => [e.date, e.name, e.type, e.amount, e.recurring ? "Yes" : "No", venues.find(v => v.id === e.venue_id)?.name || ""]),
-            ])}>{isFree ? "📥 Export 🔒" : "📥 Export Expenses CSV"}</Btn>
+            ])}>{isFree ? `📥 ${t("common.export")} 🔒` : t("analytics.exportCSV")}</Btn>
           </div>
           <div style={metricsGrid}>
-            <MetricCard label="Expenses" value={fmtEur(fixedExp)} color={C.red} hideIcon={isMobile} />
-            <MetricCard label="Daily Costs" value={fmtEur(dailyCosts)} color={C.red} hideIcon={isMobile} />
-            <MetricCard label="Grand Total Costs" value={fmtEur(totalCosts)} color={C.red} hideIcon={isMobile} />
-            <MetricCard label="Pending Invoices" value={fmtEur(pendingAmt)} color={C.amber} hideIcon={isMobile} />
-            <MetricCard label="Paid Invoices" value={fmtEur(paidAmt)} color={C.green} hideIcon={isMobile} />
+            <MetricCard label={t("analytics.expenses")} value={fmtEur(fixedExp)} color={C.red} hideIcon={isMobile} />
+            <MetricCard label={t("dashboard.dailyCosts")} value={fmtEur(dailyCosts)} color={C.red} hideIcon={isMobile} />
+            <MetricCard label={t("analytics.totalCosts")} value={fmtEur(totalCosts)} color={C.red} hideIcon={isMobile} />
+            <MetricCard label={t("invoices.pending")} value={fmtEur(pendingAmt)} color={C.amber} hideIcon={isMobile} />
+            <MetricCard label={t("invoices.paid")} value={fmtEur(paidAmt)} color={C.green} hideIcon={isMobile} />
             <MetricCard label="Largest Expense" value={fmtEur(Math.max(...filteredExp.map(e => e.amount || 0), 0))} color={C.red} hideIcon={isMobile} />
           </div>
           <SectionHeading>Expenses by Type</SectionHeading>
@@ -1298,8 +1306,8 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
                 const paidAmtS = filteredInv.filter(i => i.supplier_name === s.name && i.status === "paid").reduce((a, i) => a + (i.total || 0), 0);
                 return [s.name, sup?.nif || "", sup?.iban || "", s.count, s.spend.toFixed(2), s.pendingAmt.toFixed(2), paidAmtS.toFixed(2), s.lastDate];
               }),
-            ])}>{isFree ? "📥 Export 🔒" : "📥 Export Suppliers CSV"}</Btn>
-          }>Supplier Invoices</SectionHeading>
+            ])}>{isFree ? `📥 ${t("common.export")} 🔒` : t("analytics.exportCSV")}</Btn>
+          }>{t("invoices.title")}</SectionHeading>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(3,1fr)", gap: pick(10, 12), marginBottom: pick(14, 16) }}>
             <MetricCard label="Total Suppliers" value={suppliers.length} color={C.accent} hideIcon={isMobile} />
             <MetricCard label="Active in Range" value={supplierRankings.length} color={C.blue} hideIcon={isMobile} />
@@ -1438,14 +1446,14 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
             <Btn variant="ghost" size="sm" onClick={() => tryExport("staff-report.csv", [
               ["Name", "Job Title", "Status", "Phone", "Days Worked", "Days Missed", "Attendance %", "Revenue on Shifts", "Avg per Shift"],
               ...staffReport.map(s => [s.name, s.job_title || "", s.status, s.phone || "", s.worked, s.missed, s.rate.toFixed(1), s.rev.toFixed(2), s.avgShift.toFixed(2)]),
-            ])}>{isFree ? "📥 Export 🔒" : "📥 Export Staff Report CSV"}</Btn>
+            ])}>{isFree ? `📥 ${t("common.export")} 🔒` : t("analytics.exportCSV")}</Btn>
           </div>
           <div style={metricsGrid}>
-            <MetricCard label="Total Staff" value={filteredStaff.length} color={C.accent} hideIcon={isMobile} />
-            <MetricCard label="Active" value={filteredStaff.filter(s => s.status === "active" || !s.status).length} color={C.green} hideIcon={isMobile} />
-            <MetricCard label="On Holidays" value={filteredStaff.filter(s => s.status === "holidays").length} color={C.amber} hideIcon={isMobile} />
-            <MetricCard label="Sick Leave" value={filteredStaff.filter(s => s.status === "sick_leave").length} color={C.red} hideIcon={isMobile} />
-            <MetricCard label="Part-Time" value={filteredStaff.filter(s => s.status === "part_time").length} color={C.blue} hideIcon={isMobile} />
+            <MetricCard label={t("staff.title")} value={filteredStaff.length} color={C.accent} hideIcon={isMobile} />
+            <MetricCard label={t("staff.active")} value={filteredStaff.filter(s => s.status === "active" || !s.status).length} color={C.green} hideIcon={isMobile} />
+            <MetricCard label={t("staff.holidays")} value={filteredStaff.filter(s => s.status === "holidays").length} color={C.amber} hideIcon={isMobile} />
+            <MetricCard label={t("staff.sickLeave")} value={filteredStaff.filter(s => s.status === "sick_leave").length} color={C.red} hideIcon={isMobile} />
+            <MetricCard label={t("staff.partTime")} value={filteredStaff.filter(s => s.status === "part_time").length} color={C.blue} hideIcon={isMobile} />
             <MetricCard label="Full Team Days" value={fullTeamDays} color={C.green} hideIcon={isMobile} />
           </div>
           <SectionHeading>Attendance Heatmap</SectionHeading>
@@ -1498,7 +1506,7 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
           ))}
           <SectionHeading>Absence Tracking</SectionHeading>
           <Card style={{ padding: 0, overflow: "hidden" }}>
-            <SortableTable headers={[{ label: "Name" }, { label: "Status" }, { label: "From" }, { label: "Until" }, { label: "Duration" }]}
+            <SortableTable headers={[{ label: "Name" }, { label: "Status" }, { label: t("staff.from") }, { label: t("staff.until") }, { label: "Duration" }]}
               rows={filteredStaff.filter(s => ["holidays", "sick_leave"].includes(s.status)).map(s => {
                 const dur = s.status_from && s.status_until ? Math.ceil((new Date(s.status_until) - new Date(s.status_from)) / 86400000) + 1 : "—";
                 return [{ content: s.name }, { content: <Badge color={s.status === "sick_leave" ? C.red : C.amber}>{s.status}</Badge> }, { content: s.status_from || "—" }, { content: s.status_until || "—" }, { content: dur + (dur !== "—" ? " days" : "") }];

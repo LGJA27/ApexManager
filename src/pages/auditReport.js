@@ -110,34 +110,216 @@ function typeBadge(type) {
   return `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:${color}22;color:${color}">${esc(type)}</span>`;
 }
 
-function statusBadge(status, dueDate, todayFn) {
+function statusBadge(status, dueDate, todayFn, L) {
   const isOverdue = status !== "paid" && dueDate && dueDate < todayFn();
   const config = isOverdue
-    ? { color: "#F04060", label: "OVERDUE" }
+    ? { color: "#F04060", label: L.overdue.toUpperCase() }
     : status === "paid"
-      ? { color: "#22C97A", label: "PAID" }
-      : { color: "#F5A623", label: "PENDING" };
+      ? { color: "#22C97A", label: L.paid.toUpperCase() }
+      : { color: "#F5A623", label: L.pending.toUpperCase() };
   return `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:${config.color}22;color:${config.color}">${esc(config.label)}</span>`;
 }
 
-function staffStatusBadge(status) {
+function staffStatusBadge(status, L) {
   const config = {
-    active: { color: "#22C97A", label: "Active" },
-    part_time: { color: "#3B9EFF", label: "Part-Time" },
-    holidays: { color: "#F5A623", label: "On Holidays" },
-    sick_leave: { color: "#F04060", label: "Sick Leave" },
+    active: { color: "#22C97A", label: L.staffActive || "Active" },
+    part_time: { color: "#3B9EFF", label: L.staffPartTime || "Part-Time" },
+    holidays: { color: "#F5A623", label: L.staffHolidays || "On Holidays" },
+    sick_leave: { color: "#F04060", label: L.staffSickLeave || "Sick Leave" },
   }[status] || { color: "#8A8A9A", label: status };
   return `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:${config.color}22;color:${config.color}">${esc(config.label)}</span>`;
 }
 
-function buildExecutiveSummary(d, fmtEur) {
+function getReportLabels(lang) {
+  return lang === "pt" ? {
+    title: "Relatório de Auditoria",
+    executiveSummary: "Resumo Executivo",
+    salesSummary: "Resumo de Vendas",
+    expensesSection: "Despesas",
+    staffSection: "Equipa",
+    suppliersSection: "Fornecedores",
+    keyInsights: "Análises Principais",
+    generatedOn: "Gerado em",
+    period: "Período",
+    venue: "Estabelecimento",
+    revenue: "Receita",
+    costs: "Custos",
+    profit: "Lucro",
+    margin: "Margem",
+    days: "Dias",
+    name: "Nome",
+    daysWorked: "Dias Trabalhados",
+    attendance: "Presença",
+    revenueOnShifts: "Receita nos Turnos",
+    print: "🖨 Imprimir Relatório",
+    paid: "Pago",
+    pending: "Pendente",
+    overdue: "Em Atraso",
+    month: "Mês",
+    supplier: "Fornecedor",
+    invoices: "Faturas",
+    spend: "Gasto",
+    confidential: "ApexManager · Relatório empresarial confidencial",
+    totalRevenue: "Receita Total",
+    totalCosts: "Custos Totais",
+    netProfit: "Lucro Líquido",
+    profitMargin: "Margem de Lucro",
+    daysActive: "Dias Ativos",
+    avgDailyRevenue: "Média Diária",
+    revenueComposition: "Composição da Receita",
+    dailyCosts: "Custos diários",
+    fixedExpenses: "Despesas fixas",
+    paidInvoices: "Faturas pagas",
+    cashSales: "Vendas Numerário",
+    cardSales: "Vendas Cartão",
+    bestDay: "Melhor Dia",
+    worstDay: "Pior Dia",
+    revenueByDow: "Receita por Dia da Semana",
+    monthlyRevVsCosts: "Receita Mensal vs Custos",
+    monthlyBreakdown: "Análise Mensal",
+    salesLog: "Registo de Vendas",
+    expensesReport: "Relatório de Despesas",
+    pendingPayments: "Pagamentos Pendentes",
+    expensesByType: "Despesas por Tipo",
+    monthlyCostTrend: "Tendência de Custos Mensais",
+    date: "Data",
+    day: "Dia",
+    cash: "Numerário",
+    card: "Cartão",
+    total: "Total",
+    net: "Líquido",
+    tax: "IVA",
+    status: "Estado",
+    due: "Vencimento",
+    recurring: "Recorrente",
+    amount: "Valor",
+    type: "Tipo",
+    rank: "Pos.",
+    lastInvoice: "Última Fatura",
+    staff: "Equipa",
+    staffActive: "Ativo",
+    staffHolidays: "De Férias",
+    staffSickLeave: "Baixa Médica",
+    totalStaff: "Total Equipa",
+    fullTeamDays: "Dias Equipa Completa",
+    bestAttendance: "Melhor Presença",
+    mostRevenue: "Mais Receita",
+    revenueImpact: "Impacto de Receita por Membro",
+    attendanceRate: "Taxa de Presença",
+    staffAttendanceReport: "Relatório de Presenças",
+    jobTitle: "Função",
+    worked: "Trabalhados",
+    missed: "Faltas",
+    avgShift: "Média/Turno",
+    absences: "Ausências Atuais",
+    from: "De",
+    until: "Até",
+    duration: "Duração",
+    totalSuppliers: "Total Fornecedores",
+    totalSpend: "Gasto Total",
+    pendingAmount: "Valor Pendente",
+    supplierRanking: "Ranking de Fornecedores",
+    noData: "Sem dados.",
+  } : {
+    title: "Audit Report",
+    executiveSummary: "Executive Summary",
+    salesSummary: "Sales Summary",
+    expensesSection: "Expenses",
+    staffSection: "Staff Report",
+    suppliersSection: "Supplier Summary",
+    keyInsights: "Key Insights",
+    generatedOn: "Generated on",
+    period: "Period",
+    venue: "Venue",
+    revenue: "Revenue",
+    costs: "Costs",
+    profit: "Profit",
+    margin: "Margin",
+    days: "Days",
+    name: "Name",
+    daysWorked: "Days Worked",
+    attendance: "Attendance",
+    revenueOnShifts: "Revenue on Shifts",
+    print: "🖨 Print Report",
+    paid: "Paid",
+    pending: "Pending",
+    overdue: "Overdue",
+    month: "Month",
+    supplier: "Supplier",
+    invoices: "Invoices",
+    spend: "Spend",
+    confidential: "ApexManager · Confidential business report",
+    totalRevenue: "Total Revenue",
+    totalCosts: "Total Costs",
+    netProfit: "Net Profit",
+    profitMargin: "Profit Margin",
+    daysActive: "Days Active",
+    avgDailyRevenue: "Avg Daily Revenue",
+    revenueComposition: "Revenue Composition",
+    dailyCosts: "Daily costs",
+    fixedExpenses: "Fixed expenses",
+    paidInvoices: "Paid invoices",
+    cashSales: "Cash Sales",
+    cardSales: "Card Sales",
+    bestDay: "Best Day",
+    worstDay: "Worst Day",
+    revenueByDow: "Revenue by Day of Week",
+    monthlyRevVsCosts: "Monthly Revenue vs Costs",
+    monthlyBreakdown: "Monthly Breakdown",
+    salesLog: "Sales Log",
+    expensesReport: "Expenses Report",
+    pendingPayments: "Pending Payments",
+    expensesByType: "Expenses by Type",
+    monthlyCostTrend: "Monthly Cost Trend",
+    date: "Date",
+    day: "Day",
+    cash: "Cash",
+    card: "Card",
+    total: "Total",
+    net: "Net",
+    tax: "Tax",
+    status: "Status",
+    due: "Due",
+    recurring: "Recurring",
+    amount: "Amount",
+    type: "Type",
+    rank: "Rank",
+    lastInvoice: "Last Invoice",
+    staff: "Staff",
+    staffActive: "Active",
+    staffHolidays: "On Holidays",
+    staffSickLeave: "Sick Leave",
+    totalStaff: "Total Staff",
+    fullTeamDays: "Full Team Days",
+    bestAttendance: "Best Attendance",
+    mostRevenue: "Most Revenue",
+    revenueImpact: "Revenue Impact per Staff Member",
+    attendanceRate: "Attendance Rate",
+    staffAttendanceReport: "Staff Attendance Report",
+    jobTitle: "Job Title",
+    worked: "Worked",
+    missed: "Missed",
+    avgShift: "Avg/Shift",
+    absences: "Current Status / Absences",
+    from: "From",
+    until: "Until",
+    duration: "Duration",
+    totalSuppliers: "Total Suppliers",
+    totalSpend: "Total Spend",
+    pendingAmount: "Pending Amount",
+    supplierRanking: "Supplier Spend Ranking",
+    noData: "No data.",
+  };
+}
+
+function buildExecutiveSummary(d, fmtEur, L) {
   const marginColor = d.profitMargin > 30 ? "#22C97A" : d.profitMargin > 10 ? "#F5A623" : "#F04060";
   const base = d.totalRevenue || 1;
   const segs = [
-    { label: "Daily costs", value: d.dailyCosts, color: "#F5A623", pct: (d.dailyCosts / base) * 100 },
-    { label: "Fixed expenses", value: d.fixedExp, color: "#F04060", pct: (d.fixedExp / base) * 100 },
-    { label: "Paid invoices", value: d.paidAmt, color: "#3B9EFF", pct: (d.paidAmt / base) * 100 },
-    { label: "Net profit", value: Math.max(0, d.netProfit), color: "#22C97A", pct: Math.max(0, (d.netProfit / base) * 100) },
+    { label: L.dailyCosts, value: d.dailyCosts, color: "#F5A623", pct: (d.dailyCosts / base) * 100 },
+    { label: L.fixedExpenses, value: d.fixedExp, color: "#F04060", pct: (d.fixedExp / base) * 100 },
+    { label: L.paidInvoices, value: d.paidAmt, color: "#3B9EFF", pct: (d.paidAmt / base) * 100 },
+    { label: L.netProfit, value: Math.max(0, d.netProfit), color: "#22C97A", pct: Math.max(0, (d.netProfit / base) * 100) },
   ].filter(s => s.value > 0);
 
   const stacked = segs.map(s =>
@@ -149,21 +331,21 @@ function buildExecutiveSummary(d, fmtEur) {
   ).join("");
 
   return `
-    <h2>Executive Summary</h2>
+    <h2>${esc(L.executiveSummary)}</h2>
     ${metricsGrid([
-      metricCard("Total Revenue", fmtEur(d.totalRevenue), null, "#22C97A"),
-      metricCard("Total Costs", fmtEur(d.totalCosts), null, "#F04060"),
-      metricCard("Net Profit", fmtEur(d.netProfit), null, d.netProfit >= 0 ? "#22C97A" : "#F04060"),
-      metricCard("Profit Margin", d.profitMargin.toFixed(1) + "%", null, marginColor),
-      metricCard("Days Active", String(d.uniqueDays), null),
-      metricCard("Avg Daily Revenue", fmtEur(d.avgDaily), null, "#7C5CFC"),
+      metricCard(L.totalRevenue, fmtEur(d.totalRevenue), null, "#22C97A"),
+      metricCard(L.totalCosts, fmtEur(d.totalCosts), null, "#F04060"),
+      metricCard(L.netProfit, fmtEur(d.netProfit), null, d.netProfit >= 0 ? "#22C97A" : "#F04060"),
+      metricCard(L.profitMargin, d.profitMargin.toFixed(1) + "%", null, marginColor),
+      metricCard(L.daysActive, String(d.uniqueDays), null),
+      metricCard(L.avgDailyRevenue, fmtEur(d.avgDaily), null, "#7C5CFC"),
     ])}
-    <h3>Revenue Composition</h3>
+    <h3>${esc(L.revenueComposition)}</h3>
     <div class="stacked-bar">${stacked}</div>
     <div class="legend">${legend}</div>`;
 }
 
-function buildSalesSection(d, fmtEur, dowShort) {
+function buildSalesSection(d, fmtEur, dowShort, L) {
   const cashPct = d.totalRevenue ? ((d.totalCash / d.totalRevenue) * 100).toFixed(1) : "0";
   const cardPct = d.totalRevenue ? ((d.totalCard / d.totalRevenue) * 100).toFixed(1) : "0";
 
@@ -210,32 +392,32 @@ function buildSalesSection(d, fmtEur, dowShort) {
   ]);
 
   return `
-    <h2 class="section-break">Sales Report</h2>
+    <h2 class="section-break">${esc(L.salesSummary)}</h2>
     ${metricsGrid([
-      metricCard("Total Revenue", fmtEur(d.totalRevenue), null, "#22C97A"),
-      metricCard("Cash Sales", fmtEur(d.totalCash), cashPct + "% of revenue", "#F5A623"),
-      metricCard("Card Sales", fmtEur(d.totalCard), cardPct + "% of revenue", "#3B9EFF"),
-      metricCard("Best Day", d.bestDayEntry ? fmtEur(d.bestDayEntry[1]) : "—", d.bestDayEntry?.[0] || "", "#22C97A"),
-      metricCard("Worst Day", d.worstDayEntry ? fmtEur(d.worstDayEntry[1]) : "—", d.worstDayEntry?.[0] || "", "#F04060"),
-      metricCard("Avg Daily Revenue", fmtEur(d.avgDaily), `${d.uniqueDays} days`, "#7C5CFC"),
+      metricCard(L.totalRevenue, fmtEur(d.totalRevenue), null, "#22C97A"),
+      metricCard(L.cashSales, fmtEur(d.totalCash), cashPct + "%", "#F5A623"),
+      metricCard(L.cardSales, fmtEur(d.totalCard), cardPct + "%", "#3B9EFF"),
+      metricCard(L.bestDay, d.bestDayEntry ? fmtEur(d.bestDayEntry[1]) : "—", d.bestDayEntry?.[0] || "", "#22C97A"),
+      metricCard(L.worstDay, d.worstDayEntry ? fmtEur(d.worstDayEntry[1]) : "—", d.worstDayEntry?.[0] || "", "#F04060"),
+      metricCard(L.avgDailyRevenue, fmtEur(d.avgDaily), `${d.uniqueDays} ${L.days.toLowerCase()}`, "#7C5CFC"),
     ])}
-    <h3>Revenue by Day of Week</h3>
+    <h3>${esc(L.revenueByDow)}</h3>
     <div class="chart-section">${buildBarChart(dowBars, Math.max(...dowBars.map(b => b.value), 1), 140, fmtEur)}</div>
-    <h3>Monthly Revenue vs Costs</h3>
+    <h3>${esc(L.monthlyRevVsCosts)}</h3>
     <div class="chart-section">
       <div class="legend" style="margin-bottom:12px">
-        <div class="legend-item"><span class="legend-dot" style="background:#22C97A"></span>Revenue</div>
-        <div class="legend-item"><span class="legend-dot" style="background:#F04060"></span>Costs</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#22C97A"></span>${esc(L.revenue)}</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#F04060"></span>${esc(L.costs)}</div>
       </div>
-      ${monthlyDual || "<p style='color:#888'>No monthly data.</p>"}
+      ${monthlyDual || `<p style='color:#888'>${esc(L.noData)}</p>`}
     </div>
-    <h3>Monthly Breakdown</h3>
-    ${table(["Month", "Days", "Cash", "Card", "Total", "Daily Costs", "Net"], monthlyRows)}
-    <h3>Sales Log${salesLog.length < d.filteredSales.length ? " (last 30)" : ""}</h3>
-    ${table(["Date", "Day", "Cash", "Card", "Total", "Costs", "XPTO", "Staff"], salesRows)}`;
+    <h3>${esc(L.monthlyBreakdown)}</h3>
+    ${table([L.month, L.days, L.cash, L.card, L.total, L.dailyCosts, L.net], monthlyRows)}
+    <h3>${esc(L.salesLog)}${salesLog.length < d.filteredSales.length ? " (last 30)" : ""}</h3>
+    ${table([L.date, L.day, L.cash, L.card, L.total, L.costs, "XPTO", L.staff], salesRows)}`;
 }
 
-function buildExpensesSection(d, fmtEur, today) {
+function buildExpensesSection(d, fmtEur, today, L) {
   const costRatio = d.totalRevenue ? ((d.totalCosts / d.totalRevenue) * 100).toFixed(1) : "0";
   const typeColors = { SERVICES: "#3B9EFF", WAGES: "#F5A623", RENT: "#F04060", OTHER: "#888888" };
   const typeLabels = { SERVICES: "Services", WAGES: "Wages", RENT: "Rent", OTHER: "Other" };
@@ -269,51 +451,51 @@ function buildExpensesSection(d, fmtEur, today) {
     cell(fmtEur(i.subtotal || 0)),
     cell(fmtEur(i.tax || 0)),
     cell(fmtEur(i.total || 0), "font-weight:600"),
-    htmlCell(statusBadge(i.status, i.due_date, today)),
+    htmlCell(statusBadge(i.status, i.due_date, today, L)),
   ]);
 
   const pendingAlert = d.pendingInv.length > 0 ? `
     <div class="alert-box">
-      <strong>⚠ Pending Payments: ${fmtEur(d.pendingAmt)} — ${d.pendingInv.length} invoice(s) awaiting payment</strong>
+      <strong>⚠ ${L.pendingPayments}: ${fmtEur(d.pendingAmt)} — ${d.pendingInv.length} ${L.invoices.toLowerCase()}</strong>
       <ul style="margin:12px 0 0;padding-left:18px">
         ${d.pendingInv.map(i => {
           const overdue = i.due_date && i.due_date < today();
-          return `<li>${esc(i.supplier_name)} · ${fmtEur(i.total || 0)} · Due ${esc(i.due_date || "—")}${overdue ? " <strong>(OVERDUE)</strong>" : ""}</li>`;
+          return `<li>${esc(i.supplier_name)} · ${fmtEur(i.total || 0)} · ${L.due} ${esc(i.due_date || "—")}${overdue ? ` <strong>(${L.overdue.toUpperCase()})</strong>` : ""}</li>`;
         }).join("")}
       </ul>
     </div>` : "";
 
   return `
-    <h2 class="section-break">Expenses Report</h2>
+    <h2 class="section-break">${esc(L.expensesReport)}</h2>
     ${metricsGrid([
-      metricCard("Expenses", fmtEur(d.fixedExp), null, "#F04060"),
-      metricCard("Paid Invoices", fmtEur(d.paidAmt), null, "#3B9EFF"),
-      metricCard("Pending Invoices", fmtEur(d.pendingAmt), null, "#F5A623"),
-      metricCard("Daily Costs", fmtEur(d.dailyCosts), null, "#F5A623"),
-      metricCard("Grand Total Costs", fmtEur(d.totalCosts), null, "#F04060"),
-      metricCard("Cost / Revenue", costRatio + "%", "of total revenue", "#F04060"),
+      metricCard(L.expensesSection, fmtEur(d.fixedExp), null, "#F04060"),
+      metricCard(L.paidInvoices, fmtEur(d.paidAmt), null, "#3B9EFF"),
+      metricCard(L.pendingAmount, fmtEur(d.pendingAmt), null, "#F5A623"),
+      metricCard(L.dailyCosts, fmtEur(d.dailyCosts), null, "#F5A623"),
+      metricCard(L.totalCosts, fmtEur(d.totalCosts), null, "#F04060"),
+      metricCard(L.margin, costRatio + "%", L.revenue.toLowerCase(), "#F04060"),
     ])}
-    <h3>Expenses by Type</h3>
+    <h3>${esc(L.expensesByType)}</h3>
     <div class="chart-section">${buildHorizBars(typeBars, typeMax, fmtEur)}</div>
-    <h3>Monthly Cost Trend</h3>
+    <h3>${esc(L.monthlyCostTrend)}</h3>
     <div class="chart-section">
       ${d.monthlyCosts.slice().reverse().map(m => `
         <div class="dual-month">
-          <div class="dual-month-label">${esc(m.month)} — Rev ${fmtEur(m.rev)} / Costs ${fmtEur(m.total)}</div>
+          <div class="dual-month-label">${esc(m.month)} — ${L.revenue} ${fmtEur(m.rev)} / ${L.costs} ${fmtEur(m.total)}</div>
           <div class="dual-bars">
             <div class="horiz-bar-track" style="height:10px"><div class="horiz-bar-fill" style="width:${m.rev ? Math.min(100, (m.rev / Math.max(...d.monthlyCosts.map(x => x.rev), 1)) * 100) : 0}%;background:#22C97A"></div></div>
             <div class="horiz-bar-track" style="height:10px"><div class="horiz-bar-fill" style="width:${m.total ? Math.min(100, (m.total / Math.max(...d.monthlyCosts.map(x => x.total), 1)) * 100) : 0}%;background:#F04060"></div></div>
           </div>
-        </div>`).join("") || "<p style='color:#888'>No monthly data.</p>"}
+        </div>`).join("") || `<p style='color:#888'>${esc(L.noData)}</p>`}
     </div>
-    <h3>Expenses</h3>
-    ${table(["Date", "Name", "Type", "Amount", "Recurring"], expRows)}
-    <h3>Invoices</h3>
-    ${table(["Date", "Due", "Supplier", "Invoice #", "Net", "Tax", "Total", "Status"], invRows)}
+    <h3>${esc(L.expensesSection)}</h3>
+    ${table([L.date, L.name, L.type, L.amount, L.recurring], expRows)}
+    <h3>${esc(L.invoices)}</h3>
+    ${table([L.date, L.due, L.supplier, "#", L.net, L.tax, L.total, L.status], invRows)}
     ${pendingAlert}`;
 }
 
-function buildStaffSection(d, fmtEur) {
+function buildStaffSection(d, fmtEur, L) {
   const totalWorked = d.staffReport.reduce((a, s) => a + s.worked, 0);
   const topAttendance = [...d.staffReport].sort((a, b) => b.rate - a.rate)[0];
   const topRevenue = [...d.staffReport].sort((a, b) => b.rev - a.rev)[0];
@@ -336,7 +518,7 @@ function buildStaffSection(d, fmtEur) {
   const staffRows = d.staffReport.map(s => [
     cell(s.name, "font-weight:600"),
     cell(s.job_title || "—"),
-    htmlCell(staffStatusBadge(s.status || "active")),
+    htmlCell(staffStatusBadge(s.status || "active", L)),
     cell(String(s.worked)),
     cell(String(s.missed)),
     cell(s.rate.toFixed(0) + "%", `color:${s.rate >= 90 ? "#22C97A" : s.rate >= 70 ? "#F5A623" : "#F04060"};font-weight:600`),
@@ -347,7 +529,7 @@ function buildStaffSection(d, fmtEur) {
   const monthlyDetails = d.staffReport.filter(s => s.monthly?.length > 0).map(s => `
     <details style="margin:12px 0">
       <summary style="cursor:pointer;font-weight:600;padding:8px 0">${esc(s.name)} — monthly breakdown</summary>
-      ${table(["Month", "Days Worked", "Revenue"], s.monthly.map(([mk, v]) => [
+      ${table([L.month, L.daysWorked, L.revenue], s.monthly.map(([mk, v]) => [
         cell(d.monthLabel ? d.monthLabel(mk + "-01") : mk),
         cell(String(v.days)),
         cell(fmtEur(v.rev), "color:#22C97A"),
@@ -361,7 +543,7 @@ function buildStaffSection(d, fmtEur) {
       : "—";
     return [
       cell(s.name),
-      htmlCell(staffStatusBadge(s.status)),
+      htmlCell(staffStatusBadge(s.status, L)),
       cell(s.status_from || "—"),
       cell(s.status_until || "—"),
       cell(dur),
@@ -369,26 +551,26 @@ function buildStaffSection(d, fmtEur) {
   });
 
   return `
-    <h2 class="section-break">Staff Report</h2>
+    <h2 class="section-break">${esc(L.staffSection)}</h2>
     ${metricsGrid([
-      metricCard("Total Staff", String(d.filteredStaff.length), null, "#7C5CFC"),
-      metricCard("Active", String(d.filteredStaff.filter(s => s.status === "active" || !s.status).length), null, "#22C97A"),
-      metricCard("Full Team Days", String(d.fullTeamDays), null, "#22C97A"),
-      metricCard("Total Days Worked", String(totalWorked), "across all staff", "#3B9EFF"),
-      metricCard("Best Attendance", topAttendance ? topAttendance.name : "—", topAttendance ? topAttendance.rate.toFixed(0) + "%" : "", "#22C97A"),
-      metricCard("Most Revenue", topRevenue ? topRevenue.name : "—", topRevenue ? fmtEur(topRevenue.rev) : "", "#F5A623"),
+      metricCard(L.totalStaff, String(d.filteredStaff.length), null, "#7C5CFC"),
+      metricCard(L.staffActive, String(d.filteredStaff.filter(s => s.status === "active" || !s.status).length), null, "#22C97A"),
+      metricCard(L.fullTeamDays, String(d.fullTeamDays), null, "#22C97A"),
+      metricCard(L.daysWorked, String(totalWorked), L.staff.toLowerCase(), "#3B9EFF"),
+      metricCard(L.bestAttendance, topAttendance ? topAttendance.name : "—", topAttendance ? topAttendance.rate.toFixed(0) + "%" : "", "#22C97A"),
+      metricCard(L.mostRevenue, topRevenue ? topRevenue.name : "—", topRevenue ? fmtEur(topRevenue.rev) : "", "#F5A623"),
     ])}
-    <h3>Revenue Impact per Staff Member</h3>
+    <h3>${esc(L.revenueImpact)}</h3>
     <div class="chart-section">${buildHorizBars(revBars, revMax, fmtEur)}</div>
-    <h3>Attendance Rate</h3>
+    <h3>${esc(L.attendanceRate)}</h3>
     <div class="chart-section">${buildHorizBars(attBars, 100, fmtEur)}</div>
-    <h3>Staff Attendance Report</h3>
-    ${table(["Name", "Job Title", "Status", "Worked", "Missed", "Attendance", "Revenue", "Avg/Shift"], staffRows)}
+    <h3>${esc(L.staffAttendanceReport)}</h3>
+    ${table([L.name, L.jobTitle, L.status, L.worked, L.missed, L.attendance, L.revenue, L.avgShift], staffRows)}
     ${monthlyDetails}
-    ${absenceRows.length ? `<h3>Current Status / Absences</h3>${table(["Name", "Status", "From", "Until", "Duration"], absenceRows)}` : ""}`;
+    ${absenceRows.length ? `<h3>${esc(L.absences)}</h3>${table([L.name, L.status, L.from, L.until, L.duration], absenceRows)}` : ""}`;
 }
 
-function buildSupplierSection(d, fmtEur) {
+function buildSupplierSection(d, fmtEur, L) {
   const totalSpend = d.supplierRankings.reduce((a, s) => a + s.spend, 0);
   const paidTotal = d.supplierRankings.reduce((a, s) => a + (s.paid || 0), 0);
   const pendingTotal = d.supplierRankings.reduce((a, s) => a + (s.pendingAmt || 0), 0);
@@ -412,22 +594,22 @@ function buildSupplierSection(d, fmtEur) {
   ]);
 
   return `
-    <h2 class="section-break">Supplier Summary</h2>
+    <h2 class="section-break">${esc(L.suppliersSection)}</h2>
     ${metricsGrid([
-      metricCard("Total Suppliers", String(d.suppliers?.length ?? d.supplierRankings.length), null, "#7C5CFC"),
-      metricCard("Total Spend", fmtEur(totalSpend), null, "#F5A623"),
-      metricCard("Paid Invoices", String(paidTotal), "count in range", "#22C97A"),
-      metricCard("Pending Amount", fmtEur(pendingTotal), null, "#F04060"),
+      metricCard(L.totalSuppliers, String(d.suppliers?.length ?? d.supplierRankings.length), null, "#7C5CFC"),
+      metricCard(L.totalSpend, fmtEur(totalSpend), null, "#F5A623"),
+      metricCard(L.paidInvoices, String(paidTotal), L.invoices.toLowerCase(), "#22C97A"),
+      metricCard(L.pendingAmount, fmtEur(pendingTotal), null, "#F04060"),
     ])}
-    <h3>Supplier Spend Ranking</h3>
+    <h3>${esc(L.supplierRanking)}</h3>
     <div class="chart-section">${buildHorizBars(supplierBars, spendMax, fmtEur)}</div>
-    <h3>Supplier Rankings</h3>
-    ${table(["Rank", "Supplier", "Invoices", "Paid", "Pending", "Total Spend", "Last Invoice"], supRows)}`;
+    <h3>${esc(L.suppliersSection)}</h3>
+    ${table([L.rank, L.supplier, L.invoices, L.paid, L.pending, L.spend, L.lastInvoice], supRows)}`;
 }
 
-function buildInsightsSection(insights) {
+function buildInsightsSection(insights, L) {
   return `
-    <h2 class="section-break">Key Insights</h2>
+    <h2 class="section-break">${esc(L.keyInsights)}</h2>
     <ul class="insight-list">
       ${insights.map(i => `<li${i.startsWith("⚠") ? ' class="warn"' : ""}>${esc(i)}</li>`).join("")}
     </ul>`;
@@ -462,37 +644,39 @@ export function buildExtendedInsights(base, d, fmtEur, monthLabel) {
   return list;
 }
 
-export function buildReportHTML(d, fmtEur, dowShort) {
-  const gen = new Date().toLocaleString("en-GB");
+export function buildReportHTML(d, fmtEur, dowShort, lang = "en") {
+  const L = getReportLabels(lang);
+  const locale = lang === "pt" ? "pt-PT" : "en-GB";
+  const gen = new Date().toLocaleString(locale);
   const sections = [];
 
-  if (d.includeFull) sections.push(buildExecutiveSummary(d, fmtEur));
-  if (d.includeSales) sections.push(buildSalesSection(d, fmtEur, dowShort));
-  if (d.includeExpenses) sections.push(buildExpensesSection(d, fmtEur, d.today));
-  if (d.includeStaff) sections.push(buildStaffSection(d, fmtEur));
+  if (d.includeFull) sections.push(buildExecutiveSummary(d, fmtEur, L));
+  if (d.includeSales) sections.push(buildSalesSection(d, fmtEur, dowShort, L));
+  if (d.includeExpenses) sections.push(buildExpensesSection(d, fmtEur, d.today, L));
+  if (d.includeStaff) sections.push(buildStaffSection(d, fmtEur, L));
   if (d.includeFull) {
-    sections.push(buildSupplierSection(d, fmtEur));
-    sections.push(buildInsightsSection(d.insights));
+    sections.push(buildSupplierSection(d, fmtEur, L));
+    sections.push(buildInsightsSection(d.insights, L));
   }
 
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+  return `<!DOCTYPE html><html lang="${lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(d.reportTitle)} — ApexManager</title>
 <style>${REPORT_CSS}</style></head><body>
 <div class="page">
   <div class="noprint" style="margin-bottom:24px">
-    <button onclick="window.print()" style="padding:10px 24px;background:#7C5CFC;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600">🖨 Print Report</button>
+    <button onclick="window.print()" style="padding:10px 24px;background:#7C5CFC;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600">${L.print}</button>
   </div>
   <div class="header">
     <div class="logo">⚡ ApexManager</div>
     <h1 class="report-title">${esc(d.reportTitle)}</h1>
     <div class="meta">
-      <strong>Venue:</strong> ${esc(d.venueName)} &nbsp;|&nbsp;
-      <strong>Period:</strong> ${esc(d.from)} → ${esc(d.to)}<br>
-      <strong>Generated:</strong> ${esc(gen)}
+      <strong>${esc(L.venue)}:</strong> ${esc(d.venueName)} &nbsp;|&nbsp;
+      <strong>${esc(L.period)}:</strong> ${esc(d.from)} → ${esc(d.to)}<br>
+      <strong>${esc(L.generatedOn)}:</strong> ${esc(gen)}
     </div>
   </div>
   ${sections.join("\n")}
-  <p style="margin-top:48px;color:#888;font-size:11px;border-top:1px solid #eee;padding-top:16px">ApexManager · Confidential business report</p>
+  <p style="margin-top:48px;color:#888;font-size:11px;border-top:1px solid #eee;padding-top:16px">${esc(L.confidential)}</p>
 </div></body></html>`;
 }

@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 const C = {
   accent: "#7C5CFC",
   text: "#F0F0F8",
@@ -5,28 +7,26 @@ const C = {
   green: "#22C97A",
 };
 
-const COPY = {
-  range: {
-    title: "Unlock Full Date Ranges",
-    description:
-      "Free accounts show the last 7 days only. Subscribe to unlock monthly, yearly and custom date ranges and see your business performance over time.",
-  },
-  export: {
-    title: "Unlock Data Exports",
-    description:
-      "Data exports are available on all paid plans. Subscribe to export your sales, expenses and staff reports as CSV files.",
-  },
-  audit: {
-    title: "Unlock Audit Reports",
-    description:
-      "Full audit reports are available on paid plans. Subscribe to generate professional business reports with charts and insights.",
-  },
-};
-
 export default function UpgradePrompt({ open, onClose, feature, setPage }) {
+  const { t } = useTranslation();
   if (!open || !feature) return null;
 
-  const { title, description } = COPY[feature] || COPY.range;
+  const copyByFeature = {
+    range: {
+      title: t('common.upgradeToUnlock'),
+      description: t('dashboard.freePlanBanner'),
+    },
+    export: {
+      title: t('common.upgradeToUnlock'),
+      description: t('analytics.exportCSV'),
+    },
+    audit: {
+      title: t('audit.title'),
+      description: t('audit.subscribeTounlock'),
+    },
+  };
+
+  const { title, description } = copyByFeature[feature] || copyByFeature.range;
 
   return (
     <div
@@ -79,7 +79,7 @@ export default function UpgradePrompt({ open, onClose, feature, setPage }) {
             cursor: "pointer",
           }}
         >
-          See Plans →
+          {t('settings.upgradePlan')}
         </button>
         <button
           type="button"
@@ -97,9 +97,9 @@ export default function UpgradePrompt({ open, onClose, feature, setPage }) {
             cursor: "pointer",
           }}
         >
-          Maybe later
+          {t('common.close')}
         </button>
-        <div style={{ fontSize: 12, color: C.textSub, marginTop: 16, opacity: 0.8 }}>14-day free trial · Cancel anytime</div>
+        <div style={{ fontSize: 12, color: C.textSub, marginTop: 16, opacity: 0.8 }}>{t('common.freeTrial')}</div>
       </div>
     </div>
   );
