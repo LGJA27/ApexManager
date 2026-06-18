@@ -29,6 +29,10 @@ function pageTitleSize(isMobile, isTablet, isWide) {
   if (isTablet) return 24;
   return isWide ? 30 : 28;
 }
+
+function filterByVenue(items, venue) {
+  return venue ? items.filter(i => i.venue_id === venue.id) : items;
+}
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 import Logo from "./components/Logo.jsx";
@@ -306,6 +310,32 @@ function AllVenuesBanner({ venue }) {
       </span>
       <button onClick={() => setDismissed(true)} style={{ background: "none", border: "none", color: C.amber, cursor: "pointer", fontSize: 16, lineHeight: 1, flexShrink: 0, padding: "2px 4px" }}>✕</button>
     </div>
+  );
+}
+
+function VenueFormFields({ venues, value, onChange, messageKey }) {
+  const { t } = useTranslation();
+  if (!venues?.length) return null;
+  return (
+    <>
+      <div style={{ marginBottom: 14 }}>
+        <Select
+          label={t("common.venue")}
+          value={value}
+          onChange={onChange}
+          options={[
+            { value: "", label: t("common.chooseVenue") },
+            ...venues.map(v => ({ value: v.id, label: v.name })),
+          ]}
+        />
+      </div>
+      {!value && (
+        <div style={{ background: C.amberDim, border: `1px solid ${C.amber}44`, borderRadius: 9, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: C.amber, display: "flex", gap: 8, alignItems: "center" }}>
+          <span>⚠</span>
+          <span>{t(messageKey)}</span>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -1367,6 +1397,9 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState("");
 
+  const saleVenueId = formVenueId || venue?.id || "";
+  const staffForSale = saleVenueId ? staffList.filter(s => s.venue_id === saleVenueId) : [];
+
   const openAddModal = (scan = false) => {
     setScanMode(scan);
     setFormVenueId(venue?.id || "");
@@ -1559,23 +1592,7 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
           </div>
         )}
         {venues.length > 0 && (
-          <div style={{ marginBottom: 14 }}>
-            <Select
-              label={t("common.venue")}
-              value={formVenueId}
-              onChange={setFormVenueId}
-              options={[
-                { value: "", label: t("common.chooseVenue") },
-                ...venues.map(v => ({ value: v.id, label: v.name })),
-              ]}
-            />
-          </div>
-        )}
-        {!formVenueId && (
-          <div style={{ background: C.amberDim, border: `1px solid ${C.amber}44`, borderRadius: 9, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: C.amber, display: "flex", gap: 8, alignItems: "center" }}>
-            <span>⚠</span>
-            <span>{t("sales.selectVenueToSave")}</span>
-          </div>
+          <VenueFormFields venues={venues} value={formVenueId} onChange={setFormVenueId} messageKey="sales.selectVenueToSave" />
         )}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
           <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label={t("sales.date")} type="date" value={form.date} onChange={v => setForm(p => ({ ...p, date: v }))} /></div>
@@ -1586,7 +1603,7 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
           <Input label={t("sales.pos")} type="number" value={form.pos} onChange={v => setForm(p => ({ ...p, pos: v }))} placeholder="0.00" prefix="€" />
           <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}>
             <div style={{ fontSize: 12, color: C.textSub, marginBottom: 8, fontWeight: 600 }}>{t("sales.staffAttendance")}</div>
-            <StaffPicker staffList={staffList} selected={form.staff} onChange={v => setForm(p => ({ ...p, staff: v }))} />
+            <StaffPicker staffList={staffForSale} selected={form.staff} onChange={v => setForm(p => ({ ...p, staff: v }))} />
           </div>
           <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label={t("sales.notes")} value={form.note} onChange={v => setForm(p => ({ ...p, note: v }))} placeholder={t("common.optional")} /></div>
         </div>
@@ -1718,14 +1735,15 @@ function StaffPage({ staff, addStaff, updateStaff, deleteStaff, venue, venues, o
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [formVenueId, setFormVenueId] = useState("");
 
-  const filtered = venue ? staff.filter(s => !s.venue_id || s.venue_id === venue.id) : staff;
+  const filtered = filterByVenue(staff, venue);
   const sorted = [...filtered].sort((a, b) => {
     const ord = { active: 0, part_time: 1, holidays: 2, sick_leave: 3 };
     return (ord[a.status] ?? 0) - (ord[b.status] ?? 0) || a.name.localeCompare(b.name);
   });
 
-  const openAdd = () => { setForm(EMPTY_FORM); setEditing(null); setShowModal(true); };
+  const openAdd = () => { setForm(EMPTY_FORM); setEditing(null); setFormVenueId(venue?.id || ""); setShowModal(true); };
   const openEdit = (m) => {
     setForm({ name: m.name || "", birth_date: m.birth_date || "", phone: m.phone || "", job_title: m.job_title || "", status: m.status || "active", status_from: m.status_from || "", status_until: m.status_until || "" });
     setEditing(m);
@@ -1734,10 +1752,12 @@ function StaffPage({ staff, addStaff, updateStaff, deleteStaff, venue, venues, o
 
   const save = async () => {
     if (!form.name.trim()) return;
+    const effectiveVenueId = editing ? editing.venue_id : (formVenueId || venue?.id || "");
+    if (!editing && !effectiveVenueId) return;
     setSaving(true);
     const needsDates = ["holidays", "sick_leave"].includes(form.status);
     const payload = {
-      venue_id: venue?.id || null,
+      venue_id: effectiveVenueId || null,
       name: form.name.trim(),
       birth_date: form.birth_date || null,
       phone: form.phone || null,
@@ -1763,6 +1783,7 @@ function StaffPage({ staff, addStaff, updateStaff, deleteStaff, venue, venues, o
 
   return (
     <div style={{ padding: pagePad(isMobile, w >= 768 && w < 1024), width: "100%", boxSizing: "border-box" }}>
+      <AllVenuesBanner venue={venue} />
       <PageHeader
         title={t("staff.title")}
         venue={venue}
@@ -1809,6 +1830,9 @@ function StaffPage({ staff, addStaff, updateStaff, deleteStaff, venue, venues, o
       )}
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editing ? t("staff.title") : t("staff.addStaff")}>
+        {!editing && (
+          <VenueFormFields venues={venues} value={formVenueId} onChange={setFormVenueId} messageKey="staff.selectVenueToSave" />
+        )}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
           <Input label={t("staff.name") + " *"} value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="e.g. Ana Silva" />
           <Input label={t("staff.jobTitle")} value={form.job_title} onChange={v => setForm(p => ({ ...p, job_title: v }))} placeholder="e.g. Chef, Waiter" />
@@ -1834,7 +1858,7 @@ function StaffPage({ staff, addStaff, updateStaff, deleteStaff, venue, venues, o
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
           <Btn variant="ghost" onClick={() => setShowModal(false)}>{t("common.cancel")}</Btn>
-          <Btn onClick={save} loading={saving} disabled={!form.name.trim() || saving}>{editing ? t("common.save") : t("staff.addStaff")}</Btn>
+          <Btn onClick={save} loading={saving} disabled={!form.name.trim() || saving || (!editing && !formVenueId && !venue)}>{editing ? t("common.save") : t("staff.addStaff")}</Btn>
         </div>
       </Modal>
     </div>
@@ -2019,6 +2043,32 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
   const [editInvoice, setEditInvoice] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [formVenueId, setFormVenueId] = useState("");
+
+  const openScanModal = () => {
+    setFormVenueId(venue?.id || "");
+    setShowScan(true);
+  };
+
+  const openManualModal = () => {
+    setFormVenueId(venue?.id || "");
+    setShowManual(true);
+  };
+
+  const closeScanModal = () => {
+    setShowScan(false);
+    setExtracted(null);
+    setEditItems([]);
+    setScanError("");
+    setFormVenueId("");
+  };
+
+  const closeManualModal = () => {
+    setShowManual(false);
+    setSelectedSupplierId("");
+    setFormVenueId("");
+    setManualForm({ supplier: "", invoiceNumber: "", date: today(), dueDate: "", subtotal: "", tax: "", total: "", iban: "", nif: "" });
+  };
 
   const byVenue = venue ? invoices.filter(i => i.venue_id === venue.id) : invoices;
   const visible = statusFilter === "all" ? byVenue : byVenue.filter(i => i.status === statusFilter);
@@ -2099,9 +2149,11 @@ Rules:
 
   const saveExtracted = async () => {
     if (!extracted) return;
+    const effectiveVenueId = formVenueId || venue?.id || "";
+    if (!effectiveVenueId) return;
     setSavingExtracted(true);
 
-    const existsByNif = suppliers.find(s => s.nif && s.nif === extracted.supplierNIF);
+    const existsByNif = suppliers.find(s => s.nif && s.nif === extracted.supplierNIF && s.venue_id === effectiveVenueId);
     if (!existsByNif) {
       await addSupplier({
         name: extracted.supplierName || "Unknown",
@@ -2111,11 +2163,12 @@ Rules:
         phone: extracted.supplierPhone || null,
         email: null,
         category: null,
+        venue_id: effectiveVenueId,
       });
     }
 
     await addInvoice({
-      venueId: venue?.id || null,
+      venueId: effectiveVenueId,
       supplierName: extracted.supplierName || "Unknown",
       supplierNif: extracted.supplierNIF || null,
       supplierIban: extracted.supplierIBAN || null,
@@ -2134,23 +2187,37 @@ Rules:
         unit: item.unit || "un",
         last_price: item.unitPrice,
         supplier: extracted.supplierName || "",
+        venue_id: effectiveVenueId,
       });
     }
 
     setSavingExtracted(false);
-    setExtracted(null); setEditItems([]); setShowScan(false);
+    setExtracted(null); setEditItems([]); closeScanModal();
   };
 
   const saveManual = async () => {
     if (!manualForm.supplier.trim()) return;
+    const effectiveVenueId = formVenueId || venue?.id || "";
+    if (!effectiveVenueId) return;
     setSavingManual(true);
     // Auto-create supplier profile if not already in DB
-    const existsByName = suppliers.find(s => s.name.toLowerCase() === manualForm.supplier.trim().toLowerCase());
+    const existsByName = suppliers.find(s =>
+      s.name.toLowerCase() === manualForm.supplier.trim().toLowerCase() && s.venue_id === effectiveVenueId
+    );
     if (!existsByName) {
-      await addSupplier({ name: manualForm.supplier.trim(), nif: manualForm.nif || null, iban: manualForm.iban || null, address: null, phone: null, email: null, category: null });
+      await addSupplier({
+        name: manualForm.supplier.trim(),
+        nif: manualForm.nif || null,
+        iban: manualForm.iban || null,
+        address: null,
+        phone: null,
+        email: null,
+        category: null,
+        venue_id: effectiveVenueId,
+      });
     }
     await addInvoice({
-      venueId: venue?.id || null,
+      venueId: effectiveVenueId,
       supplierName: manualForm.supplier,
       supplierNif: manualForm.nif || null,
       supplierIban: manualForm.iban || null,
@@ -2163,9 +2230,7 @@ Rules:
       total: parseFloat(manualForm.total) || 0,
     });
     setSavingManual(false);
-    setShowManual(false);
-    setSelectedSupplierId("");
-    setManualForm({ supplier: "", invoiceNumber: "", date: today(), dueDate: "", subtotal: "", tax: "", total: "", iban: "", nif: "" });
+    closeManualModal();
   };
 
   const openEdit = (inv) => {
@@ -2207,6 +2272,8 @@ Rules:
   const sumPending = byVenue.filter(i => i.status === "pending").reduce((a, i) => a + (i.total || 0), 0);
   const sumPaid    = byVenue.filter(i => i.status === "paid").reduce((a, i) => a + (i.total || 0), 0);
   const supplierCount = new Set(byVenue.map(i => i.supplier_name).filter(Boolean)).size;
+  const invoiceVenueId = formVenueId || venue?.id || "";
+  const suppliersForInvoice = invoiceVenueId ? suppliers.filter(s => s.venue_id === invoiceVenueId) : [];
 
   return (
     <div style={{ padding: pagePad(isMobile, w >= 768 && w < 1024), width: "100%", boxSizing: "border-box" }}>
@@ -2230,8 +2297,8 @@ Rules:
         isWide={isWide}
         actions={(
           <>
-            <Btn variant="ghost" size={isMobile ? "sm" : "md"} onClick={() => setShowManual(true)}>{t("invoices.manualEntry")}</Btn>
-            <Btn size={isMobile ? "sm" : "md"} onClick={() => setShowScan(true)}>{t("invoices.scanInvoice")}</Btn>
+            <Btn variant="ghost" size={isMobile ? "sm" : "md"} onClick={openManualModal}>{t("invoices.manualEntry")}</Btn>
+            <Btn size={isMobile ? "sm" : "md"} onClick={openScanModal}>{t("invoices.scanInvoice")}</Btn>
           </>
         )}
       />
@@ -2265,7 +2332,7 @@ Rules:
       </div>
 
       {/* SCAN MODAL */}
-      <Modal open={showScan} onClose={() => { setShowScan(false); setExtracted(null); setEditItems([]); setScanError(""); }} title={t("invoices.scanTitle")} width={700}>
+      <Modal open={showScan} onClose={closeScanModal} title={t("invoices.scanTitle")} width={700}>
         {!extracted ? (
           <>
             {scanError && (
@@ -2288,7 +2355,7 @@ Rules:
             {scanError && (
               <button
                 type="button"
-                onClick={() => { setShowScan(false); setScanError(""); setShowManual(true); }}
+                onClick={() => { closeScanModal(); setScanError(""); openManualModal(); }}
                 style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, marginBottom: 16, padding: 0, textDecoration: "underline" }}
               >
                 Try manual entry instead
@@ -2299,6 +2366,7 @@ Rules:
         ) : (
           <div>
             <div style={{ background: C.greenDim, border: `1px solid ${C.green}44`, borderRadius: 9, padding: 12, marginBottom: 16, fontSize: 13, color: C.green }}>✓ {t("invoices.extracted")}</div>
+            <VenueFormFields venues={venues} value={formVenueId} onChange={setFormVenueId} messageKey="invoices.selectVenueToSave" />
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 16 }}>
               <div><div style={{ fontSize: 11, color: C.textSub }}>{t("invoices.supplier")}</div><div style={{ fontSize: 14, color: C.text, fontWeight: 600 }}>{extracted.supplierName || "—"}</div></div>
               <div><div style={{ fontSize: 11, color: C.textSub }}>{t("invoices.nif")}</div><div style={{ fontSize: 14, color: C.text }}>{extracted.supplierNIF || "—"}</div></div>
@@ -2335,22 +2403,23 @@ Rules:
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
               <Btn variant="ghost" onClick={() => { setExtracted(null); setEditItems([]); }}>{t("invoices.rescan")}</Btn>
-              <Btn variant="green" loading={savingExtracted} disabled={!venue} title={!venue ? t("common.selectVenue") : undefined} onClick={saveExtracted}>{t("invoices.saveInvoice")}</Btn>
+              <Btn variant="green" loading={savingExtracted} disabled={!formVenueId || savingExtracted} onClick={saveExtracted}>{t("invoices.saveInvoice")}</Btn>
             </div>
           </div>
         )}
       </Modal>
 
       {/* MANUAL ENTRY MODAL */}
-      <Modal open={showManual} onClose={() => { setShowManual(false); setSelectedSupplierId(""); setManualForm({ supplier: "", invoiceNumber: "", date: today(), dueDate: "", subtotal: "", tax: "", total: "", iban: "", nif: "" }); }} title={t("invoices.manualEntry")}>
+      <Modal open={showManual} onClose={closeManualModal} title={t("invoices.manualEntry")}>
+        <VenueFormFields venues={venues} value={formVenueId} onChange={setFormVenueId} messageKey="invoices.selectVenueToSave" />
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
-          {suppliers.length > 0 && (
+          {suppliersForInvoice.length > 0 && (
             <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}>
               <div style={{ fontSize: 12, color: C.textSub, marginBottom: 6 }}>{t("invoices.supplier")}</div>
               <select value={selectedSupplierId} onChange={e => handleSupplierSelect(e.target.value)}
                 style={{ width: "100%", background: C.surfaceL, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontSize: 13, padding: "8px 10px", outline: "none", fontFamily: "inherit" }}>
                 <option value="">— {t("suppliers.addSupplier").replace("+ ", "")} —</option>
-                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}{s.nif ? ` · ${s.nif}` : ""}</option>)}
+                {suppliersForInvoice.map(s => <option key={s.id} value={s.id}>{s.name}{s.nif ? ` · ${s.nif}` : ""}</option>)}
               </select>
             </div>
           )}
@@ -2365,8 +2434,8 @@ Rules:
           <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label={t("invoices.total") + " (€)"} type="number" value={manualForm.total} onChange={v => setManualForm(p => ({ ...p, total: v }))} prefix="€" /></div>
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
-          <Btn variant="ghost" onClick={() => setShowManual(false)}>{t("common.cancel")}</Btn>
-          <Btn loading={savingManual} disabled={!venue || !manualForm.supplier.trim()} title={!venue ? t("common.selectVenue") : !manualForm.supplier.trim() ? t("invoices.supplierName") : undefined} onClick={saveManual}>{t("invoices.saveInvoice")}</Btn>
+          <Btn variant="ghost" onClick={closeManualModal}>{t("common.cancel")}</Btn>
+          <Btn loading={savingManual} disabled={!formVenueId || !manualForm.supplier.trim() || savingManual} onClick={saveManual}>{t("invoices.saveInvoice")}</Btn>
         </div>
       </Modal>
 
@@ -2395,7 +2464,7 @@ Rules:
       <div style={{ display: isWide ? "flex" : "block", gap: 24, alignItems: "flex-start" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           {visible.length === 0
-            ? <EmptyState icon="🧾" title={statusFilter === "all" ? t("invoices.noInvoices") : (statusFilter === "pending" ? t("invoices.filterPending") : t("invoices.filterPaid"))} sub={statusFilter === "all" ? t("invoices.noInvoicesSub") : undefined} action={statusFilter === "all" ? <Btn onClick={() => setShowScan(true)}>{t("invoices.scanFirst")}</Btn> : undefined} />
+            ? <EmptyState icon="🧾" title={statusFilter === "all" ? t("invoices.noInvoices") : (statusFilter === "pending" ? t("invoices.filterPending") : t("invoices.filterPaid"))} sub={statusFilter === "all" ? t("invoices.noInvoicesSub") : undefined} action={statusFilter === "all" ? <Btn onClick={openScanModal}>{t("invoices.scanFirst")}</Btn> : undefined} />
             : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {supplierGroups.map(g => (
@@ -2448,9 +2517,17 @@ function ExpensesPage({ expenses, addExpense, updateExpense, deleteExpense, venu
   const [filter, setFilter] = useState("ALL");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [formVenueId, setFormVenueId] = useState("");
 
   const emptyForm = () => ({ name: "", amount: "", type: "OTHER", recurring: "ONE_TIME", date: today() });
-  const closeModal = () => { setShowAdd(false); setEditId(null); setError(""); setForm(emptyForm()); };
+  const closeModal = () => { setShowAdd(false); setEditId(null); setError(""); setFormVenueId(""); setForm(emptyForm()); };
+
+  const openAddModal = () => {
+    setEditId(null);
+    setForm(emptyForm());
+    setFormVenueId(venue?.id || "");
+    setShowAdd(true);
+  };
 
   const filtered = (venue ? expenses.filter(e => e.venue_id === venue.id) : expenses).filter(e => filter === "ALL" || e.type === filter);
 
@@ -2464,7 +2541,12 @@ function ExpensesPage({ expenses, addExpense, updateExpense, deleteExpense, venu
     if (editId) {
       await updateExpense(editId, { venue_id: venue?.id || null, ...form });
     } else {
-      await addExpense({ venue_id: venue?.id || null, ...form });
+      const effectiveVenueId = formVenueId || venue?.id || "";
+      if (!effectiveVenueId) {
+        setSaving(false);
+        return;
+      }
+      await addExpense({ venue_id: effectiveVenueId, ...form });
     }
     setSaving(false);
     closeModal();
@@ -2479,6 +2561,7 @@ function ExpensesPage({ expenses, addExpense, updateExpense, deleteExpense, venu
       date: e.date || today(),
     });
     setEditId(e.id);
+    setFormVenueId(e.venue_id || venue?.id || "");
     setShowAdd(true);
   };
 
@@ -2502,7 +2585,7 @@ function ExpensesPage({ expenses, addExpense, updateExpense, deleteExpense, venu
         isMobile={isMobile}
         isTablet={w >= 768 && w < 1024}
         isWide={isWide}
-        actions={<Btn onClick={() => { setEditId(null); setForm(emptyForm()); setShowAdd(true); }}>{t("expenses.addExpense")}</Btn>}
+        actions={<Btn onClick={openAddModal}>{t("expenses.addExpense")}</Btn>}
       />
 
       <div className="scroll-x" style={{ display: "flex", gap: 6, marginBottom: isMobile ? 16 : 20 }}>
@@ -2516,6 +2599,9 @@ function ExpensesPage({ expenses, addExpense, updateExpense, deleteExpense, venu
       </div>
 
       <Modal open={showAdd} onClose={closeModal} title={editId ? t("common.edit") : t("expenses.addExpense")}>
+        {!editId && (
+          <VenueFormFields venues={venues} value={formVenueId} onChange={setFormVenueId} messageKey="expenses.selectVenueToSave" />
+        )}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
           <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label={t("expenses.name")} value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="e.g. Electricity bill" /></div>
           <Input label={t("expenses.amount")} type="number" value={form.amount} onChange={v => setForm(p => ({ ...p, amount: v }))} prefix="€" />
@@ -2527,14 +2613,14 @@ function ExpensesPage({ expenses, addExpense, updateExpense, deleteExpense, venu
         {error && <div style={{ color: C.red, fontSize: 12, marginTop: 10 }}>⚠ {error}</div>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
           <Btn variant="ghost" onClick={closeModal}>{t("common.cancel")}</Btn>
-          <Btn loading={saving} disabled={!editId && !venue} title={!editId && !venue ? t("common.selectVenue") : undefined} onClick={save}>{editId ? t("common.save") : t("expenses.addExpense")}</Btn>
+          <Btn loading={saving} disabled={saving || (!editId && !formVenueId) || !form.name.trim()} onClick={save}>{editId ? t("common.save") : t("expenses.addExpense")}</Btn>
         </div>
       </Modal>
 
       <div style={{ display: isWide ? "flex" : "block", gap: 24, alignItems: "flex-start" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           {filtered.length === 0
-            ? <EmptyState icon="💸" title={t("expenses.noExpenses")} sub={t("expenses.noExpensesSub")} action={<Btn onClick={() => { setEditId(null); setForm(emptyForm()); setShowAdd(true); }}>{t("expenses.addFirst")}</Btn>} />
+            ? <EmptyState icon="💸" title={t("expenses.noExpenses")} sub={t("expenses.noExpensesSub")} action={<Btn onClick={openAddModal}>{t("expenses.addFirst")}</Btn>} />
             : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {[...filtered].sort((a, b) => b.date.localeCompare(a.date)).map(e => (
@@ -2595,11 +2681,20 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier, venue, venues, 
   const [form, setForm] = useState({ name: "", nif: "", iban: "", address: "", phone: "", email: "", category: "" });
   const [saving, setSaving] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
+  const [formVenueId, setFormVenueId] = useState("");
 
   const emptyForm = () => ({ name: "", nif: "", iban: "", address: "", phone: "", email: "", category: "" });
-  const closeModal = () => { setShowAdd(false); setEditId(null); setForm(emptyForm()); };
+  const closeModal = () => { setShowAdd(false); setEditId(null); setForm(emptyForm()); setFormVenueId(""); };
 
-  const filtered = suppliers.filter(s =>
+  const openAddModal = () => {
+    setEditId(null);
+    setForm(emptyForm());
+    setFormVenueId(venue?.id || "");
+    setShowAdd(true);
+  };
+
+  const venueSuppliers = filterByVenue(suppliers, venue);
+  const filtered = venueSuppliers.filter(s =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
     s.nif?.includes(search) ||
     s.category?.toLowerCase().includes(search.toLowerCase())
@@ -2607,11 +2702,13 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier, venue, venues, 
 
   const save = async () => {
     if (!form.name.trim()) return;
+    const effectiveVenueId = editId ? suppliers.find(s => s.id === editId)?.venue_id : (formVenueId || venue?.id || "");
+    if (!editId && !effectiveVenueId) return;
     setSaving(true);
     if (editId) {
       await updateSupplier(editId, form);
     } else {
-      await addSupplier(form);
+      await addSupplier({ ...form, venue_id: effectiveVenueId });
     }
     setSaving(false);
     closeModal();
@@ -2635,6 +2732,7 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier, venue, venues, 
 
   return (
     <div style={{ padding: pagePad(isMobile, w >= 768 && w < 1024), width: "100%", boxSizing: "border-box" }}>
+      <AllVenuesBanner venue={venue} />
       <PageHeader
         title={t("suppliers.title")}
         venue={venue}
@@ -2643,7 +2741,7 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier, venue, venues, 
         isMobile={isMobile}
         isTablet={w >= 768 && w < 1024}
         isWide={false}
-        actions={<Btn onClick={() => { setEditId(null); setForm(emptyForm()); setShowAdd(true); }}>{t("suppliers.addSupplier")}</Btn>}
+        actions={<Btn onClick={openAddModal}>{t("suppliers.addSupplier")}</Btn>}
       />
 
       <div style={{ marginBottom: 18 }}>
@@ -2651,6 +2749,9 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier, venue, venues, 
       </div>
 
       <Modal open={showAdd} onClose={closeModal} title={editId ? t("common.edit") : t("suppliers.addSupplier")}>
+        {!editId && (
+          <VenueFormFields venues={venues} value={formVenueId} onChange={setFormVenueId} messageKey="suppliers.selectVenueToSave" />
+        )}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
           <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label={t("suppliers.name") + " *"} value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="Empresa Lda." /></div>
           <Input label={t("invoices.nif")} value={form.nif} onChange={v => setForm(p => ({ ...p, nif: v }))} placeholder="PT123456789" />
@@ -2662,12 +2763,12 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier, venue, venues, 
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
           <Btn variant="ghost" onClick={closeModal}>{t("common.cancel")}</Btn>
-          <Btn loading={saving} onClick={save}>{editId ? t("common.save") : t("suppliers.addSupplier")}</Btn>
+          <Btn loading={saving} disabled={saving || (!editId && !formVenueId && !venue) || !form.name.trim()} onClick={save}>{editId ? t("common.save") : t("suppliers.addSupplier")}</Btn>
         </div>
       </Modal>
 
       {filtered.length === 0
-        ? <EmptyState icon="🏭" title={t("suppliers.noSuppliers")} sub={t("suppliers.noSuppliersSub")} action={<Btn onClick={() => setShowAdd(true)}>{t("suppliers.addSupplier")}</Btn>} />
+        ? <EmptyState icon="🏭" title={t("suppliers.noSuppliers")} sub={t("suppliers.noSuppliersSub")} action={<Btn onClick={openAddModal}>{t("suppliers.addSupplier")}</Btn>} />
         : (
           <Card style={{ padding: 0, overflow: "hidden" }}>
             <div style={{ display: "grid", gridTemplateColumns: rowGrid, alignItems: "center", gap: 8, padding: "10px 16px", background: C.surfaceL, borderBottom: `1px solid ${C.border}` }}>
@@ -2751,6 +2852,7 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier, venue, venues, 
 
 // ─── INGREDIENTS PAGE ────────────────────────────────────────────────────────
 function IngredientsPage({ ingredients, addIngredient, updateIngredient, venue, venues, onVenueChange }) {
+  const { t } = useTranslation();
   const w = useWindowWidth();
   const isMobile = w < 768;
   const [search, setSearch] = useState("");
@@ -2759,20 +2861,38 @@ function IngredientsPage({ ingredients, addIngredient, updateIngredient, venue, 
   const [form, setForm] = useState({ name: "", unit: "kg", last_price: "", category: "General", supplier: "" });
   const [saving, setSaving] = useState(false);
   const [exportMsg, setExportMsg] = useState("");
+  const [formVenueId, setFormVenueId] = useState("");
 
-  const filtered = ingredients.filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || i.category?.toLowerCase().includes(search.toLowerCase()));
+  const venueIngredients = filterByVenue(ingredients, venue);
+  const filtered = venueIngredients.filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || i.category?.toLowerCase().includes(search.toLowerCase()));
+
+  const openAddModal = () => {
+    setEditId(null);
+    setForm({ name: "", unit: "kg", last_price: "", category: "General", supplier: "" });
+    setFormVenueId(venue?.id || "");
+    setShowAdd(true);
+  };
+
+  const closeModal = () => {
+    setShowAdd(false);
+    setEditId(null);
+    setFormVenueId("");
+  };
 
   const save = async () => {
     if (!form.name.trim()) return;
+    const effectiveVenueId = editId ? ingredients.find(i => i.id === editId)?.venue_id : (formVenueId || venue?.id || "");
+    if (!editId && !effectiveVenueId) return;
     setSaving(true);
     if (editId) {
       await updateIngredient(editId, form);
       setEditId(null);
     } else {
-      await addIngredient(form);
+      await addIngredient({ ...form, venue_id: effectiveVenueId });
     }
     setSaving(false);
     setShowAdd(false);
+    setFormVenueId("");
     setForm({ name: "", unit: "kg", last_price: "", category: "General", supplier: "" });
   };
 
@@ -2784,7 +2904,7 @@ function IngredientsPage({ ingredients, addIngredient, updateIngredient, venue, 
 
   const exportCSV = () => {
     const rows = [["Name", "Unit", "Last Price (€)", "Category", "Supplier", "Last Update"]];
-    ingredients.forEach(i => rows.push([i.name, i.unit, i.last_price, i.category, i.supplier, i.last_update]));
+    venueIngredients.forEach(i => rows.push([i.name, i.unit, i.last_price, i.category, i.supplier, i.last_update]));
     const csv = rows.map(r => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "ingredients.csv"; a.click();
@@ -2797,6 +2917,7 @@ function IngredientsPage({ ingredients, addIngredient, updateIngredient, venue, 
 
   return (
     <div style={{ padding: pagePad(isMobile, w >= 768 && w < 1024), width: "100%", boxSizing: "border-box" }}>
+      <AllVenuesBanner venue={venue} />
       <PageHeader
         title={t("ingredients.title")}
         venue={venue}
@@ -2808,33 +2929,36 @@ function IngredientsPage({ ingredients, addIngredient, updateIngredient, venue, 
         actions={(
           <>
             {exportMsg && <span style={{ fontSize: 12, color: C.green }}>{exportMsg}</span>}
-            {!isMobile && <Btn variant="ghost" onClick={exportCSV}>📤 Export CSV</Btn>}
-            <Btn onClick={() => { setEditId(null); setForm({ name: "", unit: "kg", last_price: "", category: "General", supplier: "" }); setShowAdd(true); }}>+ Add</Btn>
+            {!isMobile && <Btn variant="ghost" onClick={exportCSV}>📤 {t("common.export")} CSV</Btn>}
+            <Btn onClick={openAddModal}>{t("ingredients.add")}</Btn>
           </>
         )}
       />
 
       <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center" }}>
-        <div style={{ flex: 1 }}><Input value={search} onChange={setSearch} placeholder="Search ingredients…" prefix="🔍" /></div>
-        <div style={{ fontSize: 13, color: C.textSub, whiteSpace: "nowrap" }}>{filtered.length} items</div>
+        <div style={{ flex: 1 }}><Input value={search} onChange={setSearch} placeholder={t("common.search") + "…"} prefix="🔍" /></div>
+        <div style={{ fontSize: 13, color: C.textSub, whiteSpace: "nowrap" }}>{filtered.length} {t("ingredients.items")}</div>
       </div>
 
-      <Modal open={showAdd} onClose={() => { setShowAdd(false); setEditId(null); }} title={editId ? "Edit Ingredient" : "Add Ingredient"}>
+      <Modal open={showAdd} onClose={closeModal} title={editId ? t("ingredients.edit") : t("ingredients.add")}>
+        {!editId && (
+          <VenueFormFields venues={venues} value={formVenueId} onChange={setFormVenueId} messageKey="ingredients.selectVenueToSave" />
+        )}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
-          <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label="Ingredient Name *" value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="e.g. Chicken breast" /></div>
-          <Input label="Unit" value={form.unit} onChange={v => setForm(p => ({ ...p, unit: v }))} placeholder="kg, L, un, g…" />
-          <Input label="Price per unit (€)" type="number" value={form.last_price} onChange={v => setForm(p => ({ ...p, last_price: v }))} prefix="€" />
-          <Input label="Category" value={form.category} onChange={v => setForm(p => ({ ...p, category: v }))} placeholder="Meat, Dairy, Produce…" />
-          <Input label="Main Supplier" value={form.supplier} onChange={v => setForm(p => ({ ...p, supplier: v }))} placeholder="Supplier name" />
+          <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label={t("ingredients.name")} value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="e.g. Chicken breast" /></div>
+          <Input label={t("ingredients.unit")} value={form.unit} onChange={v => setForm(p => ({ ...p, unit: v }))} placeholder="kg, L, un, g…" />
+          <Input label={t("ingredients.price")} type="number" value={form.last_price} onChange={v => setForm(p => ({ ...p, last_price: v }))} prefix="€" />
+          <Input label={t("ingredients.category")} value={form.category} onChange={v => setForm(p => ({ ...p, category: v }))} placeholder="Meat, Dairy, Produce…" />
+          <Input label={t("ingredients.supplier")} value={form.supplier} onChange={v => setForm(p => ({ ...p, supplier: v }))} placeholder={t("invoices.supplierName")} />
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
-          <Btn variant="ghost" onClick={() => { setShowAdd(false); setEditId(null); }}>Cancel</Btn>
-          <Btn loading={saving} onClick={save}>{editId ? "Update" : "Save"}</Btn>
+          <Btn variant="ghost" onClick={closeModal}>{t("common.cancel")}</Btn>
+          <Btn loading={saving} disabled={saving || (!editId && !formVenueId && !venue) || !form.name.trim()} onClick={save}>{editId ? t("common.save") : t("ingredients.add")}</Btn>
         </div>
       </Modal>
 
       {filtered.length === 0
-        ? <EmptyState icon="🥦" title="No ingredients yet" sub="Ingredients are auto-populated when you scan supplier invoices. You can also add them manually." action={<Btn onClick={() => setShowAdd(true)}>+ Add Ingredient</Btn>} />
+        ? <EmptyState icon="🥦" title={t("ingredients.noIngredients")} sub={t("ingredients.noIngredientsSub")} action={<Btn onClick={openAddModal}>{t("ingredients.add")}</Btn>} />
         : (
           <Card style={{ padding: 0, overflow: "hidden" }}>
             <div className="scroll-x">
@@ -2858,7 +2982,7 @@ function IngredientsPage({ ingredients, addIngredient, updateIngredient, venue, 
                       {!isMobile && <td style={{ padding: "10px 14px", color: C.textSub, fontSize: 12 }}>{ing.supplier || "—"}</td>}
                       {!isMobile && <td style={{ padding: "10px 14px", color: C.textMuted, fontSize: 12 }}>{ing.last_update || "—"}</td>}
                       <td style={{ padding: "10px 14px" }}>
-                        <button onClick={() => edit(ing)} style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 13 }}>Edit</button>
+                        <button onClick={() => edit(ing)} style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 13 }}>{t("common.edit")}</button>
                       </td>
                     </tr>
                   ))}
@@ -2996,9 +3120,10 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
       for (const v of venues) {
         await supabase.from("venues").delete().eq("id", v.id);
       }
-      // Delete suppliers and ingredients (not venue-linked via FK)
+      // Delete suppliers and ingredients without venue (legacy rows)
       await supabase.from("suppliers").delete().eq("user_id", user.id);
       await supabase.from("ingredients").delete().eq("user_id", user.id);
+      await supabase.from("staff").delete().eq("user_id", user.id);
       await supabase.from("subscriptions").delete().eq("user_id", user.id);
       // TODO: Automate Supabase auth user deletion here once ready.
       // Options: (a) call a Vercel serverless function that uses the Supabase
@@ -3585,10 +3710,10 @@ export default function App() {
   };
 
   // ── Supplier helpers ─────────────────────────────────────────────────────────
-  const addSupplier = async ({ name, nif, iban, address, phone, email, category }) => {
+  const addSupplier = async ({ name, nif, iban, address, phone, email, category, venue_id }) => {
     const { data, error } = await supabase
       .from("suppliers")
-      .insert({ user_id: user.id, name, nif: nif || null, iban: iban || null, address: address || null, phone: phone || null, email: email || null, category: category || null })
+      .insert({ user_id: user.id, venue_id: venue_id || null, name, nif: nif || null, iban: iban || null, address: address || null, phone: phone || null, email: email || null, category: category || null })
       .select().single();
     if (!error && data) {
       setSuppliers(prev => [...prev, data]);
@@ -3611,11 +3736,11 @@ export default function App() {
   };
 
   // ── Ingredient helpers ───────────────────────────────────────────────────────
-  const addIngredient = async ({ name, unit, last_price, category, supplier }) => {
+  const addIngredient = async ({ name, unit, last_price, category, supplier, venue_id }) => {
     const price = parseFloat(last_price) || 0;
     const { data, error } = await supabase
       .from("ingredients")
-      .insert({ user_id: user.id, name, unit, last_price: price, category: category || "General", supplier: supplier || null, last_update: today(), price_history: [{ date: today(), price }] })
+      .insert({ user_id: user.id, venue_id: venue_id || null, name, unit, last_price: price, category: category || "General", supplier: supplier || null, last_update: today(), price_history: [{ date: today(), price }] })
       .select().single();
     if (!error && data) setIngredients(prev => [...prev, data]);
     return error ? null : data;
@@ -3632,12 +3757,14 @@ export default function App() {
     if (!error && data) setIngredients(prev => prev.map(i => i.id === id ? data : i));
   };
 
-  const upsertIngredient = async ({ name, unit, last_price, supplier }) => {
-    const existing = ingredients.find(i => i.name.toLowerCase() === name.toLowerCase());
+  const upsertIngredient = async ({ name, unit, last_price, supplier, venue_id }) => {
+    const existing = ingredients.find(i =>
+      i.name.toLowerCase() === name.toLowerCase() && (i.venue_id || null) === (venue_id || null)
+    );
     if (existing) {
       await updateIngredient(existing.id, { name: existing.name, unit, last_price, category: existing.category || "General", supplier });
     } else {
-      await addIngredient({ name, unit, last_price, category: "General", supplier });
+      await addIngredient({ name, unit, last_price, category: "General", supplier, venue_id });
     }
   };
 
@@ -3736,6 +3863,9 @@ export default function App() {
     setSales(prev => prev.filter(s => s.venue_id !== id));
     setInvoices(prev => prev.filter(i => i.venue_id !== id));
     setExpenses(prev => prev.filter(e => e.venue_id !== id));
+    setStaff(prev => prev.filter(s => s.venue_id !== id));
+    setSuppliers(prev => prev.filter(s => s.venue_id !== id));
+    setIngredients(prev => prev.filter(i => i.venue_id !== id));
     if (venueId === id) setVenueId("");
     return { error: null };
   };

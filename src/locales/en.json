@@ -130,7 +130,8 @@
     "address": "Address",
     "phone": "Phone",
     "invoices": "invoices",
-    "totalSpend": "total spend"
+    "totalSpend": "total spend",
+    "selectVenueToSave": "Select a venue for this invoice to save it."
   },
   "expenses": {
     "title": "Expenses",
@@ -147,7 +148,8 @@
     "noExpenses": "No expenses yet",
     "noExpensesSub": "Track fixed costs like rent, wages, utilities and services.",
     "addFirst": "+ Add First Expense",
-    "total": "Total"
+    "total": "Total",
+    "selectVenueToSave": "Select a venue for this expense to save it."
   },
   "suppliers": {
     "title": "Suppliers",
@@ -160,10 +162,22 @@
     "noSuppliers": "No suppliers yet",
     "noSuppliersSub": "Suppliers are auto-created when you scan invoices, or add them manually.",
     "totalSpend": "total spend",
-    "invoiceHistory": "Invoices ▾"
+    "invoiceHistory": "Invoices ▾",
+    "selectVenueToSave": "Select a venue for this supplier to save it."
   },
   "ingredients": {
-    "title": "Ingredient Costs"
+    "title": "Ingredient Costs",
+    "add": "+ Add Ingredient",
+    "edit": "Edit Ingredient",
+    "name": "Ingredient Name *",
+    "unit": "Unit",
+    "price": "Price per unit (€)",
+    "category": "Category",
+    "supplier": "Main Supplier",
+    "noIngredients": "No ingredients yet",
+    "noIngredientsSub": "Ingredients are auto-populated when you scan supplier invoices. You can also add them manually.",
+    "selectVenueToSave": "Select a venue for this ingredient to save it.",
+    "items": "items"
   },
   "staff": {
     "title": "Staff",
@@ -180,7 +194,8 @@
     "from": "From",
     "until": "Until",
     "noStaff": "No staff members yet",
-    "noStaffSub": "Add your team members to track attendance in daily sales."
+    "noStaffSub": "Add your team members to track attendance in daily sales.",
+    "selectVenueToSave": "Select a venue for this staff member to save them."
   },
   "analytics": {
     "title": "Analytics & Reports",

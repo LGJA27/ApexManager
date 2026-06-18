@@ -615,6 +615,14 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, venue
   const [from, setFrom] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 1); return d.toISOString().split("T")[0]; });
   const [to, setTo] = useState(today);
   const venueId = venue?.id || "";
+  const scopedSuppliers = useMemo(
+    () => (venueId ? suppliers.filter(s => s.venue_id === venueId) : suppliers),
+    [suppliers, venueId]
+  );
+  const scopedIngredients = useMemo(
+    () => (venueId ? ingredients.filter(i => i.venue_id === venueId) : ingredients),
+    [ingredients, venueId]
+  );
   const [tab, setTab] = useState("overview");
   const [salesSort, setSalesSort] = useState({ key: "date", dir: "desc" });
   const [staffSort, setStaffSort] = useState({ key: "worked", dir: "desc" });
@@ -652,7 +660,7 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, venue
     if (i.status === "paid") return inDate(paidAtDate(i));
     return inDate(i.date);
   }), [invoices, from, to, venueId]);
-  const filteredStaff = useMemo(() => staff.filter(s => !venueId || !s.venue_id || s.venue_id === venueId), [staff, venueId, venueId]);
+  const filteredStaff = useMemo(() => staff.filter(s => !venueId || s.venue_id === venueId), [staff, venueId]);
 
   const totalCash = filteredSales.reduce((a, s) => a + (s.cash || 0), 0);
   const totalCard = filteredSales.reduce((a, s) => a + (s.card || 0), 0);
@@ -1307,14 +1315,14 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, venue
             <Btn variant="ghost" size="sm" onClick={() => tryExport("supplier-report.csv", [
               ["Supplier", "NIF", "IBAN", "Total Invoices", "Total Spend", "Pending Amount", "Paid Amount", "Last Invoice Date"],
               ...supplierRankings.map(s => {
-                const sup = suppliers.find(x => x.name === s.name);
+                const sup = scopedSuppliers.find(x => x.name === s.name);
                 const paidAmtS = filteredInv.filter(i => i.supplier_name === s.name && i.status === "paid").reduce((a, i) => a + (i.total || 0), 0);
                 return [s.name, sup?.nif || "", sup?.iban || "", s.count, s.spend.toFixed(2), s.pendingAmt.toFixed(2), paidAmtS.toFixed(2), s.lastDate];
               }),
             ])}>{isFree ? `📥 ${t("common.export")} 🔒` : t("analytics.exportCSV")}</Btn>
           }>{t("invoices.title")}</SectionHeading>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(3,1fr)", gap: pick(10, 12), marginBottom: pick(14, 16) }}>
-            <MetricCard label="Total Suppliers" value={suppliers.length} color={C.accent} hideIcon={isMobile} />
+            <MetricCard label="Total Suppliers" value={scopedSuppliers.length} color={C.accent} hideIcon={isMobile} />
             <MetricCard label="Active in Range" value={supplierRankings.length} color={C.blue} hideIcon={isMobile} />
             <MetricCard label="Top Supplier" value={supplierRankings[0]?.name?.slice(0, 14) || "—"} sub={supplierRankings[0] ? fmtEur(supplierRankings[0].spend) : ""} color={C.amber} hideIcon={isMobile} />
           </div>
@@ -1378,12 +1386,12 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, venue
               ))}
             </Card>
           </div>
-          {ingredients.some(i => (i.price_history || []).length > 1) && (
+          {scopedIngredients.some(i => (i.price_history || []).length > 1) && (
             <>
               <SectionHeading>Ingredient Price Evolution</SectionHeading>
               <Card style={{ padding: 0, overflow: "hidden", marginBottom: 16 }}>
                 <SortableTable headers={[{ label: "Ingredient" }, { label: "First Price" }, { label: "Latest" }, { label: "Change" }, { label: "Change %" }]}
-                  rows={ingredients.filter(i => (i.price_history || []).length > 1).map(i => {
+                  rows={scopedIngredients.filter(i => (i.price_history || []).length > 1).map(i => {
                     const hist = [...(i.price_history || [])].sort((a, b) => a.date.localeCompare(b.date));
                     const first = hist[0]?.price || 0;
                     const last = hist[hist.length - 1]?.price || 0;
