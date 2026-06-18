@@ -13,7 +13,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
+import LandingLanguageToggle from '../components/LandingLanguageToggle.jsx';
 import { motion } from 'framer-motion';
 import { PLANS } from '../config/plans.js';
 import Logo from '../components/Logo.jsx';
@@ -118,6 +118,7 @@ function ImagePlaceholder({ imageId, aspectRatio = '16/9', label }) {
 
 // ─── Browser frame chrome ─────────────────────────────────────────────────────
 function BrowserFrame({ imageId, label, children, overlay }) {
+  const { t } = useTranslation();
   return (
     <div style={{
       borderRadius: 12, overflow: 'hidden',
@@ -134,7 +135,7 @@ function BrowserFrame({ imageId, label, children, overlay }) {
           ))}
         </div>
         <div style={{ flex: 1, background: C.bg, borderRadius: 6, padding: '4px 12px', fontSize: 11, color: C.textMuted, fontFamily: 'monospace', border: `1px solid ${C.border}` }}>
-          app.apexmanager.com/dashboard
+          {t('landing.browserUrl')}
         </div>
       </div>
       {/* Content */}
@@ -207,34 +208,67 @@ function StatPill({ target, format, label, active }) {
   );
 }
 
-// ─── Feature cards ─────────────────────────────────────────────────────────────
-const FEATURE_CARDS = [
-  {
-    icon: '🧾',
-    title: 'Smart Invoice Management',
-    description: 'Photograph any supplier invoice. AI extracts every line item, price, tax, NIF and IBAN automatically. Build your supplier database without typing a single character.',
-  },
-  {
-    icon: '💳',
-    title: 'Daily Sales Tracking',
-    description: 'Log cash and card sales in seconds. Scan your POS daily report with AI. Track staff attendance. See your day\'s performance the moment you close.',
-  },
-  {
-    icon: '📊',
-    title: 'Business Analytics',
-    description: 'Revenue trends, cost breakdowns, profit margins and supplier spend — filtered by venue, date range or custom period. Know your numbers without an accountant.',
-  },
-  {
-    icon: '📋',
-    title: 'Audit Reports',
-    description: 'Generate professional PDF-ready business reports. Sales, expenses, staff attendance or full audit — export exactly what you need, when you need it.',
-  },
-  {
-    icon: '🏢',
-    title: 'Multi-Venue Management',
-    description: 'One account for all your locations. Switch between venues instantly. Data always separated, overview always unified.',
-  },
+// ─── i18n helpers ─────────────────────────────────────────────────────────────
+const CONTACT_SUBJECTS = [
+  { value: 'general', key: 'landing.contactSubjectGeneral' },
+  { value: 'support', key: 'landing.contactSubjectSupport' },
+  { value: 'billing', key: 'landing.contactSubjectBilling' },
+  { value: 'partnership', key: 'landing.contactSubjectPartnership' },
 ];
+
+function getFeatureCards(t) {
+  return [
+    { icon: '🧾', title: t('landing.feature1Title'), description: t('landing.feature1Desc') },
+    { icon: '💳', title: t('landing.feature2Title'), description: t('landing.feature2Desc') },
+    { icon: '📊', title: t('landing.feature3Title'), description: t('landing.feature3Desc') },
+    { icon: '📋', title: t('landing.feature4Title'), description: t('landing.feature4Desc') },
+    { icon: '🏢', title: t('landing.feature5Title'), description: t('landing.feature5Desc') },
+  ];
+}
+
+function getFaqs(t) {
+  return [
+    { q: t('landing.faq1Q'), a: t('landing.faq1A') },
+    { q: t('landing.faq2Q'), a: t('landing.faq2A') },
+    { q: t('landing.faq3Q'), a: t('landing.faq3A') },
+    { q: t('landing.faq4Q'), a: t('landing.faq4A') },
+    { q: t('landing.faq5Q'), a: t('landing.faq5A') },
+    { q: t('landing.faq6Q'), a: t('landing.faq6A') },
+  ];
+}
+
+function getTestimonials(t) {
+  return [
+    { quote: t('landing.testimonial1Quote'), name: t('landing.testimonial1Name'), role: t('landing.testimonial1Role'), restaurant: t('landing.testimonial1Restaurant') },
+    { quote: t('landing.testimonial2Quote'), name: t('landing.testimonial2Name'), role: t('landing.testimonial2Role'), restaurant: t('landing.testimonial2Restaurant') },
+    { quote: t('landing.testimonial3Quote'), name: t('landing.testimonial3Name'), role: t('landing.testimonial3Role'), restaurant: t('landing.testimonial3Restaurant') },
+  ];
+}
+
+const PLAN_FEATURE_KEYS = {
+  '1 venue': 'landing.planFeat1Venue',
+  'Up to 3 venues': 'landing.planFeat3Venues',
+  'Unlimited venues': 'landing.planFeatUnlimitedVenues',
+  'Unlimited AI invoice scans': 'landing.planFeatUnlimitedScans',
+  'Full sales history': 'landing.planFeatFullHistory',
+  'CSV export': 'landing.planFeatCsvExport',
+  'Full analytics': 'landing.planFeatFullAnalytics',
+  'PDF reports': 'landing.planFeatPdfReports',
+  'Priority support': 'landing.planFeatPrioritySupport',
+};
+
+function translatePlanFeature(t, feature) {
+  const key = PLAN_FEATURE_KEYS[feature];
+  return key ? t(key) : feature;
+}
+
+const PLAN_NAME_KEYS = { starter: 'landing.planStarter', growth: 'landing.planGrowth', pro: 'landing.planPro' };
+
+function translatePlanName(t, planKey) {
+  return t(PLAN_NAME_KEYS[planKey] || planKey);
+}
+
+// ─── Feature cards ─────────────────────────────────────────────────────────────
 
 function FeatureCard({ icon, title, description, delay = 0 }) {
   const isDesktop = useWindowWidth() >= 1024;
@@ -252,7 +286,7 @@ function FeatureCard({ icon, title, description, delay = 0 }) {
 // ─── Contact form ───────────────────────────────────────────────────────────────
 function ContactSection({ isMobile, inner }) {
   const { t } = useTranslation();
-  const [form, setForm] = useState({ name: '', email: '', subject: 'General Question', message: '' });
+  const [form, setForm] = useState({ name: '', email: '', subject: 'general', message: '' });
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -278,12 +312,13 @@ function ContactSection({ isMobile, inner }) {
       return;
     }
     setSaving(true);
-    const body = `Name: ${form.name}\nEmail: ${form.email}\n\n${form.message}`;
-    window.location.href = `mailto:support@apexmanager.com?subject=${encodeURIComponent(form.subject)}&body=${encodeURIComponent(body)}`;
+    const subjectLabel = t(CONTACT_SUBJECTS.find(s => s.value === form.subject)?.key || 'landing.contactSubjectGeneral');
+    const body = `${t('landing.contactName')}: ${form.name}\n${t('landing.contactEmail')}: ${form.email}\n\n${form.message}`;
+    window.location.href = `mailto:support@apexmanager.com?subject=${encodeURIComponent(subjectLabel)}&body=${encodeURIComponent(body)}`;
     setTimeout(() => {
       setSaving(false);
       setSuccess(true);
-      setForm({ name: '', email: '', subject: 'General Question', message: '' });
+      setForm({ name: '', email: '', subject: 'general', message: '' });
     }, 500);
   };
 
@@ -297,22 +332,22 @@ function ContactSection({ isMobile, inner }) {
         <RevealItem y={20} delay={0.08}>
           <form onSubmit={submit} style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>Name *</label>
-              <input required value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Your name" style={inputStyle} />
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>{t('landing.contactName')} {t('landing.requiredField')}</label>
+              <input required value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder={t('landing.contactNamePlaceholder')} style={inputStyle} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>Email *</label>
-              <input required type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="you@restaurant.com" style={inputStyle} />
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>{t('landing.contactEmail')} {t('landing.requiredField')}</label>
+              <input required type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder={t('landing.contactEmailPlaceholder')} style={inputStyle} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>Subject *</label>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>{t('landing.contactSubject')} {t('landing.requiredField')}</label>
               <select required value={form.subject} onChange={e => setForm(p => ({ ...p, subject: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
-                {['General Question', 'Support', 'Billing', 'Partnership'].map(s => <option key={s} value={s}>{s}</option>)}
+                {CONTACT_SUBJECTS.map(s => <option key={s.value} value={s.value}>{t(s.key)}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>Message *</label>
-              <textarea required value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} placeholder="How can we help?" rows={5} style={{ ...inputStyle, minHeight: 120, resize: 'vertical' }} />
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>{t('landing.contactMessage')} {t('landing.requiredField')}</label>
+              <textarea required value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} placeholder={t('landing.contactMessagePlaceholder')} rows={5} style={{ ...inputStyle, minHeight: 120, resize: 'vertical' }} />
             </div>
             {error && <div style={{ fontSize: 13, color: C.red }}>{error}</div>}
             {success && <div style={{ fontSize: 14, color: C.green, fontWeight: 600 }}>{t('landing.messageSent')}</div>}
@@ -382,14 +417,6 @@ function FeatureRow({ badge, headline, description, bullets, imageContent, image
 }
 
 // ─── FAQ accordion ────────────────────────────────────────────────────────────
-const FAQS = [
-  { q: 'Do I need a credit card to start?', a: 'No. The 14-day free trial is completely free. A card is only needed when you choose to upgrade to a paid plan.' },
-  { q: 'Is my data secure?', a: 'Yes. All data is encrypted at rest and in transit, stored on European servers. We are fully GDPR compliant and never sell your data.' },
-  { q: 'Can I use it for multiple restaurants?', a: 'Yes. The Growth plan supports up to 3 venues and the Pro plan supports unlimited locations. Switch between them instantly from the sidebar.' },
-  { q: 'Can I export my reports?', a: 'Yes. Subscribers can export Sales, Expenses, Staff and full Audit reports as print-ready documents. Free accounts have access to weekly data.' },
-  { q: 'What languages are supported?', a: 'Currently English and Portuguese. More languages are on the roadmap.' },
-  { q: 'Can I cancel anytime?', a: 'Yes, cancel from your account settings at any time. No lock-in contracts, no cancellation fees. Your data is always yours to export.' },
-];
 
 function FaqItem({ q, a, index }) {
   const [open, setOpen] = useState(false);
@@ -433,11 +460,11 @@ function LandingPricingCards() {
       <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: isMobile ? 28 : 40 }}>
         {['monthly', 'annual'].map(b => (
           <button key={b} onClick={() => setBilling(b)} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: billing === b ? C.accent : C.surfaceL, color: billing === b ? '#fff' : C.textSub, transition: 'all .15s', display: 'flex', alignItems: 'center', gap: 8 }}>
-            {b === 'annual' ? 'Annual' : 'Monthly'}
-            {b === 'annual' && billing === 'annual' && <span style={{ background: C.greenDim, color: C.green, fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>Save 2 months</span>}
+            {b === 'annual' ? t('landing.annual') : t('landing.monthly')}
+            {b === 'annual' && billing === 'annual' && <span style={{ background: C.greenDim, color: C.green, fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>{t('landing.save2months')}</span>}
           </button>
         ))}
-        {billing === 'monthly' && <span style={{ fontSize: 12, color: C.green, fontWeight: 600, alignSelf: 'center' }}>↑ Save 2 months with Annual</span>}
+        {billing === 'monthly' && <span style={{ fontSize: 12, color: C.green, fontWeight: 600, alignSelf: 'center' }}>↑ {t('landing.saveWithAnnual')}</span>}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(3, 1fr)' : '1fr', gap: 16, alignItems: 'start' }}>
         {(isMobile ? PAID_PLANS.slice().reverse() : PAID_PLANS).map((key, i) => {
@@ -451,23 +478,23 @@ function LandingPricingCards() {
                 className={plan.popular ? 'pricing-popular' : ''}
                 style={{ background: C.surface, border: `1px solid ${plan.popular ? C.accent : isH ? `${C.accent}88` : C.border}`, borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column', transform: isH ? 'scale(1.02)' : 'scale(1)', transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease', marginTop: plan.popular && isDesktop ? -8 : 0 }}
               >
-                {plan.popular && <div style={{ background: C.accent, color: '#fff', textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: '.8px', textTransform: 'uppercase', padding: '7px 0' }}>Most Popular</div>}
+                {plan.popular && <div style={{ background: C.accent, color: '#fff', textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: '.8px', textTransform: 'uppercase', padding: '7px 0' }}>{t('landing.mostPopular')}</div>}
                 <div style={{ padding: plan.popular ? '36px 24px 28px' : '28px 24px 24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 16 }}>{plan.name}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 16 }}>{translatePlanName(t, key)}</div>
                   <div style={{ marginBottom: 24 }}>
                     {billing === 'annual' ? (
                       <>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}><span style={{ fontSize: 38, fontWeight: 800, color: C.text }}>€{perMo}</span><span style={{ fontSize: 14, color: C.textSub }}>/mo</span></div>
-                        <div style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>€{price} billed annually</div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}><span style={{ fontSize: 38, fontWeight: 800, color: C.text }}>€{perMo}</span><span style={{ fontSize: 14, color: C.textSub }}>{t('landing.pricingPerMo')}</span></div>
+                        <div style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>{t('landing.pricingBilledAnnually', { price })}</div>
                       </>
                     ) : (
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}><span style={{ fontSize: 38, fontWeight: 800, color: C.text }}>€{price}</span><span style={{ fontSize: 14, color: C.textSub }}>/mo</span></div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}><span style={{ fontSize: 38, fontWeight: 800, color: C.text }}>€{price}</span><span style={{ fontSize: 14, color: C.textSub }}>{t('landing.pricingPerMo')}</span></div>
                     )}
                   </div>
                   <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {plan.features.map(f => (
                       <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, fontSize: isDesktop ? 15 : 13, color: C.textSub }}>
-                        <span style={{ color: C.green, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>✓</span>{f}
+                        <span style={{ color: C.green, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>✓</span>{translatePlanFeature(t, f)}
                       </li>
                     ))}
                   </ul>
@@ -486,20 +513,6 @@ function LandingPricingCards() {
 }
 
 // ─── Testimonials data ────────────────────────────────────────────────────────
-const TESTIMONIALS = [
-  {
-    quote: 'Finally I know my actual costs without spending hours in Excel. The invoice scanning alone is worth every cent.',
-    name: 'Miguel Santos', role: 'Head Chef', restaurant: 'Tasca do Mercado, Lisboa',
-  },
-  {
-    quote: 'I manage 3 restaurants and this is the first tool that actually makes multi-venue management feel simple.',
-    name: 'Ana Rodrigues', role: 'Owner', restaurant: 'Grupo Taberna, Porto',
-  },
-  {
-    quote: 'Scanning invoices with my phone and having everything organised automatically changed how I run my kitchen.',
-    name: 'Carlos Ferreira', role: 'Owner', restaurant: 'O Petisco, Faro',
-  },
-];
 
 // ─── Radial glow ─────────────────────────────────────────────────────────────
 function RadialGlow({ size = 700 }) {
@@ -551,6 +564,14 @@ export default function LandingPage() {
   const hp = isDesktop ? '40px' : isMobile ? '20px' : '32px';
   const inner = (maxW = 1100) => ({ maxWidth: maxW, margin: '0 auto', padding: `0 ${hp}` });
   const vPad = isMobile ? '64px 0' : '88px 0';
+  const featureCards = getFeatureCards(t);
+  const faqs = getFaqs(t);
+  const testimonials = getTestimonials(t);
+  const problemCards = [
+    { icon: '💸', titleKey: 'landing.problem1Title', subKey: 'landing.problem1Sub' },
+    { icon: '📦', titleKey: 'landing.problem2Title', subKey: 'landing.problem2Sub' },
+    { icon: '📉', titleKey: 'landing.problem3Title', subKey: 'landing.problem3Sub' },
+  ];
 
   return (
     <div style={{ background: C.bg, color: C.text, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", minHeight: '100vh', overflowX: 'hidden' }}>
@@ -585,16 +606,13 @@ export default function LandingPage() {
             {!isMobile && (
               <>
                 <button className="lp-navlink" onClick={() => scrollTo('pricing')} style={{ padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: isDesktop ? 15 : 13, background: 'transparent', color: C.textSub, border: `1px solid ${C.border}`, cursor: 'pointer' }}>{t('landing.pricing')}</button>
-                <LanguageSwitcher />
+                <LandingLanguageToggle />
                 <Link to="/signin" className="lp-navlink" style={{ padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: isDesktop ? 15 : 13, color: C.textSub, border: `1px solid ${C.border}` }}>{t('landing.signIn')}</Link>
                 <button className="lp-navlink" onClick={() => scrollTo('contact')} style={{ padding: '9px 18px', borderRadius: 10, fontWeight: 700, fontSize: isDesktop ? 15 : 13, background: 'transparent', color: C.textSub, border: `1px solid ${C.border}`, cursor: 'pointer' }}>{t('landing.contact')}</button>
               </>
             )}
             {isMobile && (
-              <>
-                <LanguageSwitcher />
-                <Link to="/signin" className="lp-navlink" style={{ padding: '8px 12px', borderRadius: 10, fontWeight: 600, fontSize: 13, color: C.textSub, border: `1px solid ${C.border}`, flexShrink: 0, whiteSpace: 'nowrap' }}>{t('landing.signIn')}</Link>
-              </>
+              <Link to="/signin" className="lp-navlink" style={{ padding: '8px 12px', borderRadius: 10, fontWeight: 600, fontSize: 13, color: C.textSub, border: `1px solid ${C.border}`, flexShrink: 0, whiteSpace: 'nowrap' }}>{t('landing.signIn')}</Link>
             )}
             <Link to="/register" className="cta-btn" style={{ padding: isMobile ? '8px 14px' : '9px 22px', borderRadius: 10, fontWeight: 700, fontSize: isMobile ? 12 : 13, background: C.accent, color: '#fff', display: 'inline-block', flexShrink: 0, whiteSpace: 'nowrap' }}>{t('landing.startTrial')}</Link>
           </div>
@@ -610,7 +628,7 @@ export default function LandingPage() {
         >
           <motion.div variants={fadeIn} style={{ marginBottom: 24 }}>
             <span style={{ display: 'inline-block', background: C.accentDim, color: C.accent, fontSize: 11, fontWeight: 700, padding: '5px 14px', borderRadius: 99, border: `1px solid ${C.accent}44`, letterSpacing: '.6px', textTransform: 'uppercase' }}>
-              Now with AI invoice scanning
+              {t('landing.nowWithAI')}
             </span>
           </motion.div>
           <motion.div variants={fadeUp}>
@@ -648,7 +666,7 @@ export default function LandingPage() {
               transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.35 }}
               style={{ transform: 'rotateX(4deg)', transformOrigin: 'top center' }}
             >
-              <BrowserFrame imageId="hero-dashboard" label="Dashboard with sales data, revenue chart and cost breakdown" />
+              <BrowserFrame imageId="hero-dashboard" label={t('landing.heroDashboardLabel')} />
             </motion.div>
           </div>
           {/* Gradient fade at bottom to blend into next section */}
@@ -663,9 +681,9 @@ export default function LandingPage() {
             {t('landing.trustedBy')}
           </div>
           <div ref={statsRef} style={{ display: 'flex', justifyContent: isDesktop ? 'space-evenly' : 'center', gap: 16, flexWrap: 'wrap' }}>
-            <RevealItem delay={0} y={20}><StatPill target={2300} format={v => `€${(v/1000).toFixed(1)}M`} label="invoices scanned" active={statsActive} /></RevealItem>
-            <RevealItem delay={0.1} y={20}><StatPill target={4800} format={v => v.toLocaleString()} label="hours saved" active={statsActive} /></RevealItem>
-            <RevealItem delay={0.2} y={20}><StatPill target={320} format={v => `${v}+`} label="venues managed" active={statsActive} /></RevealItem>
+            <RevealItem delay={0} y={20}><StatPill target={2300} format={v => `€${(v/1000).toFixed(1)}M`} label={t('landing.trustedStat1')} active={statsActive} /></RevealItem>
+            <RevealItem delay={0.1} y={20}><StatPill target={4800} format={v => v.toLocaleString()} label={t('landing.trustedStat2')} active={statsActive} /></RevealItem>
+            <RevealItem delay={0.2} y={20}><StatPill target={320} format={v => `${v}+`} label={t('landing.trustedStat3')} active={statsActive} /></RevealItem>
           </div>
         </div>
       </section>
@@ -673,19 +691,14 @@ export default function LandingPage() {
       {/* ── PROBLEM SECTION ───────────────────────────────────────────────────── */}
       <section style={{ padding: vPad }}>
         <div style={{ ...inner(1100), textAlign: 'center' }}>
-          <SectionHeader
-            title={<>Paper invoices. WhatsApp photos. Excel sheets.<br /><span style={{ color: C.textSub, fontWeight: 500 }}>Sound familiar?</span></>}
-          />
+          <SectionHeader title={t('landing.problemTitle')} />
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16 }}>
-            {[
-              { icon: '💸', text: "You don't know your real margins until month end" },
-              { icon: '📦', text: 'Supplier invoices pile up and never get digitised' },
-              { icon: '📉', text: 'You have no idea which days make the most money' },
-            ].map(({ icon, text }, i) => (
-              <RevealItem key={text} delay={i * 0.13} y={36}>
+            {problemCards.map(({ icon, titleKey, subKey }, i) => (
+              <RevealItem key={titleKey} delay={i * 0.13} y={36}>
                 <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.accent}`, borderRadius: 14, padding: '28px 24px', textAlign: 'left' }}>
                   <div style={{ fontSize: 28, marginBottom: 12 }}>{icon}</div>
-                  <p style={{ fontSize: 15, color: C.textSub, lineHeight: 1.7, margin: 0, fontWeight: 500 }}>{text}</p>
+                  <p style={{ fontSize: 15, color: C.text, lineHeight: 1.5, margin: '0 0 8px', fontWeight: 600 }}>{t(titleKey)}</p>
+                  <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.7, margin: 0 }}>{t(subKey)}</p>
                 </div>
               </RevealItem>
             ))}
@@ -696,25 +709,25 @@ export default function LandingPage() {
       {/* ── BEFORE / AFTER ────────────────────────────────────────────────────── */}
       <section style={{ padding: vPad, background: C.surface, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
         <div style={{ ...inner(1100) }}>
-          <SectionHeader title="Before ApexManager vs After" sub="From chaos to clarity. The transformation takes minutes." />
+          <SectionHeader title={t('landing.beforeAfterTitle')} sub={t('landing.beforeAfterSub')} />
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isDesktop ? 32 : 20 }}>
             {/* Before */}
             <RevealItem delay={0} y={32}>
               <div style={{ background: `${C.red}0A`, border: `1px solid ${C.red}25`, borderRadius: 16, overflow: 'hidden' }}>
-                <ImagePlaceholder imageId="before-chaos" aspectRatio="4/3" label="Scattered paper invoices, messy Excel spreadsheet, WhatsApp messages about prices" />
+                <ImagePlaceholder imageId="before-chaos" aspectRatio="4/3" label={t('landing.beforeImageLabel')} />
                 <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 16 }}>😰</span>
-                  <span style={{ fontSize: 14, color: `${C.red}CC`, fontWeight: 500 }}>Invoices in a drawer. Costs unknown. Stress high.</span>
+                  <span style={{ fontSize: 14, color: `${C.red}CC`, fontWeight: 500 }}>{t('landing.beforeLabel')}</span>
                 </div>
               </div>
             </RevealItem>
             {/* After */}
             <RevealItem delay={0.15} y={32}>
               <div style={{ background: `${C.green}0A`, border: `1px solid ${C.green}25`, borderRadius: 16, overflow: 'hidden' }}>
-                <ImagePlaceholder imageId="after-dashboard" aspectRatio="4/3" label="Clean Apex Manager dashboard with organised invoices, charts and clear profit visibility" />
+                <ImagePlaceholder imageId="after-dashboard" aspectRatio="4/3" label={t('landing.afterImageLabel')} />
                 <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 16 }}>✨</span>
-                  <span style={{ fontSize: 14, color: `${C.green}CC`, fontWeight: 500 }}>Everything organised. Costs tracked. Profit visible.</span>
+                  <span style={{ fontSize: 14, color: `${C.green}CC`, fontWeight: 500 }}>{t('landing.afterLabel')}</span>
                 </div>
               </div>
             </RevealItem>
@@ -725,9 +738,9 @@ export default function LandingPage() {
       {/* ── FEATURE CARDS ─────────────────────────────────────────────────────── */}
       <section id="features" style={{ padding: vPad }}>
         <div style={{ ...inner(1100) }}>
-          <SectionHeader title={<>Everything you need.<br />Nothing you don't.</>} sub="Built for small restaurant operators — not enterprise software in disguise." />
+          <SectionHeader title={t('landing.featuresTitle')} sub={t('landing.featuresSub')} />
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 16 }}>
-            {FEATURE_CARDS.map((card, i) => (
+            {featureCards.map((card, i) => (
               <FeatureCard key={card.title} {...card} delay={i * 0.08} />
             ))}
           </div>
@@ -737,7 +750,7 @@ export default function LandingPage() {
       {/* ── PRICING SECTION ───────────────────────────────────────────────────── */}
       <section id="pricing" style={{ padding: vPad, background: C.surface, borderTop: `1px solid ${C.border}` }}>
         <div style={{ ...inner(1000) }}>
-          <SectionHeader title="Simple pricing for real restaurants" sub="Start free. Upgrade when you're ready. No hidden fees." />
+          <SectionHeader title={t('landing.pricingTitle')} sub={t('landing.pricingSub')} />
           <LandingPricingCards />
         </div>
       </section>
@@ -745,23 +758,23 @@ export default function LandingPage() {
       {/* ── TESTIMONIALS ──────────────────────────────────────────────────────── */}
       <section style={{ padding: vPad, borderTop: `1px solid ${C.border}` }}>
         <div style={{ ...inner(1100) }}>
-          <SectionHeader title="Loved by restaurant owners" sub="Join hundreds of operators across Portugal who use Apex Manager every day." />
+          <SectionHeader title={t('landing.testimonialTitle')} sub={t('landing.testimonialSub')} />
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2,1fr)' : 'repeat(3,1fr)', gap: 20 }}>
-            {TESTIMONIALS.map((t, i) => (
+            {testimonials.map((item, i) => (
               <RevealItem key={i} delay={i * 0.12} y={28} scale={0.97}>
                 <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '24px', height: '100%', display: 'flex', flexDirection: 'column' }}>
                   {/* Stars */}
                   <div style={{ color: C.amber, fontSize: 14, letterSpacing: 2, marginBottom: 16 }}>★★★★★</div>
                   {/* Quote */}
-                  <p style={{ fontSize: 15, color: C.text, lineHeight: 1.75, fontStyle: 'italic', margin: '0 0 20px', flex: 1 }}>"{t.quote}"</p>
+                  <p style={{ fontSize: 15, color: C.text, lineHeight: 1.75, fontStyle: 'italic', margin: '0 0 20px', flex: 1 }}>&ldquo;{item.quote}&rdquo;</p>
                   {/* Attribution */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
-                      <ImagePlaceholder imageId={`testimonial-avatar-${i + 1}`} aspectRatio="1/1" label={`${t.name} photo`} />
+                      <ImagePlaceholder imageId={`testimonial-avatar-${i + 1}`} aspectRatio="1/1" label={t('landing.testimonialPhotoLabel', { name: item.name })} />
                     </div>
                     <div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{t.name}</div>
-                      <div style={{ fontSize: 12, color: C.textSub }}>{t.role}, {t.restaurant}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{item.name}</div>
+                      <div style={{ fontSize: 12, color: C.textSub }}>{item.role}, {item.restaurant}</div>
                     </div>
                   </div>
                 </div>
@@ -774,8 +787,8 @@ export default function LandingPage() {
       {/* ── FAQ ───────────────────────────────────────────────────────────────── */}
       <section style={{ padding: vPad, background: C.surface, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
         <div style={{ ...inner(760) }}>
-          <SectionHeader title="Frequently asked questions" />
-          {FAQS.map((faq, i) => <FaqItem key={faq.q} {...faq} index={i} />)}
+          <SectionHeader title={t('landing.faqTitle')} />
+          {faqs.map((faq, i) => <FaqItem key={faq.q} {...faq} index={i} />)}
         </div>
       </section>
 
@@ -788,13 +801,13 @@ export default function LandingPage() {
               <Logo size={44} showText={false} />
             </div>
             <h2 style={{ fontSize: 'clamp(28px,3vw,42px)', fontWeight: 900, margin: '0 0 18px', color: C.text }}>
-              Ready to take control of your costs?
+              {t('landing.ctaTitle')}
             </h2>
             <p style={{ fontSize: 17, color: C.textSub, lineHeight: 1.7, margin: '0 0 36px' }}>
-              Join hundreds of restaurant owners who stopped guessing and started knowing.
+              {t('landing.ctaSub')}
             </p>
             <Link to="/register" className="cta-btn" style={{ display: 'inline-block', padding: '15px 40px', borderRadius: 12, fontWeight: 700, fontSize: 17, background: C.accent, color: '#fff' }}>
-              {t('landing.startTrial')}
+              {t('landing.ctaButton')}
             </Link>
             <div style={{ fontSize: 13, color: C.textMuted, marginTop: 20 }}>
               {t('landing.trustLine')}
@@ -814,55 +827,58 @@ export default function LandingPage() {
               <div>
                 <div style={{ marginBottom: 14 }}><Logo size={26} /></div>
                 <p style={{ fontSize: isDesktop ? 14 : 13, color: C.textMuted, margin: 0, lineHeight: 1.75, maxWidth: 220 }}>
-                  {t('auth.tagline')}
+                  {t('landing.footerTagline')}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 48, justifyContent: 'center' }}>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 14 }}>Product</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 14 }}>{t('landing.footerProduct')}</div>
                   {[{ label: t('landing.features'), anchor: '#features' }, { label: t('landing.pricing'), anchor: '#pricing' }, { label: t('landing.contact'), anchor: '#contact' }].map(({ label, anchor }) => (
                     <div key={label} style={{ marginBottom: 9 }}><a href={anchor} className="lp-navlink" style={{ fontSize: isDesktop ? 14 : 13, color: C.textSub }}>{label}</a></div>
                   ))}
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 14 }}>Legal</div>
-                  {[{ label: 'Privacy', to: '/privacy' }, { label: 'Terms', to: '/terms' }, { label: 'Cookies', to: '/cookies' }].map(({ label, to }) => (
-                    <div key={label} style={{ marginBottom: 9 }}><Link to={to} className="lp-navlink" style={{ fontSize: isDesktop ? 14 : 13, color: C.textSub }}>{label}</Link></div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 14 }}>{t('landing.footerLegal')}</div>
+                  {[{ label: t('landing.footerPrivacy'), to: '/privacy' }, { label: t('landing.footerTerms'), to: '/terms' }, { label: t('landing.footerCookies'), to: '/cookies' }].map(({ label, to }) => (
+                    <div key={to} style={{ marginBottom: 9 }}><Link to={to} className="lp-navlink" style={{ fontSize: isDesktop ? 14 : 13, color: C.textSub }}>{label}</Link></div>
                   ))}
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 14 }}>Company</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 14 }}>{t('landing.footerCompany')}</div>
                 <div style={{ marginBottom: 9 }}><a href="#contact" className="lp-navlink" style={{ fontSize: isDesktop ? 14 : 13, color: C.textSub }}>{t('landing.contact')}</a></div>
-                <div style={{ fontSize: 12, color: C.textMuted, marginTop: 24 }}>© 2026 ApexManager. All rights reserved.</div>
-                <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>[Your Company] · NIF: [NIF]</div>
+                <div style={{ fontSize: 12, color: C.textMuted, marginTop: 24 }}>{t('landing.footerCopyright')}</div>
+                <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>{t('landing.footerCompanyLine')}</div>
               </div>
             </div>
           ) : (
             <div style={{ marginBottom: 24 }}>
               <div style={{ marginBottom: 14 }}><Logo size={24} /></div>
               <p style={{ fontSize: 13, color: C.textMuted, margin: '0 0 20px', lineHeight: 1.65 }}>
-                {t('auth.tagline')}
+                {t('landing.footerTagline')}
               </p>
               <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap', marginBottom: 16 }}>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>Product</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>{t('landing.footerProduct')}</div>
                   {[{ label: t('landing.features'), anchor: '#features' }, { label: t('landing.pricing'), anchor: '#pricing' }, { label: t('landing.contact'), anchor: '#contact' }].map(({ label, anchor }) => (
                     <div key={label} style={{ marginBottom: 8 }}><a href={anchor} style={{ fontSize: 13, color: C.textSub }}>{label}</a></div>
                   ))}
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>Legal</div>
-                  {[{ label: 'Privacy Policy', to: '/privacy' }, { label: 'Terms', to: '/terms' }, { label: 'Cookies', to: '/cookies' }].map(({ label, to }) => (
-                    <div key={label} style={{ marginBottom: 8 }}><Link to={to} style={{ fontSize: 13, color: C.textSub }}>{label}</Link></div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>{t('landing.footerLegal')}</div>
+                  {[{ label: t('landing.footerPrivacyPolicy'), to: '/privacy' }, { label: t('landing.footerTerms'), to: '/terms' }, { label: t('landing.footerCookies'), to: '/cookies' }].map(({ label, to }) => (
+                    <div key={to} style={{ marginBottom: 8 }}><Link to={to} style={{ fontSize: 13, color: C.textSub }}>{label}</Link></div>
                   ))}
                 </div>
               </div>
             </div>
           )}
-          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-            <span style={{ fontSize: 12, color: C.textMuted }}>© 2026 ApexManager. All rights reserved.</span>
-            <span style={{ fontSize: 12, color: C.textMuted }}>[Your Company Name] · NIF: [your NIF]</span>
+          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <span style={{ fontSize: 12, color: C.textMuted }}>{t('landing.footerCopyright')}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <LandingLanguageToggle />
+              <span style={{ fontSize: 12, color: C.textMuted }}>{t('landing.footerCompanyLine')}</span>
+            </div>
           </div>
         </div>
       </footer>

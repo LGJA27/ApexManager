@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import i18n from "./i18n";
 
 function useWindowWidth() {
   const [w, setW] = useState(() => window.innerWidth);
@@ -730,7 +729,6 @@ function NavDrawer({ open, onClose, page, setPage, venue, venues, onVenueChange,
             <SidebarUpgradeButton onClick={() => go("pricing")} />
           )}
           <div style={{ padding: "8px 14px 14px" }}>
-            <div style={{ margin: "4px 16px 8px" }}><LanguageSwitcher /></div>
             <button onClick={() => { onLogout(); onClose(); }} style={{ background: "none", border: "none", color: C.textSub, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", gap: 6, minHeight: 44 }}>🚪 {t("nav.signOut")}</button>
           </div>
         </div>
@@ -866,7 +864,6 @@ function Sidebar({ page, setPage, venue, venues, onVenueChange, user, onLogout, 
           <SidebarUpgradeButton onClick={() => setPage("pricing")} />
         )}
         <div style={{ padding: "6px 10px 10px" }}>
-          <div style={{ margin: "4px 16px 8px" }}><LanguageSwitcher /></div>
           <button onClick={onLogout} style={{ background: "none", border: "none", color: C.textSub, cursor: "pointer", fontSize: 11, display: "flex", alignItems: "center", gap: 5 }}>🚪 {t("nav.signOut")}</button>
         </div>
       </div>
@@ -2847,7 +2844,7 @@ function VenueGate({ onCreated }) {
 
 // ─── SETTINGS PAGE ───────────────────────────────────────────────────────────
 function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPage }) {
-  const { t, i18n: i18nInstance } = useTranslation();
+  const { t } = useTranslation();
   const w = useWindowWidth();
   const isMobile = w < 768;
   const [showAdd, setShowAdd] = useState(false);
@@ -2990,6 +2987,13 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
       </div>
 
       <div style={{ marginBottom: 28 }}>
+        <h2 style={{ fontSize: 15, color: C.text, margin: "0 0 14px", fontWeight: 600 }}>{t("settings.language")}</h2>
+        <Card style={{ padding: 16 }}>
+          <LanguageSwitcher />
+        </Card>
+      </div>
+
+      <div style={{ marginBottom: 28 }}>
         <h2 style={{ fontSize: 15, color: C.text, margin: "0 0 14px", fontWeight: 600 }}>{t("settings.subscription")}</h2>
         <Card style={{ background: tierStyle.background, border: tierStyle.border, position: "relative", overflow: "hidden" }}>
           <div style={{
@@ -3085,36 +3089,6 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
               </p>
             </>
           )}
-        </Card>
-      </div>
-
-      <div style={{ marginBottom: 28 }}>
-        <h2 style={{ fontSize: 15, color: C.text, margin: "0 0 14px", fontWeight: 600 }}>{t("settings.language")}</h2>
-        <Card>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button
-              onClick={() => i18n.changeLanguage("en")}
-              style={{
-                flex: 1, padding: "10px 16px", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13,
-                border: `1px solid ${i18nInstance.language?.startsWith("en") ? C.accent : C.border}`,
-                background: i18nInstance.language?.startsWith("en") ? C.accentDim : "transparent",
-                color: i18nInstance.language?.startsWith("en") ? C.accent : C.textSub,
-              }}
-            >
-              {t("settings.english")}
-            </button>
-            <button
-              onClick={() => i18n.changeLanguage("pt")}
-              style={{
-                flex: 1, padding: "10px 16px", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13,
-                border: `1px solid ${i18nInstance.language?.startsWith("pt") ? C.accent : C.border}`,
-                background: i18nInstance.language?.startsWith("pt") ? C.accentDim : "transparent",
-                color: i18nInstance.language?.startsWith("pt") ? C.accent : C.textSub,
-              }}
-            >
-              {t("settings.portuguese")}
-            </button>
-          </div>
         </Card>
       </div>
 
