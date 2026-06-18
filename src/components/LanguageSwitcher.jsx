@@ -1,32 +1,23 @@
 import { useTranslation } from "react-i18next";
+import FlagIcon, { LANGUAGE_OPTIONS } from "./FlagIcon.jsx";
 
 export default function LanguageSwitcher() {
   const { i18n, t } = useTranslation();
   const current = i18n.language?.startsWith("pt") ? "pt" : "en";
 
-  const languages = [
-    {
-      code: "en",
-      label: t("settings.english"),
-      flag: "🇬🇧",
-      country: t("settings.langCountryUK"),
-    },
-    {
-      code: "pt",
-      label: t("settings.portuguese"),
-      flag: "🇵🇹",
-      country: t("settings.langCountryPT"),
-    },
-  ];
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {languages.map(lang => {
+      {LANGUAGE_OPTIONS.map(lang => {
         const isSelected = current === lang.code;
         return (
           <div
             key={lang.code}
+            role="button"
+            tabIndex={0}
+            aria-pressed={isSelected}
+            aria-label={t(lang.labelKey)}
             onClick={() => i18n.changeLanguage(lang.code)}
+            onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); i18n.changeLanguage(lang.code); } }}
             style={{
               display: "flex",
               alignItems: "center",
@@ -55,22 +46,31 @@ export default function LanguageSwitcher() {
               }
             }}
           >
-            <div style={{ fontSize: 32, lineHeight: 1, flexShrink: 0 }}>
-              {lang.flag}
+            <div style={{
+              padding: 3,
+              borderRadius: "50%",
+              border: isSelected ? "2px solid #7C5CFC88" : "2px solid #2A2A36",
+              background: "#0D0D12",
+              flexShrink: 0,
+              transition: "border-color 0.15s",
+            }}>
+              <FlagIcon code={lang.code} size={40} shape="circle" />
             </div>
-            <div style={{ flex: 1 }}>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{
                 fontSize: 15,
                 fontWeight: 600,
                 color: isSelected ? "#7C5CFC" : "#F0F0F8",
                 marginBottom: 2,
               }}>
-                {lang.label}
+                {t(lang.labelKey)}
               </div>
               <div style={{ fontSize: 12, color: "#8A8A9A" }}>
-                {lang.country}
+                {t(lang.countryKey)}
               </div>
             </div>
+
             {isSelected && (
               <div style={{
                 width: 22,
@@ -85,6 +85,7 @@ export default function LanguageSwitcher() {
                 <span style={{ color: "#fff", fontSize: 12, fontWeight: 700, lineHeight: 1 }}>✓</span>
               </div>
             )}
+
             {isSelected && (
               <div style={{
                 position: "absolute",

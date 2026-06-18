@@ -612,7 +612,10 @@ export default function LandingPage() {
               </>
             )}
             {isMobile && (
-              <Link to="/signin" className="lp-navlink" style={{ padding: '8px 12px', borderRadius: 10, fontWeight: 600, fontSize: 13, color: C.textSub, border: `1px solid ${C.border}`, flexShrink: 0, whiteSpace: 'nowrap' }}>{t('landing.signIn')}</Link>
+              <>
+                <LandingLanguageToggle compact />
+                <Link to="/signin" className="lp-navlink" style={{ padding: '8px 12px', borderRadius: 10, fontWeight: 600, fontSize: 13, color: C.textSub, border: `1px solid ${C.border}`, flexShrink: 0, whiteSpace: 'nowrap' }}>{t('landing.signIn')}</Link>
+              </>
             )}
             <Link to="/register" className="cta-btn" style={{ padding: isMobile ? '8px 14px' : '9px 22px', borderRadius: 10, fontWeight: 700, fontSize: isMobile ? 12 : 13, background: C.accent, color: '#fff', display: 'inline-block', flexShrink: 0, whiteSpace: 'nowrap' }}>{t('landing.startTrial')}</Link>
           </div>
