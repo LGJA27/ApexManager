@@ -78,6 +78,7 @@
     "staffAttendance": "Presença da Equipa",
     "notes": "Notas",
     "saveEntry": "Guardar Registo",
+    "selectVenueToSave": "Selecione um estabelecimento para este registo para o poder guardar.",
     "scanDaily": "Digitalizar Talão Diário",
     "uploadPhoto": "Carregue foto do talão de vendas diário",
     "scanned": "Talão digitalizado. Reveja antes de guardar.",
@@ -160,6 +161,9 @@
     "noSuppliersSub": "Os fornecedores são criados automaticamente ao digitalizar faturas, ou adicione manualmente.",
     "totalSpend": "gasto total",
     "invoiceHistory": "Faturas ▾"
+  },
+  "ingredients": {
+    "title": "Custos de Ingredientes"
   },
   "staff": {
     "title": "Equipa",
@@ -269,8 +273,10 @@
     "export": "Exportar",
     "import": "Importar",
     "selectVenue": "Selecione um estabelecimento para adicionar dados",
+    "changeVenue": "Alterar estabelecimento",
     "allVenues": "Todos os Estabelecimentos",
     "viewingAll": "A ver todos os estabelecimentos. Selecione um específico para adicionar dados.",
+    "chooseVenue": "Escolha um estabelecimento…",
     "noVenueGate": "Bem-vindo! Antes de começar, adicione o seu primeiro estabelecimento.",
     "analysing": "A analisar com IA…",
     "optional": "Notas opcionais…",

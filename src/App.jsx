@@ -37,6 +37,8 @@ import AnalyticsPage from "./pages/AnalyticsPage.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
 import UpgradePrompt from "./components/UpgradePrompt.jsx";
 import LanguageSwitcher from "./components/LanguageSwitcher.jsx";
+import PageHeader from "./components/PageHeader.jsx";
+import VenueChip from "./components/VenueChip.jsx";
 import { useSubscriptionGate } from "./hooks/useSubscriptionGate.js";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage.jsx";
 import TermsOfServicePage from "./pages/TermsOfServicePage.jsx";
@@ -592,7 +594,7 @@ function AuthScreen({ defaultMode = "login" }) {
 }
 
 // ─── MOBILE HEADER ───────────────────────────────────────────────────────────
-function MobileHeader({ page, onOpenDrawer, venue }) {
+function MobileHeader({ page, onOpenDrawer, venue, venues, onVenueChange }) {
   const { t } = useTranslation();
   const PAGE_NAMES = {
     dashboard: "nav.dashboard",
@@ -606,16 +608,16 @@ function MobileHeader({ page, onOpenDrawer, venue }) {
     settings: "nav.settings",
     pricing: "nav.upgrade",
   };
-  const venueName = venue ? (venue.name.length > 12 ? venue.name.slice(0, 12) + "…" : venue.name) : t("common.allVenues");
+  const pageTitle = PAGE_NAMES[page] ? t(PAGE_NAMES[page]) : "ApexManager";
+  const showVenueChip = venues?.length > 0 && onVenueChange && page !== "settings" && page !== "pricing";
   return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 56, background: "#16161E", borderBottom: `1px solid ${C.border}`, zIndex: 200, display: "flex", alignItems: "center", paddingTop: "env(safe-area-inset-top)" }}>
       <button onClick={onOpenDrawer} style={{ width: 56, height: 56, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", color: C.text, fontSize: 20, cursor: "pointer", flexShrink: 0 }}>☰</button>
-      <div style={{ flex: 1, textAlign: "center", fontSize: 15, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "0 4px" }}>
-        {PAGE_NAMES[page] ? t(PAGE_NAMES[page]) : "ApexManager"}
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, minWidth: 0, padding: "0 4px" }}>
+        <span style={{ fontSize: 15, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flexShrink: 1 }}>{pageTitle}</span>
+        {showVenueChip && <VenueChip venue={venue} venues={venues} onVenueChange={onVenueChange} compact />}
       </div>
-      <button onClick={onOpenDrawer} style={{ minWidth: 56, height: 56, display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 14, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
-        <span style={{ fontSize: 12, color: C.accent, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 100 }}>{venueName}</span>
-      </button>
+      <div style={{ width: 56, flexShrink: 0 }} />
     </div>
   );
 }
@@ -872,7 +874,7 @@ function Sidebar({ page, setPage, venue, venues, onVenueChange, user, onLogout, 
 }
 
 // ─── DASHBOARD PAGE ──────────────────────────────────────────────────────────
-function DashboardPage({ venues, sales, expenses, invoices, venue, subscription, setPage, setInvoicesInitialFilter }) {
+function DashboardPage({ venues, sales, expenses, invoices, venue, subscription, setPage, setInvoicesInitialFilter, onVenueChange }) {
   const { t } = useTranslation();
   const w = useWindowWidth();
   const isMobile = w < 768;
@@ -1010,7 +1012,19 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
       <AllVenuesBanner venue={venue} />
 
       <div style={{ marginBottom: pick(18, 22) }}>
-        {!isMobile && <h1 style={{ margin: "0 0 16px", fontSize: pageTitleSize(isMobile, isTablet, isWide), color: C.text }}>{t("dashboard.title")}</h1>}
+        {!isMobile && (
+          <PageHeader
+            title={t("dashboard.title")}
+            venue={venue}
+            venues={venues}
+            onVenueChange={onVenueChange}
+            isMobile={isMobile}
+            isTablet={isTablet}
+            isWide={isWide}
+            titleOnly
+            marginBottom={16}
+          />
+        )}
         <div className="scroll-x" style={{ display: "flex", gap: 6 }}>
           {ranges.map(r => (
             <button key={r.v} onClick={() => {
@@ -1332,7 +1346,7 @@ function StaffPicker({ staffList, selected, onChange }) {
   );
 }
 
-function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venues, venue, subscription, setSubscription, staffList }) {
+function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venues, venue, onVenueChange, subscription, setSubscription, staffList }) {
   const { t } = useTranslation();
   const w = useWindowWidth();
   const isMobile = w < 768;
@@ -1346,17 +1360,26 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
   const [scanLimitReached, setScanLimitReached] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [formVenueId, setFormVenueId] = useState("");
 
   const [editSale, setEditSale] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState("");
 
+  const openAddModal = (scan = false) => {
+    setScanMode(scan);
+    setFormVenueId(venue?.id || "");
+    setShowAdd(true);
+  };
+
   const save = async () => {
+    const effectiveVenueId = formVenueId || venue?.id || "";
+    if (!effectiveVenueId) return;
     setSaving(true);
     setSaveError("");
     const { error } = await addSale({
-      venue_id: venue?.id || null,
+      venue_id: effectiveVenueId,
       date: form.date,
       cash: parseFloat(form.cash) || 0,
       card: parseFloat(form.card) || 0,
@@ -1372,6 +1395,7 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
     } else {
       setShowAdd(false);
       setScanResult(null);
+      setFormVenueId("");
       setForm({ date: today(), cash: "", card: "", cashExpenses: "", xpto: "", pos: "", note: "", staff: [] });
     }
   };
@@ -1480,13 +1504,21 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
           <button onClick={() => setScanLimitReached(false)} style={{ background: "none", border: "none", color: C.red, cursor: "pointer", fontSize: 18, lineHeight: 1, flexShrink: 0 }}>×</button>
         </div>
       )}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isMobile ? 16 : 24, flexWrap: "wrap", gap: 10 }}>
-        <h1 style={{ margin: 0, fontSize: pageTitleSize(isMobile, w >= 768 && w < 1024, isWide), color: C.text }}>{t("sales.title")}</h1>
-        <div style={{ display: "flex", gap: 8 }}>
-          <Btn variant="ghost" onClick={() => { setScanMode(true); setShowAdd(true); }} size={isMobile ? "sm" : "md"}>{t("sales.scanReceipt")}</Btn>
-          <Btn onClick={() => { setScanMode(false); setShowAdd(true); }} size={isMobile ? "sm" : "md"}>{t("sales.addEntry")}</Btn>
-        </div>
-      </div>
+      <PageHeader
+        title={t("sales.title")}
+        venue={venue}
+        venues={venues}
+        onVenueChange={onVenueChange}
+        isMobile={isMobile}
+        isTablet={w >= 768 && w < 1024}
+        isWide={isWide}
+        actions={(
+          <>
+            <Btn variant="ghost" onClick={() => openAddModal(true)} size={isMobile ? "sm" : "md"}>{t("sales.scanReceipt")}</Btn>
+            <Btn onClick={() => openAddModal(false)} size={isMobile ? "sm" : "md"}>{t("sales.addEntry")}</Btn>
+          </>
+        )}
+      />
 
       {/* Add Modal */}
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title={scanMode ? t("sales.scanDaily") : t("sales.title")}>
@@ -1526,6 +1558,25 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
             ✓ {t("sales.scanned")}
           </div>
         )}
+        {venues.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <Select
+              label={t("common.venue")}
+              value={formVenueId}
+              onChange={setFormVenueId}
+              options={[
+                { value: "", label: t("common.chooseVenue") },
+                ...venues.map(v => ({ value: v.id, label: v.name })),
+              ]}
+            />
+          </div>
+        )}
+        {!formVenueId && (
+          <div style={{ background: C.amberDim, border: `1px solid ${C.amber}44`, borderRadius: 9, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: C.amber, display: "flex", gap: 8, alignItems: "center" }}>
+            <span>⚠</span>
+            <span>{t("sales.selectVenueToSave")}</span>
+          </div>
+        )}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
           <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label={t("sales.date")} type="date" value={form.date} onChange={v => setForm(p => ({ ...p, date: v }))} /></div>
           <Input label={t("sales.cash")} type="number" value={form.cash} onChange={v => setForm(p => ({ ...p, cash: v }))} placeholder="0.00" prefix="€" />
@@ -1542,7 +1593,7 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
         {saveError && <div style={{ color: C.red, fontSize: 12, marginTop: 10 }}>{saveError}</div>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 12 }}>
           <Btn variant="ghost" onClick={() => { setShowAdd(false); setSaveError(""); }}>{t("common.cancel")}</Btn>
-          <Btn onClick={save} loading={saving} disabled={!venue || saving} title={!venue ? t("common.selectVenue") : undefined}>{t("sales.saveEntry")}</Btn>
+          <Btn onClick={save} loading={saving} disabled={!formVenueId || saving}>{t("sales.saveEntry")}</Btn>
         </div>
       </Modal>
 
@@ -1573,7 +1624,7 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
       <div style={{ display: isWide ? "flex" : "block", gap: 24, alignItems: "flex-start" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           {filtered.length === 0
-            ? <EmptyState icon="💳" title={t("sales.noEntries")} sub={t("sales.noEntriesSub")} action={<Btn onClick={() => setShowAdd(true)}>{t("sales.addFirst")}</Btn>} />
+            ? <EmptyState icon="💳" title={t("sales.noEntries")} sub={t("sales.noEntriesSub")} action={<Btn onClick={() => openAddModal(false)}>{t("sales.addFirst")}</Btn>} />
             : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {[...filtered].sort((a, b) => b.date.localeCompare(a.date)).map(s => {
@@ -1651,7 +1702,7 @@ function staffStatusLabel(member, t) {
   return label;
 }
 
-function StaffPage({ staff, addStaff, updateStaff, deleteStaff, venue }) {
+function StaffPage({ staff, addStaff, updateStaff, deleteStaff, venue, venues, onVenueChange }) {
   const { t } = useTranslation();
   const w = useWindowWidth();
   const isMobile = w < 768;
@@ -1712,10 +1763,16 @@ function StaffPage({ staff, addStaff, updateStaff, deleteStaff, venue }) {
 
   return (
     <div style={{ padding: pagePad(isMobile, w >= 768 && w < 1024), width: "100%", boxSizing: "border-box" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 10 }}>
-        <h1 style={{ margin: 0, fontSize: pageTitleSize(isMobile, w >= 768 && w < 1024, false), color: C.text }}>{t("staff.title")}</h1>
-        <Btn onClick={openAdd}>{t("staff.addStaff")}</Btn>
-      </div>
+      <PageHeader
+        title={t("staff.title")}
+        venue={venue}
+        venues={venues}
+        onVenueChange={onVenueChange}
+        isMobile={isMobile}
+        isTablet={w >= 768 && w < 1024}
+        isWide={false}
+        actions={<Btn onClick={openAdd}>{t("staff.addStaff")}</Btn>}
+      />
 
       {sorted.length === 0 ? (
         <EmptyState icon="👥" title={t("staff.noStaff")} sub={t("staff.noStaffSub")} action={<Btn onClick={openAdd}>{t("staff.addStaff")}</Btn>} />
@@ -1937,7 +1994,7 @@ function SupplierInvoiceGroup({ name, invs, onMarkPaid, onEdit, payingId }) {
   );
 }
 
-function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, suppliers, addSupplier, upsertIngredient, venue, subscription, setSubscription, initialStatusFilter }) {
+function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, suppliers, addSupplier, upsertIngredient, venue, venues, onVenueChange, subscription, setSubscription, initialStatusFilter }) {
   const { t } = useTranslation();
   const w = useWindowWidth();
   const isMobile = w < 768;
@@ -2163,13 +2220,21 @@ Rules:
           <button onClick={() => setScanLimitReached(false)} style={{ background: "none", border: "none", color: C.red, cursor: "pointer", fontSize: 18, lineHeight: 1, flexShrink: 0 }}>×</button>
         </div>
       )}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isMobile ? 16 : 24, flexWrap: "wrap", gap: 10 }}>
-        <h1 style={{ margin: 0, fontSize: pageTitleSize(isMobile, w >= 768 && w < 1024, isWide), color: C.text }}>{t("invoices.title")}</h1>
-        <div style={{ display: "flex", gap: 8 }}>
-          <Btn variant="ghost" size={isMobile ? "sm" : "md"} onClick={() => setShowManual(true)}>{t("invoices.manualEntry")}</Btn>
-          <Btn size={isMobile ? "sm" : "md"} onClick={() => setShowScan(true)}>{t("invoices.scanInvoice")}</Btn>
-        </div>
-      </div>
+      <PageHeader
+        title={t("invoices.title")}
+        venue={venue}
+        venues={venues}
+        onVenueChange={onVenueChange}
+        isMobile={isMobile}
+        isTablet={w >= 768 && w < 1024}
+        isWide={isWide}
+        actions={(
+          <>
+            <Btn variant="ghost" size={isMobile ? "sm" : "md"} onClick={() => setShowManual(true)}>{t("invoices.manualEntry")}</Btn>
+            <Btn size={isMobile ? "sm" : "md"} onClick={() => setShowScan(true)}>{t("invoices.scanInvoice")}</Btn>
+          </>
+        )}
+      />
 
       {/* INVOICE SUMMARY — hide on wide (shown in right panel instead) */}
       {byVenue.length > 0 && !isWide && (
@@ -2372,7 +2437,7 @@ Rules:
 }
 
 // ─── EXPENSES PAGE ───────────────────────────────────────────────────────────
-function ExpensesPage({ expenses, addExpense, updateExpense, deleteExpense, venue }) {
+function ExpensesPage({ expenses, addExpense, updateExpense, deleteExpense, venue, venues, onVenueChange }) {
   const { t } = useTranslation();
   const w = useWindowWidth();
   const isMobile = w < 768;
@@ -2429,10 +2494,16 @@ function ExpensesPage({ expenses, addExpense, updateExpense, deleteExpense, venu
   return (
     <div style={{ padding: pagePad(isMobile, w >= 768 && w < 1024), width: "100%", boxSizing: "border-box" }}>
       <AllVenuesBanner venue={venue} />
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isMobile ? 16 : 24, flexWrap: "wrap", gap: 10 }}>
-        <h1 style={{ margin: 0, fontSize: pageTitleSize(isMobile, w >= 768 && w < 1024, isWide), color: C.text }}>{t("expenses.title")}</h1>
-        <Btn onClick={() => { setEditId(null); setForm(emptyForm()); setShowAdd(true); }}>{t("expenses.addExpense")}</Btn>
-      </div>
+      <PageHeader
+        title={t("expenses.title")}
+        venue={venue}
+        venues={venues}
+        onVenueChange={onVenueChange}
+        isMobile={isMobile}
+        isTablet={w >= 768 && w < 1024}
+        isWide={isWide}
+        actions={<Btn onClick={() => { setEditId(null); setForm(emptyForm()); setShowAdd(true); }}>{t("expenses.addExpense")}</Btn>}
+      />
 
       <div className="scroll-x" style={{ display: "flex", gap: 6, marginBottom: isMobile ? 16 : 20 }}>
         {["ALL", ...types].map(typeKey => (
@@ -2514,7 +2585,7 @@ function ExpensesPage({ expenses, addExpense, updateExpense, deleteExpense, venu
 }
 
 // ─── SUPPLIERS PAGE ──────────────────────────────────────────────────────────
-function SuppliersPage({ suppliers, addSupplier, updateSupplier }) {
+function SuppliersPage({ suppliers, addSupplier, updateSupplier, venue, venues, onVenueChange }) {
   const { t } = useTranslation();
   const w = useWindowWidth();
   const isMobile = w < 768;
@@ -2564,10 +2635,16 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier }) {
 
   return (
     <div style={{ padding: pagePad(isMobile, w >= 768 && w < 1024), width: "100%", boxSizing: "border-box" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isMobile ? 16 : 24, flexWrap: "wrap", gap: 10 }}>
-        <h1 style={{ margin: 0, fontSize: pageTitleSize(isMobile, w >= 768 && w < 1024, false), color: C.text }}>{t("suppliers.title")}</h1>
-        <Btn onClick={() => { setEditId(null); setForm(emptyForm()); setShowAdd(true); }}>{t("suppliers.addSupplier")}</Btn>
-      </div>
+      <PageHeader
+        title={t("suppliers.title")}
+        venue={venue}
+        venues={venues}
+        onVenueChange={onVenueChange}
+        isMobile={isMobile}
+        isTablet={w >= 768 && w < 1024}
+        isWide={false}
+        actions={<Btn onClick={() => { setEditId(null); setForm(emptyForm()); setShowAdd(true); }}>{t("suppliers.addSupplier")}</Btn>}
+      />
 
       <div style={{ marginBottom: 18 }}>
         <Input value={search} onChange={setSearch} placeholder={t("common.search") + "…"} prefix="🔍" />
@@ -2673,7 +2750,7 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier }) {
 }
 
 // ─── INGREDIENTS PAGE ────────────────────────────────────────────────────────
-function IngredientsPage({ ingredients, addIngredient, updateIngredient }) {
+function IngredientsPage({ ingredients, addIngredient, updateIngredient, venue, venues, onVenueChange }) {
   const w = useWindowWidth();
   const isMobile = w < 768;
   const [search, setSearch] = useState("");
@@ -2720,14 +2797,22 @@ function IngredientsPage({ ingredients, addIngredient, updateIngredient }) {
 
   return (
     <div style={{ padding: pagePad(isMobile, w >= 768 && w < 1024), width: "100%", boxSizing: "border-box" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isMobile ? 16 : 24, flexWrap: "wrap", gap: 10 }}>
-        <h1 style={{ margin: 0, fontSize: pageTitleSize(isMobile, w >= 768 && w < 1024, false), color: C.text }}>Ingredient Costs</h1>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {exportMsg && <span style={{ fontSize: 12, color: C.green }}>{exportMsg}</span>}
-          {!isMobile && <Btn variant="ghost" onClick={exportCSV}>📤 Export CSV</Btn>}
-          <Btn onClick={() => { setEditId(null); setForm({ name: "", unit: "kg", last_price: "", category: "General", supplier: "" }); setShowAdd(true); }}>+ Add</Btn>
-        </div>
-      </div>
+      <PageHeader
+        title={t("ingredients.title")}
+        venue={venue}
+        venues={venues}
+        onVenueChange={onVenueChange}
+        isMobile={isMobile}
+        isTablet={w >= 768 && w < 1024}
+        isWide={false}
+        actions={(
+          <>
+            {exportMsg && <span style={{ fontSize: 12, color: C.green }}>{exportMsg}</span>}
+            {!isMobile && <Btn variant="ghost" onClick={exportCSV}>📤 Export CSV</Btn>}
+            <Btn onClick={() => { setEditId(null); setForm({ name: "", unit: "kg", last_price: "", category: "General", supplier: "" }); setShowAdd(true); }}>+ Add</Btn>
+          </>
+        )}
+      />
 
       <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center" }}>
         <div style={{ flex: 1 }}><Input value={search} onChange={setSearch} placeholder="Search ingredients…" prefix="🔍" /></div>
@@ -3751,7 +3836,7 @@ export default function App() {
     );
   }
 
-  const pageProps = { venues, sales, expenses, invoices, suppliers, ingredients, staff, venue };
+  const pageProps = { venues, sales, expenses, invoices, suppliers, ingredients, staff, venue, onVenueChange: handleVenueChange };
 
   return (
     <div style={{ display: "flex", width: "100vw", height: "100vh", overflow: "hidden", background: C.bg, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: C.text }}>
@@ -3764,7 +3849,7 @@ export default function App() {
 
       {/* Mobile: fixed top header */}
       {isMobile && (
-        <MobileHeader page={page} onOpenDrawer={() => setDrawerOpen(true)} venue={venue} />
+        <MobileHeader page={page} onOpenDrawer={() => setDrawerOpen(true)} venue={venue} venues={venues} onVenueChange={handleVenueChange} />
       )}
 
       {/* Mobile: slide-in drawer — always rendered, visibility controlled via CSS transform */}
@@ -3775,13 +3860,13 @@ export default function App() {
       <main style={{ flex: 1, minWidth: 0, overflowY: "auto", overflowX: "hidden", height: "100vh", WebkitOverflowScrolling: "touch", paddingTop: isMobile ? 56 : 0, paddingBottom: isMobile ? "calc(60px + env(safe-area-inset-bottom))" : 0, maxWidth: isMobile ? undefined : "calc(100vw - 220px)" }}>
         <div key={page} style={{ animation: "fadeIn .18s ease", width: "100%", boxSizing: "border-box" }}>
           {page === "dashboard" && <DashboardPage {...pageProps} subscription={subscription} setPage={setPage} setInvoicesInitialFilter={setInvoicesInitialFilter} />}
-          {page === "sales" && <SalesPage sales={sales} addSale={addSale} updateSale={updateSale} deleteSale={deleteSale} salesLoading={salesLoading} venues={venues} venue={venue} subscription={subscription} setSubscription={setSubscription} staffList={staff} />}
-          {page === "invoices" && <InvoicesPage invoices={invoices} addInvoice={addInvoice} updateInvoice={updateInvoice} markInvoicePaid={markInvoicePaid} suppliers={suppliers} addSupplier={addSupplier} upsertIngredient={upsertIngredient} venue={venue} subscription={subscription} setSubscription={setSubscription} initialStatusFilter={invoicesInitialFilter} />}
-          {page === "expenses" && <ExpensesPage expenses={expenses} addExpense={addExpense} updateExpense={updateExpense} deleteExpense={deleteExpense} venue={venue} />}
-          {page === "suppliers" && <SuppliersPage suppliers={suppliers} addSupplier={addSupplier} updateSupplier={updateSupplier} />}
-          {page === "ingredients" && <IngredientsPage ingredients={ingredients} addIngredient={addIngredient} updateIngredient={updateIngredient} />}
-          {page === "staff" && <StaffPage staff={staff} addStaff={addStaff} updateStaff={updateStaff} deleteStaff={deleteStaff} venue={venue} />}
-          {page === "analytics" && <AnalyticsPage sales={sales} expenses={expenses} invoices={invoices} venues={venues} staff={staff} suppliers={suppliers} ingredients={ingredients} subscription={subscription} setPage={setPage} />}
+          {page === "sales" && <SalesPage sales={sales} addSale={addSale} updateSale={updateSale} deleteSale={deleteSale} salesLoading={salesLoading} venues={venues} venue={venue} onVenueChange={handleVenueChange} subscription={subscription} setSubscription={setSubscription} staffList={staff} />}
+          {page === "invoices" && <InvoicesPage invoices={invoices} addInvoice={addInvoice} updateInvoice={updateInvoice} markInvoicePaid={markInvoicePaid} suppliers={suppliers} addSupplier={addSupplier} upsertIngredient={upsertIngredient} venue={venue} venues={venues} onVenueChange={handleVenueChange} subscription={subscription} setSubscription={setSubscription} initialStatusFilter={invoicesInitialFilter} />}
+          {page === "expenses" && <ExpensesPage expenses={expenses} addExpense={addExpense} updateExpense={updateExpense} deleteExpense={deleteExpense} venue={venue} venues={venues} onVenueChange={handleVenueChange} />}
+          {page === "suppliers" && <SuppliersPage suppliers={suppliers} addSupplier={addSupplier} updateSupplier={updateSupplier} venue={venue} venues={venues} onVenueChange={handleVenueChange} />}
+          {page === "ingredients" && <IngredientsPage ingredients={ingredients} addIngredient={addIngredient} updateIngredient={updateIngredient} venue={venue} venues={venues} onVenueChange={handleVenueChange} />}
+          {page === "staff" && <StaffPage staff={staff} addStaff={addStaff} updateStaff={updateStaff} deleteStaff={deleteStaff} venue={venue} venues={venues} onVenueChange={handleVenueChange} />}
+          {page === "analytics" && <AnalyticsPage sales={sales} expenses={expenses} invoices={invoices} venues={venues} venue={venue} onVenueChange={handleVenueChange} staff={staff} suppliers={suppliers} ingredients={ingredients} subscription={subscription} setPage={setPage} />}
           {page === "settings" && <SettingsPage venues={venues} addVenue={addVenue} deleteVenue={deleteVenue} user={user} subscription={subscription} setPage={setPage} />}
           {page === "pricing" && <PricingPage user={user} subscription={subscription} />}
         </div>

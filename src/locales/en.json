@@ -78,6 +78,7 @@
     "staffAttendance": "Staff Attendance",
     "notes": "Notes",
     "saveEntry": "Save Entry",
+    "selectVenueToSave": "Select a venue for this entry to save it.",
     "scanDaily": "Scan Daily Receipt",
     "uploadPhoto": "Upload photo of daily sales ticket",
     "scanned": "Receipt scanned. Review and save below.",
@@ -160,6 +161,9 @@
     "noSuppliersSub": "Suppliers are auto-created when you scan invoices, or add them manually.",
     "totalSpend": "total spend",
     "invoiceHistory": "Invoices ▾"
+  },
+  "ingredients": {
+    "title": "Ingredient Costs"
   },
   "staff": {
     "title": "Staff",
@@ -269,8 +273,10 @@
     "export": "Export",
     "import": "Import",
     "selectVenue": "Select a venue to add data",
+    "changeVenue": "Change venue",
     "allVenues": "All Venues",
     "viewingAll": "Viewing all venues. Select a specific venue to add new data.",
+    "chooseVenue": "Choose a venue…",
     "noVenueGate": "Welcome! Before you start, add your first venue.",
     "analysing": "Analysing with AI…",
     "optional": "Optional notes…",

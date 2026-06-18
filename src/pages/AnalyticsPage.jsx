@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef, Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import { buildReportHTML, buildExtendedInsights } from "./auditReport.js";
 import UpgradePrompt from "../components/UpgradePrompt.jsx";
+import PageHeader from "../components/PageHeader.jsx";
 import { useSubscriptionGate } from "../hooks/useSubscriptionGate.js";
 
 const C = {
@@ -606,14 +607,14 @@ function AuditModal({ open, onClose, sections, onToggle, onGenerate, isFree, onU
   );
 }
 
-export default function AnalyticsPage({ sales, expenses, invoices, venues, staff = [], suppliers = [], ingredients = [], subscription, setPage }) {
+export default function AnalyticsPage({ sales, expenses, invoices, venues, venue, onVenueChange, staff = [], suppliers = [], ingredients = [], subscription, setPage }) {
   const { t, i18n } = useTranslation();
   const { isMobile, isTablet, pick } = useTypeScale();
   const { isFree } = useSubscriptionGate(subscription);
   const [upgradePrompt, setUpgradePrompt] = useState(null);
   const [from, setFrom] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 1); return d.toISOString().split("T")[0]; });
   const [to, setTo] = useState(today);
-  const [venueId, setVenueId] = useState("");
+  const venueId = venue?.id || "";
   const [tab, setTab] = useState("overview");
   const [salesSort, setSalesSort] = useState({ key: "date", dir: "desc" });
   const [staffSort, setStaffSort] = useState({ key: "worked", dir: "desc" });
@@ -1061,7 +1062,17 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
 
   return (
     <div style={{ padding: pagePad(isMobile, isTablet), width: "100%", boxSizing: "border-box" }}>
-      {!isMobile && <h1 style={{ margin: "0 0 20px", fontSize: pick(22, 28), color: C.text }}>{t("analytics.title")}</h1>}
+      <PageHeader
+        title={t("analytics.title")}
+        venue={venue}
+        venues={venues}
+        onVenueChange={onVenueChange}
+        isMobile={isMobile}
+        isTablet={isTablet}
+        isWide={false}
+        titleOnly
+        marginBottom={20}
+      />
 
       {/* Filter bar */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: pick(12, 14), alignItems: "flex-end", marginBottom: pick(16, 20), width: "100%" }}>
@@ -1079,12 +1090,6 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, staff
         >
           <Input label={t("analytics.to")} type="date" value={to} onChange={setTo} disabled={isFree} style={{ flex: isMobile ? "1 1 100%" : "0 0 140px" }} />
         </div>
-        {venues.length > 0 && (
-          <div style={{ flex: isMobile ? "1 1 100%" : "0 0 160px" }}>
-            <Select label={t("analytics.venue")} value={venueId} onChange={setVenueId}
-              options={[{ value: "", label: t("analytics.allVenues") }, ...venues.map(v => ({ value: v.id, label: v.name }))]} />
-          </div>
-        )}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", flex: 1 }}>
           {[["week", t("analytics.thisWeek")], ["month", t("analytics.thisMonth")], ["lastmonth", t("analytics.lastMonth")], ["year", t("analytics.thisYear")], ["all", t("analytics.allTime")]].map(([k, l]) => (
             <button key={k} onClick={() => {
