@@ -142,7 +142,7 @@ export default function VenueChip({ venue, venues, onVenueChange, compact = fals
                 onMouseEnter={e => { if (!selected) e.currentTarget.style.background = "#2A2A36"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = selected ? C.accentDim : "transparent"; }}
               >
-                {v.name}
+                {v.isLocked ? "🔒 " : ""}{v.name}
               </button>
             );
           })}

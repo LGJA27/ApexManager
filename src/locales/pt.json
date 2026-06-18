@@ -270,6 +270,24 @@
     "langCountryUK": "Reino Unido",
     "langCountryPT": "Portugal"
   },
+  "aiScan": {
+    "disclaimerTitle": "A extração por IA não é perfeita.",
+    "invoiceDisclaimer": "Fotos desfocadas, má iluminação ou faturas manuscritas podem causar erros de leitura. Verifique os dados do fornecedor, valores e impostos abaixo antes de guardar.",
+    "salesDisclaimer": "Confirme que os valores de numerário, cartão e total abaixo correspondem ao seu recibo antes de guardar.",
+    "tipTitle": "Dica para melhores resultados:",
+    "tipBody": "Tire fotos com boa iluminação, mantenha o recibo plano e certifique-se de que todo o texto está focado. Pode sempre editar qualquer detalhe após a digitalização."
+  },
+  "venueLock": {
+    "bannerTitle_one": "{{count}} estabelecimento bloqueado",
+    "bannerTitle_other": "{{count}} estabelecimentos bloqueados",
+    "bannerSub": "Todos os seus dados estão seguros e visíveis. Melhore o plano para voltar a editar estes estabelecimentos.",
+    "upgradeBtn": "Melhorar ⚡",
+    "readOnlyBadge": "Só leitura — melhore para editar",
+    "modalTitle": "Este Estabelecimento Está Bloqueado",
+    "modalDescription": "O seu plano atual inclui apenas {{count}} estabelecimento(s). Este estabelecimento tem dados históricos que pode continuar a ver, mas adicionar novos registos requer a melhoria do plano.",
+    "seePlans": "Ver Planos →",
+    "maybeLater": "Talvez mais tarde"
+  },
   "common": {
     "save": "Guardar",
     "cancel": "Cancelar",
@@ -382,7 +400,7 @@
     "footerCookies": "Cookies",
     "footerCopyright": "© 2026 ApexManager. Todos os direitos reservados.",
     "allRightsReserved": "Todos os direitos reservados.",
-    "footerCompanyLine": "[A Sua Empresa] · NIF: [NIF]",
+    "footerCompanyLine": "Luis G. Jardim · NIF: 260932361",
     "contactName": "Nome",
     "contactEmail": "Email",
     "contactSubject": "Assunto",

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 function useWindowWidth() {
@@ -33,6 +33,57 @@ function pageTitleSize(isMobile, isTablet, isWide) {
 function filterByVenue(items, venue) {
   return venue ? items.filter(i => i.venue_id === venue.id) : items;
 }
+
+function computeVenuesWithLockStatus(venues, venueLimit) {
+  if (venues.length <= venueLimit) {
+    return venues.map(v => ({ ...v, isLocked: false }));
+  }
+  const sorted = [...venues].sort((a, b) =>
+    new Date(b.last_used_at || b.created_at) - new Date(a.last_used_at || a.created_at)
+  );
+  const unlockedIds = new Set(sorted.slice(0, venueLimit).map(v => v.id));
+  return venues.map(v => ({ ...v, isLocked: !unlockedIds.has(v.id) }));
+}
+
+function LockedVenuesBanner({ venuesWithLockStatus, onUpgrade }) {
+  const { t } = useTranslation();
+  const lockedCount = venuesWithLockStatus.filter(v => v.isLocked).length;
+  if (lockedCount === 0) return null;
+  return (
+    <div style={{
+      background: "linear-gradient(135deg, #F5A62311, #F5A62308)",
+      border: "1px solid #F5A62344",
+      borderRadius: 10,
+      padding: "12px 16px",
+      marginBottom: 16,
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 12,
+      flexWrap: "wrap",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: 18 }}>🔒</span>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
+            {t("venueLock.bannerTitle", { count: lockedCount })}
+          </div>
+          <div style={{ fontSize: 12, color: C.textSub }}>
+            {t("venueLock.bannerSub")}
+          </div>
+        </div>
+      </div>
+      <button type="button" onClick={onUpgrade} style={{
+        background: "linear-gradient(135deg, #7C5CFC, #5B2FD4)",
+        border: "none", borderRadius: 7, color: "#fff",
+        fontSize: 12, fontWeight: 700, padding: "7px 14px",
+        cursor: "pointer", whiteSpace: "nowrap",
+      }}>
+        {t("venueLock.upgradeBtn")}
+      </button>
+    </div>
+  );
+}
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 import Logo from "./components/Logo.jsx";
@@ -40,6 +91,7 @@ import PricingPage from "./pages/PricingPage.jsx";
 import AnalyticsPage from "./pages/AnalyticsPage.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
 import UpgradePrompt from "./components/UpgradePrompt.jsx";
+import InstallAppButton from "./components/InstallAppButton.jsx";
 import LanguageSwitcher from "./components/LanguageSwitcher.jsx";
 import PageHeader from "./components/PageHeader.jsx";
 import VenueChip from "./components/VenueChip.jsx";
@@ -325,7 +377,7 @@ function VenueFormFields({ venues, value, onChange, messageKey }) {
           onChange={onChange}
           options={[
             { value: "", label: t("common.chooseVenue") },
-            ...venues.map(v => ({ value: v.id, label: v.name })),
+            ...venues.map(v => ({ value: v.id, label: `${v.isLocked ? "🔒 " : ""}${v.name}` })),
           ]}
         />
       </div>
@@ -443,6 +495,91 @@ function MiniBar({ data, color = C.accent, height = 60 }) {
           onMouseEnter={e => e.currentTarget.style.background = color + "88"}
           onMouseLeave={e => e.currentTarget.style.background = color + "44"} />
       ))}
+    </div>
+  );
+}
+
+function computeInvoiceReviewTotals(extracted, editItems) {
+  const subtotal = editItems.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
+  const tax = extracted?.taxRate != null && extracted.taxRate !== ""
+    ? subtotal * (parseFloat(extracted.taxRate) / 100)
+    : (parseFloat(extracted?.tax) || 0);
+  return { subtotal, tax, total: subtotal + tax };
+}
+
+const inlineCellInputStyle = {
+  width: "100%",
+  background: C.surfaceL,
+  border: `1px solid ${C.border}`,
+  borderRadius: 6,
+  color: C.text,
+  fontSize: 12,
+  padding: "4px 8px",
+  outline: "none",
+  fontFamily: "inherit",
+  boxSizing: "border-box",
+};
+
+function ScanFirstTimeTip() {
+  const { t } = useTranslation();
+  const [showScanTip, setShowScanTip] = useState(
+    () => !localStorage.getItem("apex_scan_tip_seen")
+  );
+
+  const dismissScanTip = () => {
+    localStorage.setItem("apex_scan_tip_seen", "true");
+    setShowScanTip(false);
+  };
+
+  if (!showScanTip) return null;
+
+  return (
+    <div style={{
+      background: "#7C5CFC11",
+      border: "1px solid #7C5CFC33",
+      borderRadius: 9,
+      padding: "12px 14px",
+      marginBottom: 14,
+      fontSize: 12.5,
+      color: C.textSub,
+      display: "flex",
+      gap: 10,
+      alignItems: "flex-start",
+    }}>
+      <span style={{ fontSize: 16, flexShrink: 0 }}>💡</span>
+      <div style={{ flex: 1 }}>
+        <strong style={{ color: C.text }}>{t("aiScan.tipTitle")}</strong>{" "}
+        {t("aiScan.tipBody")}
+      </div>
+      <button type="button" onClick={dismissScanTip} style={{
+        background: "none", border: "none", color: C.textMuted,
+        cursor: "pointer", fontSize: 16, lineHeight: 1, flexShrink: 0,
+      }}>✕</button>
+    </div>
+  );
+}
+
+function AiExtractionNotice({ variant }) {
+  const { t } = useTranslation();
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "flex-start",
+      gap: 10,
+      background: "#F5A62311",
+      border: "1px solid #F5A62333",
+      borderRadius: 9,
+      padding: "11px 14px",
+      marginBottom: 16,
+      fontSize: 12.5,
+      color: C.textSub,
+      lineHeight: 1.5,
+    }}>
+      <span style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }}>⚠️</span>
+      <span>
+        <strong style={{ color: C.text }}>{t("aiScan.disclaimerTitle")}</strong>{" "}
+        {variant === "invoice" ? t("aiScan.invoiceDisclaimer") : t("aiScan.salesDisclaimer")}
+      </span>
     </div>
   );
 }
@@ -721,7 +858,7 @@ function NavDrawer({ open, onClose, page, setPage, venue, venues, onVenueChange,
             <select value={venue?.id || ""} onChange={e => { onVenueChange(e.target.value); onClose(); }}
               style={{ width: "100%", background: C.surfaceL, border: `1px solid ${!venue ? C.amber + "88" : C.border}`, borderRadius: 8, color: !venue ? C.amber : C.text, fontSize: 15, padding: "10px 10px", outline: "none", fontFamily: "inherit", minHeight: 48 }}>
               <option value="">{t("common.allVenues")}</option>
-              {venues.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+              {venues.map(v => <option key={v.id} value={v.id}>{v.isLocked ? "🔒 " : ""}{v.name}</option>)}
             </select>
           </div>
         )}
@@ -808,7 +945,7 @@ function Sidebar({ page, setPage, venue, venues, onVenueChange, user, onLogout, 
           <select value={venue?.id || ""} onChange={e => onVenueChange(e.target.value)}
             style={{ width: "100%", background: C.surfaceL, border: `1px solid ${!venue ? C.amber + "88" : C.border}`, borderRadius: 6, color: !venue ? C.amber : C.text, fontSize: pick(11, 14), padding: "5px 8px", outline: "none", fontFamily: "inherit" }}>
             <option value="">{t("common.allVenues")}</option>
-            {venues.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+            {venues.map(v => <option key={v.id} value={v.id}>{v.isLocked ? "🔒 " : ""}{v.name}</option>)}
           </select>
           {!venue && <div style={{ fontSize: 9, color: C.amber, marginTop: 3 }}>{t("common.selectVenue")}</div>}
           <div style={{ fontSize: 9, color: C.textMuted, marginTop: 3 }}>{todayStr}</div>
@@ -1040,6 +1177,7 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
         </div>
       )}
       <AllVenuesBanner venue={venue} />
+      <LockedVenuesBanner venuesWithLockStatus={venues} onUpgrade={() => setPage("pricing")} />
 
       <div style={{ marginBottom: pick(18, 22) }}>
         {!isMobile && (
@@ -1491,6 +1629,7 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
         ...prev,
         cash: data.cash?.toString() || prev.cash,
         card: data.card?.toString() || prev.card,
+        pos: data.total?.toString() || prev.pos,
         date: data.date || prev.date,
         note: data.notes || prev.note,
       }));
@@ -1583,13 +1722,17 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
                 Try manual entry instead
               </button>
             )}
+            <ScanFirstTimeTip />
             <UploadZone onFile={scanReceipt} loading={scanLoading} label={t("sales.uploadPhoto")} />
           </div>
         )}
         {scanResult && (
-          <div style={{ background: C.greenDim, border: `1px solid ${C.green}44`, borderRadius: 9, padding: 12, marginBottom: 16, fontSize: 13, color: C.green }}>
-            ✓ {t("sales.scanned")}
-          </div>
+          <>
+            <div style={{ background: C.greenDim, border: `1px solid ${C.green}44`, borderRadius: 9, padding: 12, marginBottom: 16, fontSize: 13, color: C.green }}>
+              ✓ {t("sales.scanned")}
+            </div>
+            <AiExtractionNotice variant="sales" />
+          </>
         )}
         {venues.length > 0 && (
           <VenueFormFields venues={venues} value={formVenueId} onChange={setFormVenueId} messageKey="sales.selectVenueToSave" />
@@ -2176,9 +2319,7 @@ Rules:
       dueDate: extracted.dueDate || null,
       invoiceNumber: extracted.invoiceNumber || "",
       items: editItems,
-      subtotal: extracted.subtotal || 0,
-      tax: extracted.tax || 0,
-      total: extracted.total || 0,
+      ...computeInvoiceReviewTotals(extracted, editItems),
     });
 
     for (const item of editItems) {
@@ -2274,6 +2415,28 @@ Rules:
   const supplierCount = new Set(byVenue.map(i => i.supplier_name).filter(Boolean)).size;
   const invoiceVenueId = formVenueId || venue?.id || "";
   const suppliersForInvoice = invoiceVenueId ? suppliers.filter(s => s.venue_id === invoiceVenueId) : [];
+  const { subtotal: reviewSubtotal, tax: reviewTax, total: reviewTotal } = extracted
+    ? computeInvoiceReviewTotals(extracted, editItems)
+    : { subtotal: 0, tax: 0, total: 0 };
+
+  const updateLineItem = (index, field, rawValue) => {
+    setEditItems(prev => prev.map((item, i) => {
+      if (i !== index) return item;
+      const updated = { ...item };
+      if (field === "name" || field === "unit") {
+        updated[field] = rawValue;
+      } else {
+        const num = parseFloat(rawValue);
+        updated[field] = rawValue === "" ? "" : (Number.isNaN(num) ? item[field] : num);
+        if (field === "qty" || field === "unitPrice") {
+          const qty = parseFloat(field === "qty" ? rawValue : updated.qty) || 0;
+          const unitPrice = parseFloat(field === "unitPrice" ? rawValue : updated.unitPrice) || 0;
+          updated.total = qty * unitPrice;
+        }
+      }
+      return updated;
+    }));
+  };
 
   return (
     <div style={{ padding: pagePad(isMobile, w >= 768 && w < 1024), width: "100%", boxSizing: "border-box" }}>
@@ -2361,6 +2524,7 @@ Rules:
                 Try manual entry instead
               </button>
             )}
+            <ScanFirstTimeTip />
             <UploadZone onFile={scanInvoice} loading={scanLoading} label={t("invoices.uploadInvoice")} />
           </>
         ) : (
@@ -2368,14 +2532,17 @@ Rules:
             <div style={{ background: C.greenDim, border: `1px solid ${C.green}44`, borderRadius: 9, padding: 12, marginBottom: 16, fontSize: 13, color: C.green }}>✓ {t("invoices.extracted")}</div>
             <VenueFormFields venues={venues} value={formVenueId} onChange={setFormVenueId} messageKey="invoices.selectVenueToSave" />
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 16 }}>
-              <div><div style={{ fontSize: 11, color: C.textSub }}>{t("invoices.supplier")}</div><div style={{ fontSize: 14, color: C.text, fontWeight: 600 }}>{extracted.supplierName || "—"}</div></div>
-              <div><div style={{ fontSize: 11, color: C.textSub }}>{t("invoices.nif")}</div><div style={{ fontSize: 14, color: C.text }}>{extracted.supplierNIF || "—"}</div></div>
-              <div><div style={{ fontSize: 11, color: C.textSub }}>{t("invoices.iban")}</div><div style={{ fontSize: 14, color: C.text, fontFamily: "monospace" }}>{extracted.supplierIBAN || "—"}</div></div>
-              <div><div style={{ fontSize: 11, color: C.textSub }}>{t("invoices.date")}</div><div style={{ fontSize: 14, color: C.text }}>{extracted.date || "—"}</div></div>
+              <Input label={t("invoices.supplier")} value={extracted.supplierName || ""} onChange={v => setExtracted(p => ({ ...p, supplierName: v }))} />
+              <Input label={t("invoices.nif")} value={extracted.supplierNIF || ""} onChange={v => setExtracted(p => ({ ...p, supplierNIF: v }))} placeholder="PT123456789" />
+              <Input label={t("invoices.iban")} value={extracted.supplierIBAN || ""} onChange={v => setExtracted(p => ({ ...p, supplierIBAN: v }))} placeholder="PT50 0000…" />
+              <Input label={t("invoices.date")} type="date" value={extracted.date || ""} onChange={v => setExtracted(p => ({ ...p, date: v }))} />
+              <Input label={t("invoices.invoiceNumber")} value={extracted.invoiceNumber || ""} onChange={v => setExtracted(p => ({ ...p, invoiceNumber: v }))} placeholder="INV-001" />
+              <Input label={t("invoices.dueDate")} type="date" value={extracted.dueDate || ""} onChange={v => setExtracted(p => ({ ...p, dueDate: v }))} />
             </div>
+            <AiExtractionNotice variant="invoice" />
             <div style={{ fontSize: 12, color: C.textSub, fontWeight: 600, marginBottom: 8 }}>{t("invoices.lineItems")}</div>
             <div className="scroll-x" style={{ border: `1px solid ${C.border}`, borderRadius: 9, overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 360 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 480 }}>
                 <thead>
                   <tr style={{ background: C.surfaceL }}>
                     {[t("invoices.item"), t("invoices.qty"), t("invoices.unit"), t("invoices.unitPrice"), t("invoices.total")].map(h => (
@@ -2386,20 +2553,43 @@ Rules:
                 <tbody>
                   {editItems.map((item, i) => (
                     <tr key={i} style={{ borderTop: `1px solid ${C.border}` }}>
-                      <td style={{ padding: "8px 12px", color: C.text }}>{item.name}</td>
-                      <td style={{ padding: "8px 12px", color: C.textSub }}>{item.qty}</td>
-                      <td style={{ padding: "8px 12px", color: C.textSub }}>{item.unit}</td>
-                      <td style={{ padding: "8px 12px", color: C.amber }}>{fmtEur(item.unitPrice)}</td>
-                      <td style={{ padding: "8px 12px", color: C.text, fontWeight: 600 }}>{fmtEur(item.total)}</td>
+                      <td style={{ padding: "6px 8px" }}>
+                        <input type="text" value={item.name || ""} onChange={e => updateLineItem(i, "name", e.target.value)} style={inlineCellInputStyle} />
+                      </td>
+                      <td style={{ padding: "6px 8px", width: 72 }}>
+                        <input type="number" value={item.qty ?? ""} onChange={e => updateLineItem(i, "qty", e.target.value)} style={inlineCellInputStyle} />
+                      </td>
+                      <td style={{ padding: "6px 8px", width: 72 }}>
+                        <input type="text" value={item.unit || ""} onChange={e => updateLineItem(i, "unit", e.target.value)} style={inlineCellInputStyle} />
+                      </td>
+                      <td style={{ padding: "6px 8px", width: 96 }}>
+                        <input type="number" step="0.01" value={item.unitPrice ?? ""} onChange={e => updateLineItem(i, "unitPrice", e.target.value)} style={inlineCellInputStyle} />
+                      </td>
+                      <td style={{ padding: "6px 8px", width: 96 }}>
+                        <input type="number" step="0.01" value={item.total ?? ""} onChange={e => updateLineItem(i, "total", e.target.value)} style={{ ...inlineCellInputStyle, fontWeight: 600 }} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 16, marginTop: 12, fontSize: 14 }}>
-              <span style={{ color: C.textSub }}>{t("invoices.net")}: {fmtEur(extracted.subtotal)}</span>
-              <span style={{ color: C.textSub }}>{t("invoices.tax")}: {fmtEur(extracted.tax)}</span>
-              <span style={{ color: C.text, fontWeight: 700 }}>{t("invoices.total")}: {fmtEur(extracted.total)}</span>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 16, marginTop: 12, fontSize: 14, alignItems: "center", flexWrap: "wrap" }}>
+              <span style={{ color: C.textSub }}>{t("invoices.net")}: {fmtEur(reviewSubtotal)}</span>
+              {extracted?.taxRate != null && extracted.taxRate !== "" ? (
+                <span style={{ color: C.textSub }}>{t("invoices.tax")} ({extracted.taxRate}%): {fmtEur(reviewTax)}</span>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ color: C.textSub, fontSize: 13 }}>{t("invoices.tax")}:</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={extracted?.tax ?? ""}
+                    onChange={e => setExtracted(p => ({ ...p, tax: e.target.value === "" ? "" : parseFloat(e.target.value) || 0 }))}
+                    style={{ ...inlineCellInputStyle, width: 88 }}
+                  />
+                </div>
+              )}
+              <span style={{ color: C.text, fontWeight: 700 }}>{t("invoices.total")}: {fmtEur(reviewTotal)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
               <Btn variant="ghost" onClick={() => { setExtracted(null); setEditItems([]); }}>{t("invoices.rescan")}</Btn>
@@ -3099,7 +3289,7 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
     if (!supportForm.message.trim()) return;
     setSupportSaving(true);
     const body = `From: ${user?.email || "unknown"}\nUser: ${user?.user_metadata?.name || "unknown"}\n\n${supportForm.message}`;
-    window.location.href = `mailto:support@apexmanager.com?subject=${encodeURIComponent(supportForm.subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = `mailto:support@apexmanager.app?subject=${encodeURIComponent(supportForm.subject)}&body=${encodeURIComponent(body)}`;
     setTimeout(() => {
       setSupportSaving(false);
       setSupportSuccess(true);
@@ -3182,6 +3372,21 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
   return (
     <div style={{ padding: isMobile ? 16 : "28px 32px", maxWidth: 700 }}>
       <h1 style={{ margin: isMobile ? "0 0 20px" : "0 0 28px", fontSize: pageTitleSize(isMobile, w >= 768 && w < 1024, false), color: C.text }}>{t("settings.title")}</h1>
+      <LockedVenuesBanner venuesWithLockStatus={venues} onUpgrade={() => setPage("pricing")} />
+
+      <Card style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
+              Install ApexManager
+            </div>
+            <div style={{ fontSize: 12, color: C.textSub, marginTop: 2 }}>
+              Add to your home screen for quick access, like a native app
+            </div>
+          </div>
+          <InstallAppButton />
+        </div>
+      </Card>
 
       <div style={{ marginBottom: 28 }}>
         <h2 style={{ fontSize: 15, color: C.text, margin: "0 0 14px", fontWeight: 600 }}>{t("settings.account")}</h2>
@@ -3312,10 +3517,17 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
           : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {venues.map(v => (
-                <Card key={v.id}>
+                <Card key={v.id} style={v.isLocked ? { borderLeft: "3px solid #F5A623" } : undefined}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{v.name}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <div style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{v.name}</div>
+                        {v.isLocked && (
+                          <span style={{ background: "#F5A62322", color: "#F5A623", padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600 }}>
+                            🔒 {t("venueLock.readOnlyBadge")}
+                          </span>
+                        )}
+                      </div>
                       <div style={{ fontSize: 12, color: C.textSub }}>{v.type} {v.address ? `· ${v.address}` : ""}</div>
                     </div>
                     <button onClick={() => { setPendingDelete(v); setDeleteError(""); }} title={t("settings.deleteVenue")} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 16 }}>🗑</button>
@@ -3526,6 +3738,24 @@ export default function App() {
   const [ingredients, setIngredients] = useState([]);
   const [staff, setStaff] = useState([]);
   const [subscription, setSubscription] = useState(null);
+  const [upgradePrompt, setUpgradePrompt] = useState(null);
+
+  const venueLimit = subscription?.venue_limit ?? 1;
+
+  const venuesWithLockStatus = useMemo(
+    () => computeVenuesWithLockStatus(venues, venueLimit),
+    [venues, venueLimit]
+  );
+
+  const guardVenueWrite = useCallback((targetVenueId) => {
+    if (!targetVenueId) return null;
+    const targetVenue = venuesWithLockStatus.find(v => v.id === targetVenueId);
+    if (targetVenue?.isLocked) {
+      setUpgradePrompt("venueLocked");
+      return { error: { message: "This venue is locked. Upgrade to add more data." } };
+    }
+    return null;
+  }, [venuesWithLockStatus]);
 
   useEffect(() => {
     if (!supabase) {
@@ -3651,6 +3881,8 @@ export default function App() {
 
   // ── Sales helpers ─────────────────────────────────────────────────────────────
   const addSale = async ({ venue_id, date, cash, card, cash_expenses, xpto, pos, staff, note }) => {
+    const blocked = guardVenueWrite(venue_id);
+    if (blocked) return blocked;
     const { data, error } = await supabase
       .from("sales")
       .insert({ user_id: user.id, venue_id: venue_id || null, date, cash, card, cash_expenses, xpto, pos, staff, note })
@@ -3687,6 +3919,8 @@ export default function App() {
 
   // ── Expense helpers ──────────────────────────────────────────────────────────
   const addExpense = async ({ venue_id, name, amount, type, recurring, date }) => {
+    const blocked = guardVenueWrite(venue_id);
+    if (blocked) return blocked;
     const { data, error } = await supabase
       .from("expenses")
       .insert({ user_id: user.id, venue_id: venue_id || null, name, amount: parseFloat(amount) || 0, type, recurring, date })
@@ -3711,6 +3945,8 @@ export default function App() {
 
   // ── Supplier helpers ─────────────────────────────────────────────────────────
   const addSupplier = async ({ name, nif, iban, address, phone, email, category, venue_id }) => {
+    const blocked = guardVenueWrite(venue_id);
+    if (blocked) return null;
     const { data, error } = await supabase
       .from("suppliers")
       .insert({ user_id: user.id, venue_id: venue_id || null, name, nif: nif || null, iban: iban || null, address: address || null, phone: phone || null, email: email || null, category: category || null })
@@ -3737,6 +3973,8 @@ export default function App() {
 
   // ── Ingredient helpers ───────────────────────────────────────────────────────
   const addIngredient = async ({ name, unit, last_price, category, supplier, venue_id }) => {
+    const blocked = guardVenueWrite(venue_id);
+    if (blocked) return null;
     const price = parseFloat(last_price) || 0;
     const { data, error } = await supabase
       .from("ingredients")
@@ -3770,6 +4008,8 @@ export default function App() {
 
   // ── Staff helpers ────────────────────────────────────────────────────────────
   const addStaff = async (payload) => {
+    const blocked = guardVenueWrite(payload.venue_id);
+    if (blocked) return null;
     const { data, error } = await supabase
       .from("staff")
       .insert({ user_id: user.id, ...payload })
@@ -3794,6 +4034,8 @@ export default function App() {
   };
 
   const addInvoice = async ({ venueId, supplierName, supplierNif, supplierIban, date, dueDate, invoiceNumber, items, subtotal, tax, total }) => {
+    const blocked = guardVenueWrite(venueId);
+    if (blocked) return blocked;
     const { data, error } = await supabase
       .from("invoices")
       .insert({
@@ -3870,13 +4112,20 @@ export default function App() {
     return { error: null };
   };
 
-  const venue = venues.find(v => v.id === venueId) || null;
+  const venue = venuesWithLockStatus.find(v => v.id === venueId) || null;
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
 
-  const handleVenueChange = (id) => setVenueId(id);
+  const handleVenueChange = useCallback((id) => {
+    setVenueId(id);
+    if (id && supabase) {
+      const ts = new Date().toISOString();
+      supabase.from("venues").update({ last_used_at: ts }).eq("id", id).then(() => {});
+      setVenues(prev => prev.map(v => (v.id === id ? { ...v, last_used_at: ts } : v)));
+    }
+  }, []);
 
   const w = useWindowWidth();
   const isMobile = w < 1024;
@@ -3966,7 +4215,7 @@ export default function App() {
     );
   }
 
-  const pageProps = { venues, sales, expenses, invoices, suppliers, ingredients, staff, venue, onVenueChange: handleVenueChange };
+  const pageProps = { venues: venuesWithLockStatus, sales, expenses, invoices, suppliers, ingredients, staff, venue, onVenueChange: handleVenueChange };
 
   return (
     <div style={{ display: "flex", width: "100vw", height: "100vh", overflow: "hidden", background: C.bg, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: C.text }}>
@@ -3974,33 +4223,41 @@ export default function App() {
 
       {/* Desktop sidebar */}
       {!isMobile && (
-        <Sidebar page={page} setPage={setPage} venue={venue} venues={venues} onVenueChange={handleVenueChange} user={user} onLogout={handleLogout} subscription={subscription} />
+        <Sidebar page={page} setPage={setPage} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} user={user} onLogout={handleLogout} subscription={subscription} />
       )}
 
       {/* Mobile: fixed top header */}
       {isMobile && (
-        <MobileHeader page={page} onOpenDrawer={() => setDrawerOpen(true)} venue={venue} venues={venues} onVenueChange={handleVenueChange} />
+        <MobileHeader page={page} onOpenDrawer={() => setDrawerOpen(true)} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />
       )}
 
       {/* Mobile: slide-in drawer — always rendered, visibility controlled via CSS transform */}
       {isMobile && (
-        <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} page={page} setPage={setPage} venue={venue} venues={venues} onVenueChange={handleVenueChange} user={user} onLogout={handleLogout} subscription={subscription} />
+        <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} page={page} setPage={setPage} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} user={user} onLogout={handleLogout} subscription={subscription} />
       )}
 
       <main style={{ flex: 1, minWidth: 0, overflowY: "auto", overflowX: "hidden", height: "100vh", WebkitOverflowScrolling: "touch", paddingTop: isMobile ? 56 : 0, paddingBottom: isMobile ? "calc(60px + env(safe-area-inset-bottom))" : 0, maxWidth: isMobile ? undefined : "calc(100vw - 220px)" }}>
         <div key={page} style={{ animation: "fadeIn .18s ease", width: "100%", boxSizing: "border-box" }}>
           {page === "dashboard" && <DashboardPage {...pageProps} subscription={subscription} setPage={setPage} setInvoicesInitialFilter={setInvoicesInitialFilter} />}
-          {page === "sales" && <SalesPage sales={sales} addSale={addSale} updateSale={updateSale} deleteSale={deleteSale} salesLoading={salesLoading} venues={venues} venue={venue} onVenueChange={handleVenueChange} subscription={subscription} setSubscription={setSubscription} staffList={staff} />}
-          {page === "invoices" && <InvoicesPage invoices={invoices} addInvoice={addInvoice} updateInvoice={updateInvoice} markInvoicePaid={markInvoicePaid} suppliers={suppliers} addSupplier={addSupplier} upsertIngredient={upsertIngredient} venue={venue} venues={venues} onVenueChange={handleVenueChange} subscription={subscription} setSubscription={setSubscription} initialStatusFilter={invoicesInitialFilter} />}
-          {page === "expenses" && <ExpensesPage expenses={expenses} addExpense={addExpense} updateExpense={updateExpense} deleteExpense={deleteExpense} venue={venue} venues={venues} onVenueChange={handleVenueChange} />}
-          {page === "suppliers" && <SuppliersPage suppliers={suppliers} addSupplier={addSupplier} updateSupplier={updateSupplier} venue={venue} venues={venues} onVenueChange={handleVenueChange} />}
-          {page === "ingredients" && <IngredientsPage ingredients={ingredients} addIngredient={addIngredient} updateIngredient={updateIngredient} venue={venue} venues={venues} onVenueChange={handleVenueChange} />}
-          {page === "staff" && <StaffPage staff={staff} addStaff={addStaff} updateStaff={updateStaff} deleteStaff={deleteStaff} venue={venue} venues={venues} onVenueChange={handleVenueChange} />}
-          {page === "analytics" && <AnalyticsPage sales={sales} expenses={expenses} invoices={invoices} venues={venues} venue={venue} onVenueChange={handleVenueChange} staff={staff} suppliers={suppliers} ingredients={ingredients} subscription={subscription} setPage={setPage} />}
-          {page === "settings" && <SettingsPage venues={venues} addVenue={addVenue} deleteVenue={deleteVenue} user={user} subscription={subscription} setPage={setPage} />}
+          {page === "sales" && <SalesPage sales={sales} addSale={addSale} updateSale={updateSale} deleteSale={deleteSale} salesLoading={salesLoading} venues={venuesWithLockStatus} venue={venue} onVenueChange={handleVenueChange} subscription={subscription} setSubscription={setSubscription} staffList={staff} />}
+          {page === "invoices" && <InvoicesPage invoices={invoices} addInvoice={addInvoice} updateInvoice={updateInvoice} markInvoicePaid={markInvoicePaid} suppliers={suppliers} addSupplier={addSupplier} upsertIngredient={upsertIngredient} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} subscription={subscription} setSubscription={setSubscription} initialStatusFilter={invoicesInitialFilter} />}
+          {page === "expenses" && <ExpensesPage expenses={expenses} addExpense={addExpense} updateExpense={updateExpense} deleteExpense={deleteExpense} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
+          {page === "suppliers" && <SuppliersPage suppliers={suppliers} addSupplier={addSupplier} updateSupplier={updateSupplier} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
+          {page === "ingredients" && <IngredientsPage ingredients={ingredients} addIngredient={addIngredient} updateIngredient={updateIngredient} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
+          {page === "staff" && <StaffPage staff={staff} addStaff={addStaff} updateStaff={updateStaff} deleteStaff={deleteStaff} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
+          {page === "analytics" && <AnalyticsPage sales={sales} expenses={expenses} invoices={invoices} venues={venuesWithLockStatus} venue={venue} onVenueChange={handleVenueChange} staff={staff} suppliers={suppliers} ingredients={ingredients} subscription={subscription} setPage={setPage} />}
+          {page === "settings" && <SettingsPage venues={venuesWithLockStatus} addVenue={addVenue} deleteVenue={deleteVenue} user={user} subscription={subscription} setPage={setPage} />}
           {page === "pricing" && <PricingPage user={user} subscription={subscription} />}
         </div>
       </main>
+
+      <UpgradePrompt
+        open={!!upgradePrompt}
+        feature={upgradePrompt}
+        onClose={() => setUpgradePrompt(null)}
+        setPage={setPage}
+        venueLimit={venueLimit}
+      />
 
       {/* Mobile: fixed bottom nav */}
       {isMobile && <BottomNav page={page} setPage={setPage} onOpenDrawer={() => setDrawerOpen(true)} />}

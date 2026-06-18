@@ -18,6 +18,7 @@ import LandingLanguageToggle from '../components/LandingLanguageToggle.jsx';
 import { motion } from 'framer-motion';
 import { PLANS } from '../config/plans.js';
 import Logo from '../components/Logo.jsx';
+import InstallAppButton from '../components/InstallAppButton.jsx';
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 function useWindowWidth() {
@@ -332,7 +333,7 @@ function ContactSection({ isMobile, inner }) {
     setSaving(true);
     const subjectLabel = t(CONTACT_SUBJECTS.find(s => s.value === form.subject)?.key || 'landing.contactSubjectGeneral');
     const body = `${t('landing.contactName')}: ${form.name}\n${t('landing.contactEmail')}: ${form.email}\n\n${form.message}`;
-    window.location.href = `mailto:support@apexmanager.com?subject=${encodeURIComponent(subjectLabel)}&body=${encodeURIComponent(body)}`;
+    window.location.href = `mailto:support@apexmanager.app?subject=${encodeURIComponent(subjectLabel)}&body=${encodeURIComponent(body)}`;
     setTimeout(() => {
       setSaving(false);
       setSuccess(true);
@@ -673,6 +674,7 @@ export default function LandingPage() {
               {t('landing.seeHow')}
             </button>
           </motion.div>
+          {isMobile && <InstallAppButton style={{ marginTop: 16 }} />}
           <motion.div variants={fadeIn} style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.8 }}>
             {t('landing.trustLine')}
           </motion.div>

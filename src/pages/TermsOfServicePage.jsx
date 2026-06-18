@@ -47,8 +47,8 @@ export default function TermsOfServicePage() {
 
         <Section title="1. The Service">
           <p>
-            ApexManager is a cloud-based restaurant management platform operated by <strong style={{ color: C.text }}>[Your Company Name]</strong>
-            , NIF [Your NIF], registered in Portugal ("we", "us", "our"). The platform provides tools for
+            ApexManager is a cloud-based restaurant management platform operated by <strong style={{ color: C.text }}>Luis G. Jardim</strong>
+            , NIF 260932361, a sole trader (trabalhador independente) registered in Portugal ("we", "us", "our"). The platform provides tools for
             AI-powered invoice scanning, daily sales tracking, expense management, supplier directories, ingredient
             cost tracking, and business analytics designed for restaurant, bar and café operators.
           </p>
@@ -144,7 +144,17 @@ export default function TermsOfServicePage() {
           </p>
         </Section>
 
-        <Section title="9. Account Suspension and Termination">
+        <Section title="9. AI-Powered Features">
+          <p>
+            <strong style={{ color: C.text }}>AI-Powered Features:</strong> ApexManager uses artificial intelligence to
+            extract data from photographs of invoices and receipts. While designed for accuracy, AI extraction may produce
+            errors, especially with low-quality images. Users are responsible for reviewing and verifying all
+            AI-extracted data before relying on it for business, accounting, or tax purposes. ApexManager is not liable
+            for financial decisions made based on unverified AI-extracted data.
+          </p>
+        </Section>
+
+        <Section title="10. Account Suspension and Termination">
           <p>We may suspend or terminate your account immediately if you:</p>
           <ul style={{ paddingLeft: 20, margin: '6px 0 14px' }}>
             <Li>Violate any provision of these Terms.</Li>
@@ -153,13 +163,13 @@ export default function TermsOfServicePage() {
             <Li>Provide false registration information.</Li>
           </ul>
           <p>
-            You may terminate your account at any time by contacting us at <a href="mailto:[your@email.com]" style={{ color: C.accent }}>[your@email.com]</a>.
+            You may terminate your account at any time by contacting us at <a href="mailto:support@apexmanager.app" style={{ color: C.accent }}>support@apexmanager.app</a>.
             Upon termination, your data will be deleted within 30 days in accordance with our{' '}
             <Link to="/privacy" style={{ color: C.accent }}>Privacy Policy</Link>.
           </p>
         </Section>
 
-        <Section title="10. Service Availability">
+        <Section title="11. Service Availability">
           <p>
             We aim to provide a reliable service but cannot guarantee 100% uptime. We may perform scheduled maintenance,
             which we will endeavour to notify you of in advance. We are not liable for any losses arising from service
@@ -167,7 +177,7 @@ export default function TermsOfServicePage() {
           </p>
         </Section>
 
-        <Section title="11. Changes to These Terms">
+        <Section title="12. Changes to These Terms">
           <p>
             We may update these Terms at any time. We will notify you of material changes by email at least 14 days
             before they take effect. Continued use of the service after the effective date constitutes acceptance of
@@ -175,7 +185,7 @@ export default function TermsOfServicePage() {
           </p>
         </Section>
 
-        <Section title="12. Governing Law and Disputes">
+        <Section title="13. Governing Law and Disputes">
           <p>
             These Terms are governed by and construed in accordance with the laws of <strong style={{ color: C.text }}>Portugal</strong>,
             without regard to conflict of law provisions.
@@ -189,14 +199,14 @@ export default function TermsOfServicePage() {
           </p>
         </Section>
 
-        <Section title="13. Contact">
+        <Section title="14. Contact">
           <p>For any questions about these Terms, contact us at:</p>
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: '16px 20px', marginTop: 8 }}>
-            <div style={{ color: C.text, fontWeight: 600, marginBottom: 4 }}>[Your Company Name]</div>
-            <div>[Your Address], Portugal</div>
-            <div>NIF: [Your NIF]</div>
+            <div style={{ color: C.text, fontWeight: 600, marginBottom: 4 }}>Luis G. Jardim</div>
+            <div>Funchal, Portugal</div>
+            <div>NIF: 260932361</div>
             <div style={{ marginTop: 6 }}>
-              <a href="mailto:[your@email.com]" style={{ color: C.accent }}>[your@email.com]</a>
+              <a href="mailto:support@apexmanager.app" style={{ color: C.accent }}>support@apexmanager.app</a>
             </div>
           </div>
         </Section>

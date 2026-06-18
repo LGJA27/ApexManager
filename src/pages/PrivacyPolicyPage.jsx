@@ -48,14 +48,14 @@ export default function PrivacyPolicyPage() {
 
         <Section title="1. Who We Are">
           <p>
-            ApexManager is a restaurant management SaaS operated by <strong style={{ color: C.text }}>[Your Company Name]</strong>,
-            a company registered in Portugal.
+            ApexManager is a restaurant management SaaS operated by <strong style={{ color: C.text }}>Luis G. Jardim</strong>,
+            a sole trader (trabalhador independente) registered in Portugal.
           </p>
           <ul style={{ paddingLeft: 20, margin: '10px 0' }}>
-            <Li><strong style={{ color: C.text }}>Company:</strong> [Your Company Name]</Li>
-            <Li><strong style={{ color: C.text }}>Address:</strong> [Your Address], Portugal</Li>
-            <Li><strong style={{ color: C.text }}>NIF:</strong> [Your NIF]</Li>
-            <Li><strong style={{ color: C.text }}>Email:</strong> <a href="mailto:[your@email.com]" style={{ color: C.accent }}>[your@email.com]</a></Li>
+            <Li><strong style={{ color: C.text }}>Trader:</strong> Luis G. Jardim</Li>
+            <Li><strong style={{ color: C.text }}>Address:</strong> Funchal, Portugal</Li>
+            <Li><strong style={{ color: C.text }}>NIF:</strong> 260932361</Li>
+            <Li><strong style={{ color: C.text }}>Email:</strong> <a href="mailto:support@apexmanager.app" style={{ color: C.accent }}>support@apexmanager.app</a></Li>
           </ul>
           <p>
             We are the data controller for the personal data you provide when using ApexManager. This policy explains what
@@ -129,6 +129,7 @@ export default function PrivacyPolicyPage() {
               <strong style={{ color: C.text }}>Anthropic, PBC</strong> — AI invoice scanning. When you scan an invoice,
               the image is sent to Anthropic's Claude API for processing. Images are transmitted over TLS and are not
               stored or used for AI training by Anthropic under our enterprise agreement.
+              AI-extracted data may contain errors and should be reviewed by the user before relying on it for accounting or tax purposes.
               <a href="https://www.anthropic.com/privacy" target="_blank" rel="noreferrer" style={{ color: C.accent }}> Anthropic Privacy Policy →</a>
             </Li>
           </ul>
@@ -146,7 +147,7 @@ export default function PrivacyPolicyPage() {
           </ul>
           <p style={{ marginTop: 14 }}>
             To exercise any of these rights, contact us at{' '}
-            <a href="mailto:[your@email.com]" style={{ color: C.accent }}>[your@email.com]</a>.
+            <a href="mailto:support@apexmanager.app" style={{ color: C.accent }}>support@apexmanager.app</a>.
             We will respond within 30 days.
           </p>
           <p>
@@ -186,11 +187,11 @@ export default function PrivacyPolicyPage() {
             For any privacy-related questions or to exercise your GDPR rights, contact us at:
           </p>
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: '16px 20px', marginTop: 8 }}>
-            <div style={{ color: C.text, fontWeight: 600, marginBottom: 4 }}>[Your Company Name]</div>
-            <div>[Your Address], Portugal</div>
-            <div>NIF: [Your NIF]</div>
+            <div style={{ color: C.text, fontWeight: 600, marginBottom: 4 }}>Luis G. Jardim</div>
+            <div>Funchal, Portugal</div>
+            <div>NIF: 260932361</div>
             <div style={{ marginTop: 6 }}>
-              <a href="mailto:[your@email.com]" style={{ color: C.accent }}>[your@email.com]</a>
+              <a href="mailto:support@apexmanager.app" style={{ color: C.accent }}>support@apexmanager.app</a>
             </div>
           </div>
         </Section>

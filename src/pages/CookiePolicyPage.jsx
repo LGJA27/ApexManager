@@ -156,7 +156,7 @@ export default function CookiePolicyPage() {
         <Section title="7. Contact">
           <p>
             For any questions about our use of cookies, contact us at{' '}
-            <a href="mailto:[your@email.com]" style={{ color: C.accent }}>[your@email.com]</a>.
+            <a href="mailto:support@apexmanager.app" style={{ color: C.accent }}>support@apexmanager.app</a>.
           </p>
           <p>
             For more information about how we handle your personal data, see our{' '}

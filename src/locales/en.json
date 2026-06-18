@@ -270,6 +270,24 @@
     "langCountryUK": "United Kingdom",
     "langCountryPT": "Portugal"
   },
+  "aiScan": {
+    "disclaimerTitle": "AI extraction isn't perfect.",
+    "invoiceDisclaimer": "Blurry photos, poor lighting or handwritten invoices can cause reading errors. Please double-check the supplier details, amounts and tax values below before saving.",
+    "salesDisclaimer": "Please verify the cash, card and total amounts below match your actual receipt before saving.",
+    "tipTitle": "Tip for best results:",
+    "tipBody": "Take photos in good lighting, keep the receipt flat, and make sure all text is in focus. You can always edit any detail after scanning."
+  },
+  "venueLock": {
+    "bannerTitle_one": "{{count}} venue locked",
+    "bannerTitle_other": "{{count}} venues locked",
+    "bannerSub": "All your data is safe and viewable. Upgrade to resume editing these venues.",
+    "upgradeBtn": "Upgrade ⚡",
+    "readOnlyBadge": "Read-only — upgrade to edit",
+    "modalTitle": "This Venue is Locked",
+    "modalDescription": "Your current plan only includes {{count}} venue(s). This venue has historical data you can still view, but adding new entries requires upgrading your plan.",
+    "seePlans": "See Plans →",
+    "maybeLater": "Maybe later"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -382,7 +400,7 @@
     "footerCookies": "Cookies",
     "footerCopyright": "© 2026 ApexManager. All rights reserved.",
     "allRightsReserved": "All rights reserved.",
-    "footerCompanyLine": "[Your Company] · NIF: [NIF]",
+    "footerCompanyLine": "Luis G. Jardim · NIF: 260932361",
     "contactName": "Name",
     "contactEmail": "Email",
     "contactSubject": "Subject",

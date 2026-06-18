@@ -7,7 +7,7 @@ const C = {
   green: "#22C97A",
 };
 
-export default function UpgradePrompt({ open, onClose, feature, setPage }) {
+export default function UpgradePrompt({ open, onClose, feature, setPage, venueLimit = 1 }) {
   const { t } = useTranslation();
   if (!open || !feature) return null;
 
@@ -24,9 +24,14 @@ export default function UpgradePrompt({ open, onClose, feature, setPage }) {
       title: t('audit.title'),
       description: t('audit.subscribeTounlock'),
     },
+    venueLocked: {
+      title: t('venueLock.modalTitle'),
+      description: t('venueLock.modalDescription', { count: venueLimit }),
+    },
   };
 
   const { title, description } = copyByFeature[feature] || copyByFeature.range;
+  const showFeatureList = feature !== 'venueLocked';
 
   return (
     <div
@@ -54,16 +59,20 @@ export default function UpgradePrompt({ open, onClose, feature, setPage }) {
           textAlign: "center",
         }}
       >
-        <div style={{ fontSize: 48, lineHeight: 1, marginBottom: 16, color: C.accent }}>⚡</div>
+        <div style={{ fontSize: 48, lineHeight: 1, marginBottom: 16, color: feature === 'venueLocked' ? '#F5A623' : C.accent }}>
+          {feature === 'venueLocked' ? '🔒' : '⚡'}
+        </div>
         <h2 style={{ margin: "0 0 12px", fontSize: 22, fontWeight: 800, color: C.text }}>{title}</h2>
         <p style={{ margin: "0 0 24px", fontSize: 14, color: C.textSub, lineHeight: 1.7 }}>{description}</p>
-        <ul style={{ listStyle: "none", padding: 0, margin: "0 0 28px", textAlign: "left", display: "flex", flexDirection: "column", gap: 10 }}>
-          {["Unlimited date ranges", "All data exports", "Full audit reports + charts"].map(item => (
-            <li key={item} style={{ fontSize: 14, color: C.textSub, display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ color: C.green, fontWeight: 700 }}>✓</span>{item}
-            </li>
-          ))}
-        </ul>
+        {showFeatureList && (
+          <ul style={{ listStyle: "none", padding: 0, margin: "0 0 28px", textAlign: "left", display: "flex", flexDirection: "column", gap: 10 }}>
+            {["Unlimited date ranges", "All data exports", "Full audit reports + charts"].map(item => (
+              <li key={item} style={{ fontSize: 14, color: C.textSub, display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ color: C.green, fontWeight: 700 }}>✓</span>{item}
+              </li>
+            ))}
+          </ul>
+        )}
         <button
           type="button"
           onClick={() => { setPage("pricing"); onClose(); }}
@@ -79,7 +88,7 @@ export default function UpgradePrompt({ open, onClose, feature, setPage }) {
             cursor: "pointer",
           }}
         >
-          {t('settings.upgradePlan')}
+          {t('venueLock.seePlans')}
         </button>
         <button
           type="button"
@@ -97,9 +106,11 @@ export default function UpgradePrompt({ open, onClose, feature, setPage }) {
             cursor: "pointer",
           }}
         >
-          {t('common.close')}
+          {t('venueLock.maybeLater')}
         </button>
-        <div style={{ fontSize: 12, color: C.textSub, marginTop: 16, opacity: 0.8 }}>{t('common.freeTrial')}</div>
+        {showFeatureList && (
+          <div style={{ fontSize: 12, color: C.textSub, marginTop: 16, opacity: 0.8 }}>{t('common.freeTrial')}</div>
+        )}
       </div>
     </div>
   );
