@@ -12,7 +12,7 @@ export default defineConfig({
       manifest: {
         name: 'ApexManager',
         short_name: 'ApexManager',
-        description: 'Restaurant intelligence platform — invoices, sales, analytics',
+        description: 'Business intelligence platform — invoices, sales, analytics',
         theme_color: '#0D0D12',
         background_color: '#0D0D12',
         display: 'standalone',

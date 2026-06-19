@@ -125,6 +125,12 @@ const C = {
   textMuted: "#55556A",
 };
 
+const VENUE_TYPE_OPTIONS = [
+  "Restaurant", "Bar/Café", "Bakery", "Takeaway", "Fine Dining",
+  "Retail Shop", "Salon/Spa", "Clinic/Practice", "Office/Studio",
+  "Other",
+];
+
 // ─── CLAUDE API (proxied through /api/scan) ──────────────────────────────────
 async function callClaude(prompt, systemPrompt, imageBase64, imageType = "image/jpeg") {
   const res = await fetch("/api/scan", {
@@ -724,7 +730,7 @@ function AuthScreen({ defaultMode = "login" }) {
           {/* onKeyDown on the container catches Enter from any input inside */}
           <div onKeyDown={handleKeyDown} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {mode === "register" && <Input label={t("auth.fullName")} value={name} onChange={setName} placeholder="João Silva" />}
-            <Input label={t("auth.email")} value={email} onChange={setEmail} type="email" placeholder="you@restaurant.com" />
+            <Input label={t("auth.email")} value={email} onChange={setEmail} type="email" placeholder="you@yourbusiness.com" />
             <Input label={t("auth.password")} value={password} onChange={setPassword} type="password" placeholder="••••••••" />
           </div>
           {mode === "register" && (
@@ -769,7 +775,7 @@ function MobileHeader({ page, onOpenDrawer, venue, venues, onVenueChange }) {
     invoices: "nav.invoices",
     expenses: "nav.expenses",
     suppliers: "nav.suppliers",
-    ingredients: "nav.ingredients",
+    stock: "nav.stock",
     staff: "nav.staff",
     analytics: "nav.analytics",
     settings: "nav.settings",
@@ -799,7 +805,7 @@ function BottomNav({ page, setPage, onOpenDrawer }) {
     { id: "expenses",  icon: "💸", label: t("nav.expenses") },
     { id: "more",      icon: "⋯",  label: t("nav.more") },
   ];
-  const MORE_PAGES = ["analytics", "suppliers", "ingredients", "staff", "settings", "pricing"];
+  const MORE_PAGES = ["analytics", "suppliers", "stock", "staff", "settings", "pricing"];
   return (
     <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#16161E", borderTop: `1px solid ${C.border}`, zIndex: 200, display: "flex", paddingBottom: "env(safe-area-inset-bottom)" }}>
       {bottomNavItems.map(n => {
@@ -829,10 +835,10 @@ function NavDrawer({ open, onClose, page, setPage, venue, venues, onVenueChange,
   ];
   const dbItems = [
     { id: "suppliers",   icon: "🏭", label: t("nav.suppliers") },
-    { id: "ingredients", icon: "🥦", label: t("nav.ingredients") },
+    { id: "stock", icon: "📦", label: t("nav.stock") },
     { id: "staff",       icon: "👥", label: t("nav.staff") },
   ];
-  const dbActive = ["suppliers","ingredients","staff"].includes(page);
+  const dbActive = ["suppliers","stock","staff"].includes(page);
   const [dbOpen, setDbOpen] = useState(dbActive);
   const go = id => { setPage(id); onClose(); };
   const DRAWER_W = Math.min(280, window.innerWidth * 0.85);
@@ -919,14 +925,14 @@ function Sidebar({ page, setPage, venue, venues, onVenueChange, user, onLogout, 
   ];
   const dbItems = [
     { id: "suppliers",   icon: "🏭", label: t("nav.suppliers") },
-    { id: "ingredients", icon: "🥦", label: t("nav.ingredients") },
+    { id: "stock", icon: "📦", label: t("nav.stock") },
     { id: "staff",       icon: "👥", label: t("nav.staff") },
   ];
-  const [dbOpen, setDbOpen] = useState(["suppliers", "ingredients", "staff"].includes(page));
+  const [dbOpen, setDbOpen] = useState(["suppliers", "stock", "staff"].includes(page));
 
   const todayStr = new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 
-  const dbActive = ["suppliers","ingredients","staff"].includes(page);
+  const dbActive = ["suppliers","stock","staff"].includes(page);
   return (
     <div style={{ width: 220, minWidth: 220, maxWidth: 220, flexShrink: 0, overflowX: "hidden", overflowY: "auto", height: "100vh", background: C.surface, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column" }}>
       <div style={{ padding: "16px 10px 14px", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
@@ -1620,7 +1626,7 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
     try {
       const b64 = await fileToBase64(file);
       const prompt = "Extract daily sales data from this receipt/ticket. Return ONLY valid JSON with fields: cash (number), card (number), total (number), date (YYYY-MM-DD or null), notes (string).";
-      const systemPrompt = "You are a data extraction assistant for restaurant management. Extract financial data from receipt images precisely. Return only valid JSON, no markdown.";
+      const systemPrompt = "You are a data extraction assistant for small business expense and sales management. Extract financial data from receipt images precisely. Return only valid JSON, no markdown.";
       const result = await callClaude(prompt, systemPrompt, b64, file.type);
       const clean = result.replace(/```json|```/g, "").trim();
       const data = JSON.parse(clean);
@@ -2161,7 +2167,7 @@ function SupplierInvoiceGroup({ name, invs, onMarkPaid, onEdit, payingId }) {
   );
 }
 
-function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, suppliers, addSupplier, upsertIngredient, venue, venues, onVenueChange, subscription, setSubscription, initialStatusFilter }) {
+function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, suppliers, addSupplier, upsertStockItem, venue, venues, onVenueChange, subscription, setSubscription, initialStatusFilter }) {
   const { t } = useTranslation();
   const w = useWindowWidth();
   const isMobile = w < 768;
@@ -2239,7 +2245,7 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
     setScanLoading(true);
     try {
       const b64 = await fileToBase64(file);
-      const prompt = `You are analyzing a supplier invoice image for a restaurant management system. Extract ALL visible data precisely.
+      const prompt = `You are analyzing a supplier invoice image for a small business management system. Extract ALL visible data precisely.
 
 Return ONLY a valid JSON object with exactly this structure (use null for any field not visible):
 {
@@ -2323,7 +2329,7 @@ Rules:
     });
 
     for (const item of editItems) {
-      await upsertIngredient({
+      await upsertStockItem({
         name: item.name,
         unit: item.unit || "un",
         last_price: item.unitPrice,
@@ -3040,8 +3046,8 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier, venue, venues, 
   );
 }
 
-// ─── INGREDIENTS PAGE ────────────────────────────────────────────────────────
-function IngredientsPage({ ingredients, addIngredient, updateIngredient, venue, venues, onVenueChange }) {
+// ─── STOCK PAGE ──────────────────────────────────────────────────────────────
+function StockPage({ stockItems, addStockItem, updateStockItem, venue, venues, onVenueChange }) {
   const { t } = useTranslation();
   const w = useWindowWidth();
   const isMobile = w < 768;
@@ -3053,8 +3059,8 @@ function IngredientsPage({ ingredients, addIngredient, updateIngredient, venue, 
   const [exportMsg, setExportMsg] = useState("");
   const [formVenueId, setFormVenueId] = useState("");
 
-  const venueIngredients = filterByVenue(ingredients, venue);
-  const filtered = venueIngredients.filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || i.category?.toLowerCase().includes(search.toLowerCase()));
+  const venueStockItems = filterByVenue(stockItems, venue);
+  const filtered = venueStockItems.filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || i.category?.toLowerCase().includes(search.toLowerCase()));
 
   const openAddModal = () => {
     setEditId(null);
@@ -3071,14 +3077,14 @@ function IngredientsPage({ ingredients, addIngredient, updateIngredient, venue, 
 
   const save = async () => {
     if (!form.name.trim()) return;
-    const effectiveVenueId = editId ? ingredients.find(i => i.id === editId)?.venue_id : (formVenueId || venue?.id || "");
+    const effectiveVenueId = editId ? stockItems.find(i => i.id === editId)?.venue_id : (formVenueId || venue?.id || "");
     if (!editId && !effectiveVenueId) return;
     setSaving(true);
     if (editId) {
-      await updateIngredient(editId, form);
+      await updateStockItem(editId, form);
       setEditId(null);
     } else {
-      await addIngredient({ ...form, venue_id: effectiveVenueId });
+      await addStockItem({ ...form, venue_id: effectiveVenueId });
     }
     setSaving(false);
     setShowAdd(false);
@@ -3094,22 +3100,22 @@ function IngredientsPage({ ingredients, addIngredient, updateIngredient, venue, 
 
   const exportCSV = () => {
     const rows = [["Name", "Unit", "Last Price (€)", "Category", "Supplier", "Last Update"]];
-    venueIngredients.forEach(i => rows.push([i.name, i.unit, i.last_price, i.category, i.supplier, i.last_update]));
+    venueStockItems.forEach(i => rows.push([i.name, i.unit, i.last_price, i.category, i.supplier, i.last_update]));
     const csv = rows.map(r => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "ingredients.csv"; a.click();
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "stock.csv"; a.click();
     setExportMsg("Exported ✓");
     setTimeout(() => setExportMsg(""), 2000);
   };
 
-  const mobileHeaders = ["Ingredient", "Unit", "Price", ""];
-  const desktopHeaders = ["Ingredient", "Category", "Unit", "Last Price", "Supplier", "Last Update", ""];
+  const mobileHeaders = ["Item", "Unit", "Price", ""];
+  const desktopHeaders = ["Item", "Category", "Unit", "Last Price", "Supplier", "Last Update", ""];
 
   return (
     <div style={{ padding: pagePad(isMobile, w >= 768 && w < 1024), width: "100%", boxSizing: "border-box" }}>
       <AllVenuesBanner venue={venue} />
       <PageHeader
-        title={t("ingredients.title")}
+        title={t("stock.title")}
         venue={venue}
         venues={venues}
         onVenueChange={onVenueChange}
@@ -3120,35 +3126,35 @@ function IngredientsPage({ ingredients, addIngredient, updateIngredient, venue, 
           <>
             {exportMsg && <span style={{ fontSize: 12, color: C.green }}>{exportMsg}</span>}
             {!isMobile && <Btn variant="ghost" onClick={exportCSV}>📤 {t("common.export")} CSV</Btn>}
-            <Btn onClick={openAddModal}>{t("ingredients.add")}</Btn>
+            <Btn onClick={openAddModal}>{t("stock.add")}</Btn>
           </>
         )}
       />
 
       <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center" }}>
         <div style={{ flex: 1 }}><Input value={search} onChange={setSearch} placeholder={t("common.search") + "…"} prefix="🔍" /></div>
-        <div style={{ fontSize: 13, color: C.textSub, whiteSpace: "nowrap" }}>{filtered.length} {t("ingredients.items")}</div>
+        <div style={{ fontSize: 13, color: C.textSub, whiteSpace: "nowrap" }}>{filtered.length} {t("stock.items")}</div>
       </div>
 
-      <Modal open={showAdd} onClose={closeModal} title={editId ? t("ingredients.edit") : t("ingredients.add")}>
+      <Modal open={showAdd} onClose={closeModal} title={editId ? t("stock.edit") : t("stock.add")}>
         {!editId && (
-          <VenueFormFields venues={venues} value={formVenueId} onChange={setFormVenueId} messageKey="ingredients.selectVenueToSave" />
+          <VenueFormFields venues={venues} value={formVenueId} onChange={setFormVenueId} messageKey="stock.selectVenueToSave" />
         )}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
-          <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label={t("ingredients.name")} value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="e.g. Chicken breast" /></div>
-          <Input label={t("ingredients.unit")} value={form.unit} onChange={v => setForm(p => ({ ...p, unit: v }))} placeholder="kg, L, un, g…" />
-          <Input label={t("ingredients.price")} type="number" value={form.last_price} onChange={v => setForm(p => ({ ...p, last_price: v }))} prefix="€" />
-          <Input label={t("ingredients.category")} value={form.category} onChange={v => setForm(p => ({ ...p, category: v }))} placeholder="Meat, Dairy, Produce…" />
-          <Input label={t("ingredients.supplier")} value={form.supplier} onChange={v => setForm(p => ({ ...p, supplier: v }))} placeholder={t("invoices.supplierName")} />
+          <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label={t("stock.name")} value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="e.g. Chicken breast, printer paper, shampoo…" /></div>
+          <Input label={t("stock.unit")} value={form.unit} onChange={v => setForm(p => ({ ...p, unit: v }))} placeholder="kg, L, un, g…" />
+          <Input label={t("stock.price")} type="number" value={form.last_price} onChange={v => setForm(p => ({ ...p, last_price: v }))} prefix="€" />
+          <Input label={t("stock.category")} value={form.category} onChange={v => setForm(p => ({ ...p, category: v }))} placeholder="Meat, Dairy, Produce…" />
+          <Input label={t("stock.supplier")} value={form.supplier} onChange={v => setForm(p => ({ ...p, supplier: v }))} placeholder={t("invoices.supplierName")} />
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
           <Btn variant="ghost" onClick={closeModal}>{t("common.cancel")}</Btn>
-          <Btn loading={saving} disabled={saving || (!editId && !formVenueId && !venue) || !form.name.trim()} onClick={save}>{editId ? t("common.save") : t("ingredients.add")}</Btn>
+          <Btn loading={saving} disabled={saving || (!editId && !formVenueId && !venue) || !form.name.trim()} onClick={save}>{editId ? t("common.save") : t("stock.add")}</Btn>
         </div>
       </Modal>
 
       {filtered.length === 0
-        ? <EmptyState icon="🥦" title={t("ingredients.noIngredients")} sub={t("ingredients.noIngredientsSub")} action={<Btn onClick={openAddModal}>{t("ingredients.add")}</Btn>} />
+        ? <EmptyState icon="📦" title={t("stock.noItems")} sub={t("stock.noItemsSub")} action={<Btn onClick={openAddModal}>{t("stock.add")}</Btn>} />
         : (
           <Card style={{ padding: 0, overflow: "hidden" }}>
             <div className="scroll-x">
@@ -3189,7 +3195,7 @@ function IngredientsPage({ ingredients, addIngredient, updateIngredient, venue, 
 // ─── VENUE GATE ──────────────────────────────────────────────────────────────
 function VenueGate({ onCreated }) {
   const { t } = useTranslation();
-  const [form, setForm] = useState({ name: "", type: "Bar/Restaurant", address: "", phone: "" });
+  const [form, setForm] = useState({ name: "", type: "Other", address: "", phone: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -3216,12 +3222,12 @@ function VenueGate({ onCreated }) {
         <Card>
           <div style={{ fontSize: 13, fontWeight: 600, color: C.textSub, marginBottom: 18, textTransform: "uppercase", letterSpacing: ".6px" }}>{t("settings.addFirst")}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <Input label={t("settings.venueName") + " *"} value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="My Restaurant" />
+            <Input label={t("settings.venueName") + " *"} value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="My Business" />
             <Select
               label={t("settings.venueType")}
               value={form.type}
               onChange={v => setForm(p => ({ ...p, type: v }))}
-              options={["Bar/Restaurant", "Café", "Bakery", "Takeaway", "Fine Dining", "Other"].map(vt => ({ value: vt, label: vt }))}
+              options={VENUE_TYPE_OPTIONS.map(vt => ({ value: vt, label: vt }))}
             />
             <Input label={t("suppliers.address")} value={form.address} onChange={v => setForm(p => ({ ...p, address: v }))} placeholder="Rua… (optional)" />
             <Input label={t("suppliers.phone")} value={form.phone} onChange={v => setForm(p => ({ ...p, phone: v }))} placeholder="+351 … (optional)" />
@@ -3248,7 +3254,7 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
   const isMobile = w < 768;
   const [showAdd, setShowAdd] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
-  const [form, setForm] = useState({ name: "", type: "Bar/Restaurant", address: "", phone: "" });
+  const [form, setForm] = useState({ name: "", type: "Other", address: "", phone: "" });
   const [saving, setSaving] = useState(false);
 
   // venue delete confirmation state
@@ -3310,9 +3316,9 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
       for (const v of venues) {
         await supabase.from("venues").delete().eq("id", v.id);
       }
-      // Delete suppliers and ingredients without venue (legacy rows)
+      // Delete suppliers and stock items without venue (legacy rows)
       await supabase.from("suppliers").delete().eq("user_id", user.id);
-      await supabase.from("ingredients").delete().eq("user_id", user.id);
+      await supabase.from("stock_items").delete().eq("user_id", user.id);
       await supabase.from("staff").delete().eq("user_id", user.id);
       await supabase.from("subscriptions").delete().eq("user_id", user.id);
       // TODO: Automate Supabase auth user deletion here once ready.
@@ -3353,7 +3359,7 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
     await addVenue(form);
     setSaving(false);
     setShowAdd(false);
-    setForm({ name: "", type: "Bar/Restaurant", address: "", phone: "" });
+    setForm({ name: "", type: "Other", address: "", phone: "" });
   };
 
   const confirmDelete = async () => {
@@ -3590,9 +3596,9 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
 
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title={t("settings.addVenue")}>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <Input label={t("settings.venueName") + " *"} value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="My Restaurant" />
+          <Input label={t("settings.venueName") + " *"} value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="My Business" />
           <Select label={t("settings.venueType")} value={form.type} onChange={v => setForm(p => ({ ...p, type: v }))}
-            options={["Bar/Restaurant", "Café", "Bakery", "Takeaway", "Fine Dining", "Other"].map(vt => ({ value: vt, label: vt }))} />
+            options={VENUE_TYPE_OPTIONS.map(vt => ({ value: vt, label: vt }))} />
           <Input label={t("suppliers.address")} value={form.address} onChange={v => setForm(p => ({ ...p, address: v }))} placeholder="Rua…" />
           <Input label={t("suppliers.phone")} value={form.phone} onChange={v => setForm(p => ({ ...p, phone: v }))} placeholder="+351 …" />
         </div>
@@ -3606,7 +3612,7 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
         <h2 style={{ fontSize: 15, color: C.text, margin: "0 0 14px", fontWeight: 600 }}>About</h2>
         <Card>
           <div style={{ fontSize: 13, color: C.textSub, lineHeight: 1.7 }}>
-            <strong style={{ color: C.text }}>ApexManager</strong> — Restaurant intelligence platform<br />
+            <strong style={{ color: C.text }}>ApexManager</strong> — {t("landing.footerTagline")}<br />
             AI-powered invoice scanning · Daily sales tracking · Cost analytics
           </div>
         </Card>
@@ -3671,7 +3677,7 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
             <li>All daily sales entries</li>
             <li>All invoices</li>
             <li>All expenses</li>
-            <li>All suppliers and ingredients</li>
+            <li>All suppliers and stock items</li>
           </ul>
           <div style={{ fontSize: 12, color: C.red, marginTop: 10, fontWeight: 700 }}>
             This cannot be undone.
@@ -3735,7 +3741,7 @@ export default function App() {
   const [expenses, setExpenses] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  const [ingredients, setIngredients] = useState([]);
+  const [stockItems, setStockItems] = useState([]);
   const [staff, setStaff] = useState([]);
   const [subscription, setSubscription] = useState(null);
   const [upgradePrompt, setUpgradePrompt] = useState(null);
@@ -3816,9 +3822,9 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    if (!user) { setIngredients([]); return; }
-    supabase.from("ingredients").select("*").eq("user_id", user.id).order("name")
-      .then(({ data }) => setIngredients(data || []));
+    if (!user) { setStockItems([]); return; }
+    supabase.from("stock_items").select("*").eq("user_id", user.id).order("name")
+      .then(({ data }) => setStockItems(data || []));
   }, [user]);
 
   useEffect(() => {
@@ -3971,38 +3977,38 @@ export default function App() {
     return null;
   };
 
-  // ── Ingredient helpers ───────────────────────────────────────────────────────
-  const addIngredient = async ({ name, unit, last_price, category, supplier, venue_id }) => {
+  // ── Stock item helpers ───────────────────────────────────────────────────────
+  const addStockItem = async ({ name, unit, last_price, category, supplier, venue_id }) => {
     const blocked = guardVenueWrite(venue_id);
     if (blocked) return null;
     const price = parseFloat(last_price) || 0;
     const { data, error } = await supabase
-      .from("ingredients")
+      .from("stock_items")
       .insert({ user_id: user.id, venue_id: venue_id || null, name, unit, last_price: price, category: category || "General", supplier: supplier || null, last_update: today(), price_history: [{ date: today(), price }] })
       .select().single();
-    if (!error && data) setIngredients(prev => [...prev, data]);
+    if (!error && data) setStockItems(prev => [...prev, data]);
     return error ? null : data;
   };
 
-  const updateIngredient = async (id, { name, unit, last_price, category, supplier }) => {
+  const updateStockItem = async (id, { name, unit, last_price, category, supplier }) => {
     const price = parseFloat(last_price) || 0;
-    const existing = ingredients.find(i => i.id === id);
+    const existing = stockItems.find(i => i.id === id);
     const price_history = [...(existing?.price_history || []), { date: today(), price }];
     const { data, error } = await supabase
-      .from("ingredients")
+      .from("stock_items")
       .update({ name, unit, last_price: price, category, supplier: supplier || null, last_update: today(), price_history })
       .eq("id", id).select().single();
-    if (!error && data) setIngredients(prev => prev.map(i => i.id === id ? data : i));
+    if (!error && data) setStockItems(prev => prev.map(i => i.id === id ? data : i));
   };
 
-  const upsertIngredient = async ({ name, unit, last_price, supplier, venue_id }) => {
-    const existing = ingredients.find(i =>
+  const upsertStockItem = async ({ name, unit, last_price, supplier, venue_id }) => {
+    const existing = stockItems.find(i =>
       i.name.toLowerCase() === name.toLowerCase() && (i.venue_id || null) === (venue_id || null)
     );
     if (existing) {
-      await updateIngredient(existing.id, { name: existing.name, unit, last_price, category: existing.category || "General", supplier });
+      await updateStockItem(existing.id, { name: existing.name, unit, last_price, category: existing.category || "General", supplier });
     } else {
-      await addIngredient({ name, unit, last_price, category: "General", supplier, venue_id });
+      await addStockItem({ name, unit, last_price, category: "General", supplier, venue_id });
     }
   };
 
@@ -4107,7 +4113,7 @@ export default function App() {
     setExpenses(prev => prev.filter(e => e.venue_id !== id));
     setStaff(prev => prev.filter(s => s.venue_id !== id));
     setSuppliers(prev => prev.filter(s => s.venue_id !== id));
-    setIngredients(prev => prev.filter(i => i.venue_id !== id));
+    setStockItems(prev => prev.filter(i => i.venue_id !== id));
     if (venueId === id) setVenueId("");
     return { error: null };
   };
@@ -4215,7 +4221,7 @@ export default function App() {
     );
   }
 
-  const pageProps = { venues: venuesWithLockStatus, sales, expenses, invoices, suppliers, ingredients, staff, venue, onVenueChange: handleVenueChange };
+  const pageProps = { venues: venuesWithLockStatus, sales, expenses, invoices, suppliers, stockItems, staff, venue, onVenueChange: handleVenueChange };
 
   return (
     <div style={{ display: "flex", width: "100vw", height: "100vh", overflow: "hidden", background: C.bg, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: C.text }}>
@@ -4240,12 +4246,12 @@ export default function App() {
         <div key={page} style={{ animation: "fadeIn .18s ease", width: "100%", boxSizing: "border-box" }}>
           {page === "dashboard" && <DashboardPage {...pageProps} subscription={subscription} setPage={setPage} setInvoicesInitialFilter={setInvoicesInitialFilter} />}
           {page === "sales" && <SalesPage sales={sales} addSale={addSale} updateSale={updateSale} deleteSale={deleteSale} salesLoading={salesLoading} venues={venuesWithLockStatus} venue={venue} onVenueChange={handleVenueChange} subscription={subscription} setSubscription={setSubscription} staffList={staff} />}
-          {page === "invoices" && <InvoicesPage invoices={invoices} addInvoice={addInvoice} updateInvoice={updateInvoice} markInvoicePaid={markInvoicePaid} suppliers={suppliers} addSupplier={addSupplier} upsertIngredient={upsertIngredient} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} subscription={subscription} setSubscription={setSubscription} initialStatusFilter={invoicesInitialFilter} />}
+          {page === "invoices" && <InvoicesPage invoices={invoices} addInvoice={addInvoice} updateInvoice={updateInvoice} markInvoicePaid={markInvoicePaid} suppliers={suppliers} addSupplier={addSupplier} upsertStockItem={upsertStockItem} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} subscription={subscription} setSubscription={setSubscription} initialStatusFilter={invoicesInitialFilter} />}
           {page === "expenses" && <ExpensesPage expenses={expenses} addExpense={addExpense} updateExpense={updateExpense} deleteExpense={deleteExpense} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
           {page === "suppliers" && <SuppliersPage suppliers={suppliers} addSupplier={addSupplier} updateSupplier={updateSupplier} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
-          {page === "ingredients" && <IngredientsPage ingredients={ingredients} addIngredient={addIngredient} updateIngredient={updateIngredient} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
+          {page === "stock" && <StockPage stockItems={stockItems} addStockItem={addStockItem} updateStockItem={updateStockItem} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
           {page === "staff" && <StaffPage staff={staff} addStaff={addStaff} updateStaff={updateStaff} deleteStaff={deleteStaff} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
-          {page === "analytics" && <AnalyticsPage sales={sales} expenses={expenses} invoices={invoices} venues={venuesWithLockStatus} venue={venue} onVenueChange={handleVenueChange} staff={staff} suppliers={suppliers} ingredients={ingredients} subscription={subscription} setPage={setPage} />}
+          {page === "analytics" && <AnalyticsPage sales={sales} expenses={expenses} invoices={invoices} venues={venuesWithLockStatus} venue={venue} onVenueChange={handleVenueChange} staff={staff} suppliers={suppliers} stockItems={stockItems} subscription={subscription} setPage={setPage} />}
           {page === "settings" && <SettingsPage venues={venuesWithLockStatus} addVenue={addVenue} deleteVenue={deleteVenue} user={user} subscription={subscription} setPage={setPage} />}
           {page === "pricing" && <PricingPage user={user} subscription={subscription} />}
         </div>

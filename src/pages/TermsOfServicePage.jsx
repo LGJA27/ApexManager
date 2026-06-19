@@ -47,10 +47,10 @@ export default function TermsOfServicePage() {
 
         <Section title="1. The Service">
           <p>
-            ApexManager is a cloud-based restaurant management platform operated by <strong style={{ color: C.text }}>Luis G. Jardim</strong>
+            ApexManager is a cloud-based business management platform operated by <strong style={{ color: C.text }}>Luis G. Jardim</strong>
             , NIF 260932361, a sole trader (trabalhador independente) registered in Portugal ("we", "us", "our"). The platform provides tools for
-            AI-powered invoice scanning, daily sales tracking, expense management, supplier directories, ingredient
-            cost tracking, and business analytics designed for restaurant, bar and café operators.
+            AI-powered invoice scanning, daily sales tracking, expense management, supplier directories, stock
+            cost tracking, and business analytics designed for small and medium businesses.
           </p>
           <p>
             By creating an account and using ApexManager, you agree to be bound by these Terms of Service. If you
@@ -67,14 +67,14 @@ export default function TermsOfServicePage() {
         </Section>
 
         <Section title="3. Acceptable Use">
-          <p>ApexManager is licensed for use as a restaurant management tool. You agree that you will:</p>
+          <p>ApexManager is licensed for use as a business management tool. You agree that you will:</p>
           <ul style={{ paddingLeft: 20, margin: '6px 0 14px' }}>
-            <Li>Use the service only for lawful restaurant, bar, or café management purposes.</Li>
+            <Li>Use the service only for lawful small business management purposes.</Li>
             <Li>Not resell, sublicense, or white-label the service to third parties without our prior written consent.</Li>
             <Li>Not attempt to reverse-engineer, scrape, or extract data from our platform programmatically.</Li>
             <Li>Not upload content that is illegal, fraudulent, or infringes the rights of third parties.</Li>
             <Li>Not attempt to gain unauthorised access to other users' data or to our infrastructure.</Li>
-            <Li>Not use the AI invoice scanning feature to process documents unrelated to your restaurant business.</Li>
+            <Li>Not use the AI invoice scanning feature to process documents unrelated to your business operations.</Li>
           </ul>
           <p>
             We reserve the right to investigate suspected violations and to terminate accounts that breach these rules.

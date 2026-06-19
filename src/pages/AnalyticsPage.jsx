@@ -607,7 +607,7 @@ function AuditModal({ open, onClose, sections, onToggle, onGenerate, isFree, onU
   );
 }
 
-export default function AnalyticsPage({ sales, expenses, invoices, venues, venue, onVenueChange, staff = [], suppliers = [], ingredients = [], subscription, setPage }) {
+export default function AnalyticsPage({ sales, expenses, invoices, venues, venue, onVenueChange, staff = [], suppliers = [], stockItems = [], subscription, setPage }) {
   const { t, i18n } = useTranslation();
   const { isMobile, isTablet, pick } = useTypeScale();
   const { isFree } = useSubscriptionGate(subscription);
@@ -619,9 +619,9 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, venue
     () => (venueId ? suppliers.filter(s => s.venue_id === venueId) : suppliers),
     [suppliers, venueId]
   );
-  const scopedIngredients = useMemo(
-    () => (venueId ? ingredients.filter(i => i.venue_id === venueId) : ingredients),
-    [ingredients, venueId]
+  const scopedStockItems = useMemo(
+    () => (venueId ? stockItems.filter(i => i.venue_id === venueId) : stockItems),
+    [stockItems, venueId]
   );
   const [tab, setTab] = useState("overview");
   const [salesSort, setSalesSort] = useState({ key: "date", dir: "desc" });
@@ -1386,12 +1386,12 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, venue
               ))}
             </Card>
           </div>
-          {scopedIngredients.some(i => (i.price_history || []).length > 1) && (
+          {scopedStockItems.some(i => (i.price_history || []).length > 1) && (
             <>
-              <SectionHeading>Ingredient Price Evolution</SectionHeading>
+              <SectionHeading>Stock Price Evolution</SectionHeading>
               <Card style={{ padding: 0, overflow: "hidden", marginBottom: 16 }}>
-                <SortableTable headers={[{ label: "Ingredient" }, { label: "First Price" }, { label: "Latest" }, { label: "Change" }, { label: "Change %" }]}
-                  rows={scopedIngredients.filter(i => (i.price_history || []).length > 1).map(i => {
+                <SortableTable headers={[{ label: "Item" }, { label: "First Price" }, { label: "Latest" }, { label: "Change" }, { label: "Change %" }]}
+                  rows={scopedStockItems.filter(i => (i.price_history || []).length > 1).map(i => {
                     const hist = [...(i.price_history || [])].sort((a, b) => a.date.localeCompare(b.date));
                     const first = hist[0]?.price || 0;
                     const last = hist[hist.length - 1]?.price || 0;

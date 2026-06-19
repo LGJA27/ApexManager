@@ -258,9 +258,9 @@ function getFaqs(t) {
 
 function getTestimonials(t) {
   return [
-    { quote: t('landing.testimonial1Quote'), name: t('landing.testimonial1Name'), role: t('landing.testimonial1Role'), restaurant: t('landing.testimonial1Restaurant') },
-    { quote: t('landing.testimonial2Quote'), name: t('landing.testimonial2Name'), role: t('landing.testimonial2Role'), restaurant: t('landing.testimonial2Restaurant') },
-    { quote: t('landing.testimonial3Quote'), name: t('landing.testimonial3Name'), role: t('landing.testimonial3Role'), restaurant: t('landing.testimonial3Restaurant') },
+    { quote: t('landing.testimonial1Quote'), name: t('landing.testimonial1Name'), role: t('landing.testimonial1Role'), business: t('landing.testimonial1Business') },
+    { quote: t('landing.testimonial2Quote'), name: t('landing.testimonial2Name'), role: t('landing.testimonial2Role'), business: t('landing.testimonial2Business') },
+    { quote: t('landing.testimonial3Quote'), name: t('landing.testimonial3Name'), role: t('landing.testimonial3Role'), business: t('landing.testimonial3Business') },
   ];
 }
 
@@ -797,7 +797,7 @@ export default function LandingPage() {
                     </div>
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{item.name}</div>
-                      <div style={{ fontSize: 12, color: C.textSub }}>{item.role}, {item.restaurant}</div>
+                      <div style={{ fontSize: 12, color: C.textSub }}>{item.role}, {item.business}</div>
                     </div>
                   </div>
                 </div>
