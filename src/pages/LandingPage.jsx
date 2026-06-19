@@ -1,10 +1,10 @@
 // IMAGES NEEDED — add paths to LANDING_IMAGES below as assets become available
 // hero-dashboard         ✓ /images/hero-dashboard.png  (desktop browser, dashboard view)
-// hero-mobile            — Mobile app screenshot, portrait, any core screen (dashboard or scan flow)
-// feature-invoice-scan   — Phone screenshot: invoice scan upload/result screen
-// feature-sales          — Phone screenshot: Daily Sales entry form filled in
-// feature-analytics      — Phone screenshot: Analytics & Reports page
-// feature-audit          — Phone screenshot: Audit report selection modal or generated report
+// hero-mobile            ✓ /images/hero-mobile.png
+// feature-invoice-scan   ✓ /images/feature-invoice-scan.png
+// feature-sales          ✓ /images/feature-sales.png
+// feature-analytics      ✓ /images/feature-analytics.png
+// feature-audit          ✓ /images/feature-audit.png
 // feature-multivenue     — Phone screenshot: venue switcher dropdown showing multiple venues
 // testimonial-avatar-1   — Miguel Santos portrait photo
 // testimonial-avatar-2   — Ana Rodrigues portrait photo
@@ -93,6 +93,11 @@ const scaleFade = { hidden: { opacity: 0, scale: 0.95 }, show: { opacity: 1, sca
 
 const LANDING_IMAGES = {
   'hero-dashboard': '/images/hero-dashboard.png',
+  'hero-mobile': '/images/hero-mobile.png',
+  'feature-invoice-scan': '/images/feature-invoice-scan.png',
+  'feature-sales': '/images/feature-sales.png',
+  'feature-analytics': '/images/feature-analytics.png',
+  'feature-audit': '/images/feature-audit.png',
   'after-dashboard': '/images/after-dashboard.png',
 };
 

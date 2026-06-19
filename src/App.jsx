@@ -95,6 +95,7 @@ import InstallAppButton from "./components/InstallAppButton.jsx";
 import LanguageSwitcher from "./components/LanguageSwitcher.jsx";
 import PageHeader from "./components/PageHeader.jsx";
 import VenueChip from "./components/VenueChip.jsx";
+import DateInput from "./components/DateInput.jsx";
 import { useSubscriptionGate } from "./hooks/useSubscriptionGate.js";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage.jsx";
 import TermsOfServicePage from "./pages/TermsOfServicePage.jsx";
@@ -1744,7 +1745,7 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
           <VenueFormFields venues={venues} value={formVenueId} onChange={setFormVenueId} messageKey="sales.selectVenueToSave" />
         )}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
-          <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label={t("sales.date")} type="date" value={form.date} onChange={v => setForm(p => ({ ...p, date: v }))} /></div>
+          <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><DateInput label={t("sales.date")} value={form.date} onChange={v => setForm(p => ({ ...p, date: v }))} /></div>
           <Input label={t("sales.cash")} type="number" value={form.cash} onChange={v => setForm(p => ({ ...p, cash: v }))} placeholder="0.00" prefix="€" />
           <Input label={t("sales.card")} type="number" value={form.card} onChange={v => setForm(p => ({ ...p, card: v }))} placeholder="0.00" prefix="€" />
           <Input label={t("sales.cashExpenses")} type="number" value={form.cashExpenses} onChange={v => setForm(p => ({ ...p, cashExpenses: v }))} placeholder="0.00" prefix="€" />
@@ -1767,7 +1768,7 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
       {editForm && (
         <Modal open={!!editSale} onClose={() => { setEditSale(null); setEditForm(null); }} title={t("sales.edit")}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
-            <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label={t("sales.date")} type="date" value={editForm.date} onChange={v => setEditForm(p => ({ ...p, date: v }))} /></div>
+            <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><DateInput label={t("sales.date")} value={editForm.date} onChange={v => setEditForm(p => ({ ...p, date: v }))} /></div>
             <Input label={t("sales.cash")} type="number" value={editForm.cash} onChange={v => setEditForm(p => ({ ...p, cash: v }))} placeholder="0.00" prefix="€" />
             <Input label={t("sales.card")} type="number" value={editForm.card} onChange={v => setEditForm(p => ({ ...p, card: v }))} placeholder="0.00" prefix="€" />
             <Input label={t("sales.cashExpenses")} type="number" value={editForm.cashExpenses} onChange={v => setEditForm(p => ({ ...p, cashExpenses: v }))} placeholder="0.00" prefix="€" />
@@ -1986,7 +1987,7 @@ function StaffPage({ staff, addStaff, updateStaff, deleteStaff, venue, venues, o
           <Input label={t("staff.name") + " *"} value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="e.g. Ana Silva" />
           <Input label={t("staff.jobTitle")} value={form.job_title} onChange={v => setForm(p => ({ ...p, job_title: v }))} placeholder="e.g. Chef, Waiter" />
           <Input label={t("staff.phone")} value={form.phone} onChange={v => setForm(p => ({ ...p, phone: v }))} placeholder="+351..." />
-          <Input label={t("staff.birthDate")} type="date" value={form.birth_date} onChange={v => setForm(p => ({ ...p, birth_date: v }))} />
+          <DateInput label={t("staff.birthDate")} value={form.birth_date} onChange={v => setForm(p => ({ ...p, birth_date: v }))} />
           <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}>
             <div style={{ fontSize: 12, color: C.textSub, marginBottom: 8, fontWeight: 600 }}>{t("staff.status")}</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -2000,8 +2001,8 @@ function StaffPage({ staff, addStaff, updateStaff, deleteStaff, venue, venues, o
           </div>
           {needsDates && (
             <>
-              <Input label={t("staff.from")} type="date" value={form.status_from} onChange={v => setForm(p => ({ ...p, status_from: v }))} />
-              <Input label={t("staff.until")} type="date" value={form.status_until} onChange={v => setForm(p => ({ ...p, status_until: v }))} />
+              <DateInput label={t("staff.from")} value={form.status_from} onChange={v => setForm(p => ({ ...p, status_from: v }))} />
+              <DateInput label={t("staff.until")} value={form.status_until} onChange={v => setForm(p => ({ ...p, status_until: v }))} />
             </>
           )}
         </div>
@@ -2036,27 +2037,28 @@ function DueDateBadge({ dueDate }) {
   );
 }
 
-function AmountsRow({ subtotal, tax, total, totalColor }) {
+function AmountsRow({ subtotal, tax, total, totalColor, isMobile }) {
   const { t } = useTranslation();
+  const labelSize = isMobile ? 8 : 9;
   return (
-    <div style={{ display: "flex" }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 9, color: C.textMuted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>{t("invoices.net")}</div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{fmtEur(subtotal || 0)}</div>
+    <div style={{ display: "flex", gap: isMobile ? 4 : 0 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: labelSize, color: C.textMuted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>{t("invoices.net")}</div>
+        <div style={{ fontSize: isMobile ? 12 : 13, fontWeight: 600, color: C.text }}>{fmtEur(subtotal || 0)}</div>
       </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 9, color: C.textMuted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>{t("invoices.tax")}</div>
-        <div style={{ fontSize: 13, color: C.textSub }}>{fmtEur(tax || 0)}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: labelSize, color: C.textMuted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>{t("invoices.tax")}</div>
+        <div style={{ fontSize: isMobile ? 12 : 13, color: C.textSub }}>{fmtEur(tax || 0)}</div>
       </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 9, color: C.textMuted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>{t("invoices.total")}</div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: totalColor || C.text }}>{fmtEur(total || 0)}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: labelSize, color: C.textMuted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>{t("invoices.total")}</div>
+        <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 700, color: totalColor || C.text }}>{fmtEur(total || 0)}</div>
       </div>
     </div>
   );
 }
 
-function SupplierInvoiceGroup({ name, invs, onMarkPaid, onEdit, payingId }) {
+function SupplierInvoiceGroup({ name, invs, onMarkPaid, onEdit, payingId, isMobile }) {
   const { t } = useTranslation();
   const pending = invs.filter(i => i.status === "pending");
   const paid = invs.filter(i => i.status === "paid");
@@ -2071,14 +2073,14 @@ function SupplierInvoiceGroup({ name, invs, onMarkPaid, onEdit, payingId }) {
       <div onClick={() => setOpen(o => !o)} style={{ display: "flex", alignItems: "center", padding: "11px 16px", cursor: "pointer", userSelect: "none", gap: 12 }}>
         <span style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "left" }}>{name}</span>
         {pending.length > 0 ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 16, flexShrink: 0 }}>
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 9, color: C.textMuted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Pending invoices</div>
-              <div style={{ fontSize: 13, color: C.amber, fontWeight: 700 }}>{pending.length}</div>
+              <div style={{ fontSize: isMobile ? 8 : 9, color: C.textMuted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Pending invoices</div>
+              <div style={{ fontSize: isMobile ? 12 : 13, color: C.amber, fontWeight: 700 }}>{pending.length}</div>
             </div>
-            <div style={{ textAlign: "right", minWidth: 70 }}>
-              <div style={{ fontSize: 9, color: C.textMuted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Amount due</div>
-              <div style={{ fontSize: 14, color: C.amber, fontWeight: 700 }}>{fmtEur(pendingTotal)}</div>
+            <div style={{ textAlign: "right", minWidth: isMobile ? 58 : 70 }}>
+              <div style={{ fontSize: isMobile ? 8 : 9, color: C.textMuted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Amount due</div>
+              <div style={{ fontSize: isMobile ? 13 : 14, color: C.amber, fontWeight: 700 }}>{fmtEur(pendingTotal)}</div>
             </div>
           </div>
         ) : (
@@ -2097,22 +2099,46 @@ function SupplierInvoiceGroup({ name, invs, onMarkPaid, onEdit, payingId }) {
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {pending.map(inv => (
                   <div key={inv.id} style={{ background: C.surfaceL, borderRadius: 9, padding: "9px 12px" }}>
-                    {/* Row 1: [invoice nr] [dates centered] [action buttons] */}
-                    <div style={{ display: "flex", alignItems: "center", marginBottom: 7 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: C.text, flex: "0 0 auto" }}>
-                        {inv.invoice_number ? <><span style={{ color: C.textMuted, fontWeight: 400 }}>Invoice Nr: </span>{`#${inv.invoice_number}`}</> : <span style={{ color: C.textMuted, fontStyle: "italic" }}>No ref.</span>}
-                      </span>
-                      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                        <span style={{ fontSize: 11, color: C.textMuted }}>{inv.date}</span>
-                        {inv.due_date && <DueDateBadge dueDate={inv.due_date} />}
+                    {isMobile ? (
+                      <div style={{ marginBottom: 7 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 4 }}>
+                          {inv.invoice_number
+                            ? <><span style={{ color: C.textMuted, fontWeight: 400 }}>Invoice Nr: </span>{`#${inv.invoice_number}`}</>
+                            : <span style={{ color: C.textMuted, fontStyle: "italic" }}>No ref.</span>}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 11, color: C.textMuted }}>{inv.date}</span>
+                          {inv.due_date && <DueDateBadge dueDate={inv.due_date} />}
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button type="button" onClick={() => onEdit(inv)} style={{
+                            flex: 1, background: C.accentDim, border: `1px solid ${C.accent}44`,
+                            color: C.accent, borderRadius: 8, padding: "11px 0", fontSize: 12,
+                            cursor: "pointer", fontWeight: 600, textAlign: "center", minHeight: 44,
+                          }}>✏ {t("common.edit")}</button>
+                          <Btn variant="green" size="sm" loading={payingId === inv.id}
+                            onClick={() => onMarkPaid(inv.id)}
+                            style={{ flex: 1, justifyContent: "center", minHeight: 44, padding: "11px 0" }}>
+                            {t("invoices.markPaid")}
+                          </Btn>
+                        </div>
                       </div>
-                      <div style={{ display: "flex", gap: 6, flex: "0 0 auto" }}>
-                        <button onClick={() => onEdit(inv)} style={{ background: C.accentDim, border: `1px solid ${C.accent}44`, color: C.accent, borderRadius: 6, padding: "3px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>✏ {t("common.edit")}</button>
-                        <Btn variant="green" size="sm" loading={payingId === inv.id} onClick={() => onMarkPaid(inv.id)}>{t("invoices.markPaid")}</Btn>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", marginBottom: 7 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: C.text, flex: "0 0 auto" }}>
+                          {inv.invoice_number ? <><span style={{ color: C.textMuted, fontWeight: 400 }}>Invoice Nr: </span>{`#${inv.invoice_number}`}</> : <span style={{ color: C.textMuted, fontStyle: "italic" }}>No ref.</span>}
+                        </span>
+                        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                          <span style={{ fontSize: 11, color: C.textMuted }}>{inv.date}</span>
+                          {inv.due_date && <DueDateBadge dueDate={inv.due_date} />}
+                        </div>
+                        <div style={{ display: "flex", gap: 6, flex: "0 0 auto" }}>
+                          <button type="button" onClick={() => onEdit(inv)} style={{ background: C.accentDim, border: `1px solid ${C.accent}44`, color: C.accent, borderRadius: 6, padding: "3px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>✏ {t("common.edit")}</button>
+                          <Btn variant="green" size="sm" loading={payingId === inv.id} onClick={() => onMarkPaid(inv.id)}>{t("invoices.markPaid")}</Btn>
+                        </div>
                       </div>
-                    </div>
-                    {/* Row 2: amounts */}
-                    <AmountsRow subtotal={inv.subtotal} tax={inv.tax} total={inv.total} totalColor={C.amber} />
+                    )}
+                    <AmountsRow subtotal={inv.subtotal} tax={inv.tax} total={inv.total} totalColor={C.amber} isMobile={isMobile} />
                     {inv.items && inv.items.length > 0 && (
                       <div style={{ fontSize: 11, color: C.textMuted, marginTop: 5 }}>{inv.items.slice(0, 3).map(i => i.name).join(", ")}{inv.items.length > 3 ? ` +${inv.items.length - 3} more` : ""}</div>
                     )}
@@ -2129,30 +2155,53 @@ function SupplierInvoiceGroup({ name, invs, onMarkPaid, onEdit, payingId }) {
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 {paid.map(inv => (
                   <div key={inv.id} style={{ borderRadius: 7, overflow: "hidden" }}>
-                    {/* compact row */}
-                    <div onClick={() => setExpandedPaidId(id => id === inv.id ? null : inv.id)}
-                      style={{ display: "flex", alignItems: "center", gap: 0, padding: "7px 8px", cursor: "pointer", background: expandedPaidId === inv.id ? C.surfaceL : "transparent" }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: C.textSub, flex: "0 0 90px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {inv.invoice_number ? `Invoice Nr: #${inv.invoice_number}` : "No ref."}
-                      </span>
-                      <span style={{ fontSize: 11, color: C.textMuted, flex: "0 0 80px" }}>{inv.date}</span>
-                      <span style={{ flex: 1 }} />
-                      <Badge color={C.green}>{t("invoices.paid")}</Badge>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: C.green, minWidth: 72, textAlign: "right", marginLeft: 8 }}>{fmtEur(inv.total || 0)}</span>
-                      <span style={{ fontSize: 10, color: C.textMuted, transition: "transform .2s", display: "inline-block", transform: expandedPaidId === inv.id ? "rotate(180deg)" : "rotate(0deg)", marginLeft: 6, flexShrink: 0 }}>▾</span>
-                    </div>
-                    {/* expanded detail */}
+                    {isMobile ? (
+                      <div onClick={() => setExpandedPaidId(id => id === inv.id ? null : inv.id)}
+                        style={{ padding: "9px 10px", cursor: "pointer", background: expandedPaidId === inv.id ? C.surfaceL : "transparent" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: C.textSub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, marginRight: 8 }}>
+                            {inv.invoice_number ? `#${inv.invoice_number}` : "No ref."}
+                          </span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: C.green, flexShrink: 0 }}>
+                            {fmtEur(inv.total || 0)}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 11, color: C.textMuted }}>{inv.date}</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <Badge color={C.green}>{t("invoices.paid")}</Badge>
+                            <span style={{ fontSize: 10, color: C.textMuted, transition: "transform .2s", display: "inline-block", transform: expandedPaidId === inv.id ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div onClick={() => setExpandedPaidId(id => id === inv.id ? null : inv.id)}
+                        style={{ display: "flex", alignItems: "center", gap: 0, padding: "7px 8px", cursor: "pointer", background: expandedPaidId === inv.id ? C.surfaceL : "transparent" }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: C.textSub, flex: "0 0 90px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {inv.invoice_number ? `Invoice Nr: #${inv.invoice_number}` : "No ref."}
+                        </span>
+                        <span style={{ fontSize: 11, color: C.textMuted, flex: "0 0 80px" }}>{inv.date}</span>
+                        <span style={{ flex: 1 }} />
+                        <Badge color={C.green}>{t("invoices.paid")}</Badge>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: C.green, minWidth: 72, textAlign: "right", marginLeft: 8 }}>{fmtEur(inv.total || 0)}</span>
+                        <span style={{ fontSize: 10, color: C.textMuted, transition: "transform .2s", display: "inline-block", transform: expandedPaidId === inv.id ? "rotate(180deg)" : "rotate(0deg)", marginLeft: 6, flexShrink: 0 }}>▾</span>
+                      </div>
+                    )}
                     {expandedPaidId === inv.id && (
                       <div style={{ padding: "8px 10px 10px", background: C.surfaceL, borderTop: `1px solid ${C.border}` }}>
                         <div style={{ marginBottom: 6 }}>
-                          <AmountsRow subtotal={inv.subtotal} tax={inv.tax} total={inv.total} totalColor={C.green} />
+                          <AmountsRow subtotal={inv.subtotal} tax={inv.tax} total={inv.total} totalColor={C.green} isMobile={isMobile} />
                         </div>
                         {inv.due_date && <div style={{ marginBottom: 6 }}><DueDateBadge dueDate={inv.due_date} /></div>}
                         {inv.items && inv.items.length > 0 && (
                           <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 6 }}>{inv.items.slice(0, 3).map(i => i.name).join(", ")}{inv.items.length > 3 ? ` +${inv.items.length - 3} more` : ""}</div>
                         )}
-                        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                          <button onClick={() => onEdit(inv)} style={{ background: C.accentDim, border: `1px solid ${C.accent}44`, color: C.accent, borderRadius: 6, padding: "3px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>✏ {t("common.edit")}</button>
+                        <div style={{ display: "flex", justifyContent: isMobile ? "stretch" : "flex-end" }}>
+                          <button type="button" onClick={() => onEdit(inv)} style={{
+                            background: C.accentDim, border: `1px solid ${C.accent}44`, color: C.accent, borderRadius: 6,
+                            padding: isMobile ? "11px 0" : "3px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600,
+                            width: isMobile ? "100%" : undefined, textAlign: "center", minHeight: isMobile ? 44 : undefined,
+                          }}>✏ {t("common.edit")}</button>
                         </div>
                       </div>
                     )}
@@ -2474,11 +2523,34 @@ Rules:
 
       {/* INVOICE SUMMARY — hide on wide (shown in right panel instead) */}
       {byVenue.length > 0 && !isWide && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 20, padding: "12px 18px", background: C.surfaceL, borderRadius: 10, marginBottom: 16, fontSize: 13, border: `1px solid ${C.border}` }}>
-          <span style={{ color: C.textSub }}>{byVenue.length} {t("invoices.invoices")}</span>
-          <span>{t("invoices.total")}: <strong style={{ color: C.text }}>{fmtEur(sumTotal)}</strong></span>
-          <span>{t("invoices.pending")}: <strong style={{ color: C.amber }}>{fmtEur(sumPending)}</strong></span>
-          <span>{t("invoices.paid")}: <strong style={{ color: C.green }}>{fmtEur(sumPaid)}</strong></span>
+        <div style={{ padding: "12px 18px", background: C.surfaceL, borderRadius: 10, marginBottom: 16, fontSize: 13, border: `1px solid ${C.border}` }}>
+          {isMobile ? (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>{t("invoices.invoices")}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{byVenue.length}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>{t("invoices.total")}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{fmtEur(sumTotal)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>{t("invoices.pending")}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: C.amber }}>{fmtEur(sumPending)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>{t("invoices.paid")}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: C.green }}>{fmtEur(sumPaid)}</div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 20 }}>
+              <span style={{ color: C.textSub }}>{byVenue.length} {t("invoices.invoices")}</span>
+              <span>{t("invoices.total")}: <strong style={{ color: C.text }}>{fmtEur(sumTotal)}</strong></span>
+              <span>{t("invoices.pending")}: <strong style={{ color: C.amber }}>{fmtEur(sumPending)}</strong></span>
+              <span>{t("invoices.paid")}: <strong style={{ color: C.green }}>{fmtEur(sumPaid)}</strong></span>
+            </div>
+          )}
         </div>
       )}
 
@@ -2541,9 +2613,9 @@ Rules:
               <Input label={t("invoices.supplier")} value={extracted.supplierName || ""} onChange={v => setExtracted(p => ({ ...p, supplierName: v }))} />
               <Input label={t("invoices.nif")} value={extracted.supplierNIF || ""} onChange={v => setExtracted(p => ({ ...p, supplierNIF: v }))} placeholder="PT123456789" />
               <Input label={t("invoices.iban")} value={extracted.supplierIBAN || ""} onChange={v => setExtracted(p => ({ ...p, supplierIBAN: v }))} placeholder="PT50 0000…" />
-              <Input label={t("invoices.date")} type="date" value={extracted.date || ""} onChange={v => setExtracted(p => ({ ...p, date: v }))} />
+              <DateInput label={t("invoices.date")} value={extracted.date || ""} onChange={v => setExtracted(p => ({ ...p, date: v }))} />
               <Input label={t("invoices.invoiceNumber")} value={extracted.invoiceNumber || ""} onChange={v => setExtracted(p => ({ ...p, invoiceNumber: v }))} placeholder="INV-001" />
-              <Input label={t("invoices.dueDate")} type="date" value={extracted.dueDate || ""} onChange={v => setExtracted(p => ({ ...p, dueDate: v }))} />
+              <DateInput label={t("invoices.dueDate")} value={extracted.dueDate || ""} onChange={v => setExtracted(p => ({ ...p, dueDate: v }))} />
             </div>
             <AiExtractionNotice variant="invoice" />
             <div style={{ fontSize: 12, color: C.textSub, fontWeight: 600, marginBottom: 8 }}>{t("invoices.lineItems")}</div>
@@ -2621,8 +2693,8 @@ Rules:
           )}
           <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label={t("invoices.supplierName") + " *"} value={manualForm.supplier} onChange={v => setManualForm(p => ({ ...p, supplier: v }))} placeholder={t("invoices.supplierName")} /></div>
           <Input label={t("invoices.invoiceNumber")} value={manualForm.invoiceNumber} onChange={v => setManualForm(p => ({ ...p, invoiceNumber: v }))} placeholder="INV-001" />
-          <Input label={t("invoices.date")} type="date" value={manualForm.date} onChange={v => setManualForm(p => ({ ...p, date: v }))} />
-          <Input label={t("invoices.dueDate")} type="date" value={manualForm.dueDate} onChange={v => setManualForm(p => ({ ...p, dueDate: v }))} />
+          <DateInput label={t("invoices.date")} value={manualForm.date} onChange={v => setManualForm(p => ({ ...p, date: v }))} />
+          <DateInput label={t("invoices.dueDate")} value={manualForm.dueDate} onChange={v => setManualForm(p => ({ ...p, dueDate: v }))} />
           <Input label={t("invoices.nif")} value={manualForm.nif} onChange={v => setManualForm(p => ({ ...p, nif: v }))} placeholder="PT123456789" />
           <Input label={t("invoices.iban")} value={manualForm.iban} onChange={v => setManualForm(p => ({ ...p, iban: v }))} placeholder="PT50 0000…" />
           <Input label={t("invoices.net") + " (€)"} type="number" value={manualForm.subtotal} onChange={v => setManualForm(p => ({ ...p, subtotal: v }))} prefix="€" />
@@ -2641,8 +2713,8 @@ Rules:
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
             <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label={t("invoices.supplierName")} value={editForm.supplier} onChange={v => setEditForm(p => ({ ...p, supplier: v }))} /></div>
             <Input label={t("invoices.invoiceNumber")} value={editForm.invoiceNumber} onChange={v => setEditForm(p => ({ ...p, invoiceNumber: v }))} placeholder="INV-001" />
-            <Input label={t("invoices.date")} type="date" value={editForm.date} onChange={v => setEditForm(p => ({ ...p, date: v }))} />
-            <Input label={t("invoices.dueDate")} type="date" value={editForm.dueDate} onChange={v => setEditForm(p => ({ ...p, dueDate: v }))} />
+            <DateInput label={t("invoices.date")} value={editForm.date} onChange={v => setEditForm(p => ({ ...p, date: v }))} />
+            <DateInput label={t("invoices.dueDate")} value={editForm.dueDate} onChange={v => setEditForm(p => ({ ...p, dueDate: v }))} />
             <Input label={t("invoices.nif")} value={editForm.nif} onChange={v => setEditForm(p => ({ ...p, nif: v }))} />
             <Input label={t("invoices.iban")} value={editForm.iban} onChange={v => setEditForm(p => ({ ...p, iban: v }))} />
             <Input label={t("invoices.net") + " (€)"} type="number" value={editForm.subtotal} onChange={v => setEditForm(p => ({ ...p, subtotal: v }))} prefix="€" />
@@ -2664,7 +2736,7 @@ Rules:
             : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {supplierGroups.map(g => (
-                  <SupplierInvoiceGroup key={g.name} name={g.name} invs={g.invs} onMarkPaid={handleMarkPaid} onEdit={openEdit} payingId={payingId} />
+                  <SupplierInvoiceGroup key={g.name} name={g.name} invs={g.invs} onMarkPaid={handleMarkPaid} onEdit={openEdit} payingId={payingId} isMobile={isMobile} />
                 ))}
               </div>
             )}
@@ -2801,7 +2873,7 @@ function ExpensesPage({ expenses, addExpense, updateExpense, deleteExpense, venu
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
           <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label={t("expenses.name")} value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="e.g. Electricity bill" /></div>
           <Input label={t("expenses.amount")} type="number" value={form.amount} onChange={v => setForm(p => ({ ...p, amount: v }))} prefix="€" />
-          <Input label={t("expenses.date")} type="date" value={form.date} onChange={v => setForm(p => ({ ...p, date: v }))} />
+          <DateInput label={t("expenses.date")} value={form.date} onChange={v => setForm(p => ({ ...p, date: v }))} />
           <Select label={t("expenses.type")} value={form.type} onChange={v => setForm(p => ({ ...p, type: v }))} options={types.map(typeKey => ({ value: typeKey, label: typeKey }))} />
           <Select label={t("expenses.recurring")} value={form.recurring} onChange={v => setForm(p => ({ ...p, recurring: v }))}
             options={[{ value: "ONE_TIME", label: t("expenses.oneTime") }, { value: "WEEKLY", label: t("expenses.weekly") }, { value: "MONTHLY", label: t("expenses.monthly") }, { value: "ANNUALLY", label: t("expenses.annually") }]} />
@@ -4157,7 +4229,6 @@ export default function App() {
       ::-webkit-scrollbar { width: 6px; height: 6px; }
       ::-webkit-scrollbar-track { background: ${C.surface}; }
       ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 3px; }
-      input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
       select option { background: ${C.surface}; }
       .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
       .apex-btn:not([disabled]):active { transform: scale(0.97) !important; transition: transform 0.08s ease !important; }

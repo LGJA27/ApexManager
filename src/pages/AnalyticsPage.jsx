@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { buildReportHTML, buildExtendedInsights } from "./auditReport.js";
 import UpgradePrompt from "../components/UpgradePrompt.jsx";
 import PageHeader from "../components/PageHeader.jsx";
+import DateInput from "../components/DateInput.jsx";
 import { useSubscriptionGate } from "../hooks/useSubscriptionGate.js";
 
 const C = {
@@ -1089,14 +1090,14 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, venue
           onClick={isFree ? () => setUpgradePrompt("range") : undefined}
           title={isFree ? t("common.upgradeToUnlock") : undefined}
         >
-          <Input label={t("analytics.from")} type="date" value={from} onChange={setFrom} disabled={isFree} style={{ flex: isMobile ? "1 1 100%" : "0 0 140px" }} />
+          <DateInput label={t("analytics.from")} value={from} onChange={setFrom} disabled={isFree} style={{ flex: isMobile ? "1 1 100%" : "0 0 140px" }} />
         </div>
         <div
           style={{ flex: isMobile ? "1 1 100%" : "0 0 140px", ...(isFree ? { cursor: "pointer" } : {}) }}
           onClick={isFree ? () => setUpgradePrompt("range") : undefined}
           title={isFree ? t("common.upgradeToUnlock") : undefined}
         >
-          <Input label={t("analytics.to")} type="date" value={to} onChange={setTo} disabled={isFree} style={{ flex: isMobile ? "1 1 100%" : "0 0 140px" }} />
+          <DateInput label={t("analytics.to")} value={to} onChange={setTo} disabled={isFree} style={{ flex: isMobile ? "1 1 100%" : "0 0 140px" }} />
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", flex: 1 }}>
           {[["week", t("analytics.thisWeek")], ["month", t("analytics.thisMonth")], ["lastmonth", t("analytics.lastMonth")], ["year", t("analytics.thisYear")], ["all", t("analytics.allTime")]].map(([k, l]) => (
