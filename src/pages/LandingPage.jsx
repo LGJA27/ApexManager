@@ -1,10 +1,11 @@
 // IMAGES NEEDED — add paths to LANDING_IMAGES below as assets become available
-// hero-dashboard         ✓ /images/hero-dashboard.png
-// after-dashboard        ✓ /images/after-dashboard.png
-// feature-invoice-scan   — Phone camera pointed at a paper invoice (portrait)
-// feature-dashboard      — Dashboard analytics view with charts and real data
-// feature-sales          — Mobile daily sales form with numbers filled in
-// feature-multivenue     — Venue switcher dropdown showing 3 venues
+// hero-dashboard         ✓ /images/hero-dashboard.png  (desktop browser, dashboard view)
+// hero-mobile            — Mobile app screenshot, portrait, any core screen (dashboard or scan flow)
+// feature-invoice-scan   — Phone screenshot: invoice scan upload/result screen
+// feature-sales          — Phone screenshot: Daily Sales entry form filled in
+// feature-analytics      — Phone screenshot: Analytics & Reports page
+// feature-audit          — Phone screenshot: Audit report selection modal or generated report
+// feature-multivenue     — Phone screenshot: venue switcher dropdown showing multiple venues
 // testimonial-avatar-1   — Miguel Santos portrait photo
 // testimonial-avatar-2   — Ana Rodrigues portrait photo
 // testimonial-avatar-3   — Carlos Ferreira portrait photo
@@ -237,11 +238,41 @@ const CONTACT_SUBJECTS = [
 
 function getFeatureCards(t) {
   return [
-    { icon: '🧾', title: t('landing.feature1Title'), description: t('landing.feature1Desc') },
-    { icon: '💳', title: t('landing.feature2Title'), description: t('landing.feature2Desc') },
-    { icon: '📊', title: t('landing.feature3Title'), description: t('landing.feature3Desc') },
-    { icon: '📋', title: t('landing.feature4Title'), description: t('landing.feature4Desc') },
-    { icon: '🏢', title: t('landing.feature5Title'), description: t('landing.feature5Desc') },
+    {
+      icon: '🧾',
+      title: t('landing.feature1Title'),
+      description: t('landing.feature1Desc'),
+      imageId: 'feature-invoice-scan',
+      imageLabel: t('landing.featureInvoiceScanLabel'),
+    },
+    {
+      icon: '💳',
+      title: t('landing.feature2Title'),
+      description: t('landing.feature2Desc'),
+      imageId: 'feature-sales',
+      imageLabel: t('landing.featureSalesLabel'),
+    },
+    {
+      icon: '📊',
+      title: t('landing.feature3Title'),
+      description: t('landing.feature3Desc'),
+      imageId: 'feature-analytics',
+      imageLabel: t('landing.featureAnalyticsLabel'),
+    },
+    {
+      icon: '📋',
+      title: t('landing.feature4Title'),
+      description: t('landing.feature4Desc'),
+      imageId: 'feature-audit',
+      imageLabel: t('landing.featureAuditLabel'),
+    },
+    {
+      icon: '🏢',
+      title: t('landing.feature5Title'),
+      description: t('landing.feature5Desc'),
+      imageId: 'feature-multivenue',
+      imageLabel: t('landing.featureMultivenueLabel'),
+    },
   ];
 }
 
@@ -285,21 +316,6 @@ const PLAN_NAME_KEYS = { starter: 'landing.planStarter', growth: 'landing.planGr
 
 function translatePlanName(t, planKey) {
   return t(PLAN_NAME_KEYS[planKey] || planKey);
-}
-
-// ─── Feature cards ─────────────────────────────────────────────────────────────
-
-function FeatureCard({ icon, title, description, delay = 0 }) {
-  const isDesktop = useWindowWidth() >= 1024;
-  return (
-    <RevealItem delay={delay} y={24}>
-      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: isDesktop ? '28px 26px' : '24px 20px', height: '100%' }}>
-        <div style={{ fontSize: 32, marginBottom: 14 }}>{icon}</div>
-        <h3 style={{ fontSize: 17, fontWeight: 700, color: C.text, margin: '0 0 12px', lineHeight: 1.3 }}>{title}</h3>
-        <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.75, margin: 0 }}>{description}</p>
-      </div>
-    </RevealItem>
-  );
 }
 
 // ─── Contact form ───────────────────────────────────────────────────────────────
@@ -642,7 +658,7 @@ export default function LandingPage() {
       </motion.nav>
 
       {/* ── HERO ──────────────────────────────────────────────────────────────── */}
-      <section style={{ position: 'relative', overflow: 'hidden', padding: isMobile ? '56px 0 40px' : '100px 0 0' }}>
+      <section style={{ position: 'relative', overflow: isMobile ? 'hidden' : 'visible', padding: isMobile ? '56px 0 40px' : '100px 0 0' }}>
         <RadialGlow size={900} />
         {/* Centered text content */}
         <motion.div variants={heroContainer} initial="hidden" animate="show"
@@ -680,9 +696,9 @@ export default function LandingPage() {
           </motion.div>
         </motion.div>
 
-        {/* Large browser frame hero mockup */}
-        <div style={{ ...inner(1100), marginTop: isMobile ? 40 : 64, position: 'relative', zIndex: 1 }}>
-          <div style={{ perspective: '1200px', perspectiveOrigin: '50% 40%' }}>
+        {/* Large browser frame hero mockup + overlapping phone mockup */}
+        <div style={{ ...inner(1100), marginTop: isMobile ? 40 : 64, paddingBottom: isMobile ? 0 : 56, position: 'relative', zIndex: 1 }}>
+          <div style={{ perspective: '1200px', perspectiveOrigin: '50% 40%', position: 'relative' }}>
             <motion.div
               initial={{ opacity: 0, y: 80 }}
               animate={{ opacity: 1, y: 0 }}
@@ -691,9 +707,27 @@ export default function LandingPage() {
             >
               <BrowserFrame imageId="hero-dashboard" label={t('landing.heroDashboardLabel')} />
             </motion.div>
+
+            {!isMobile && (
+              <motion.div
+                initial={{ opacity: 0, y: 60, x: 20 }}
+                animate={{ opacity: 1, y: 0, x: 0 }}
+                transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.55 }}
+                style={{
+                  position: 'absolute',
+                  bottom: -36,
+                  right: isTablet ? -8 : -28,
+                  zIndex: 2,
+                  transform: 'scale(0.82)',
+                  transformOrigin: 'bottom right',
+                }}
+              >
+                <PhoneMockup imageId="hero-mobile" label={t('landing.heroMobileLabel')} />
+              </motion.div>
+            )}
           </div>
           {/* Gradient fade at bottom to blend into next section */}
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 120, background: `linear-gradient(to bottom, transparent, ${C.bg})`, pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 140, background: `linear-gradient(to bottom, transparent, ${C.bg})`, pointerEvents: 'none' }} />
         </div>
       </section>
 
@@ -758,15 +792,63 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── FEATURE CARDS ─────────────────────────────────────────────────────── */}
-      <section id="features" style={{ padding: vPad }}>
+      {/* ── FEATURES ─────────────────────────────────────────────────── */}
+      <section id="features" style={{ padding: isMobile ? '60px 0' : '100px 0' }}>
         <div style={{ ...inner(1100) }}>
-          <SectionHeader title={t('landing.featuresTitle')} sub={t('landing.featuresSub')} />
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 16 }}>
-            {featureCards.map((card, i) => (
-              <FeatureCard key={card.title} {...card} delay={i * 0.08} />
-            ))}
-          </div>
+          <motion.div
+            initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }}
+            variants={heroContainer}
+            style={{ textAlign: 'center', marginBottom: isMobile ? 48 : 72 }}
+          >
+            <motion.h2 variants={fadeUp} style={{ fontSize: isMobile ? 26 : 38, fontWeight: 800, color: C.text, margin: '0 0 14px' }}>
+              {t('landing.featuresTitle')}
+            </motion.h2>
+            <motion.p variants={fadeIn} style={{ fontSize: isMobile ? 14 : 17, color: C.textSub, maxWidth: 560, margin: '0 auto' }}>
+              {t('landing.featuresSub')}
+            </motion.p>
+          </motion.div>
+
+          {featureCards.map((feature, i) => {
+            const imageLeft = i % 2 === 0;
+            return (
+              <motion.div
+                key={feature.imageId}
+                initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.25 }}
+                variants={heroContainer}
+                style={{
+                  display: 'flex',
+                  flexDirection: isMobile ? 'column' : (imageLeft ? 'row' : 'row-reverse'),
+                  alignItems: 'center',
+                  gap: isMobile ? 32 : 64,
+                  marginBottom: isMobile ? 56 : 88,
+                }}
+              >
+                <motion.div variants={fadeUp} style={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 52, height: 52, borderRadius: 14,
+                    background: C.accentDim, fontSize: 24, marginBottom: 18,
+                  }}>
+                    {feature.icon}
+                  </div>
+                  <h3 style={{ fontSize: isMobile ? 20 : 26, fontWeight: 700, color: C.text, margin: '0 0 12px' }}>
+                    {feature.title}
+                  </h3>
+                  <p style={{ fontSize: isMobile ? 14 : 16, color: C.textSub, lineHeight: 1.7, margin: 0 }}>
+                    {feature.description}
+                  </p>
+                </motion.div>
+
+                <motion.div variants={scaleFade} style={{
+                  flexShrink: 0,
+                  display: 'flex',
+                  justifyContent: 'center',
+                }}>
+                  <PhoneMockup imageId={feature.imageId} label={feature.imageLabel} />
+                </motion.div>
+              </motion.div>
+            );
+          })}
         </div>
       </section>
 
