@@ -4,7 +4,6 @@
 // feature-sales          ✓ /images/feature-sales.png
 // feature-analytics      ✓ /images/feature-analytics.png
 // feature-audit          ✓ /images/feature-audit.png
-// feature-multivenue     — Phone screenshot: venue switcher dropdown showing multiple venues
 //
 // hero-dashboard         ✓ /images/hero-dashboard.png
 
@@ -262,13 +261,6 @@ function getFeatureCards(t) {
       description: t('landing.feature4Desc'),
       imageId: 'feature-audit',
       imageLabel: t('landing.featureAuditLabel'),
-    },
-    {
-      icon: '🏢',
-      title: t('landing.feature5Title'),
-      description: t('landing.feature5Desc'),
-      imageId: 'feature-multivenue',
-      imageLabel: t('landing.featureMultivenueLabel'),
     },
   ];
 }
