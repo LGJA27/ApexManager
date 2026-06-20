@@ -19,12 +19,12 @@ function getRawBody(req) {
 /** Map a Stripe Price ID → { tier, venueLimit, scanLimit } */
 function tierFromPriceId(priceId) {
   const map = {
-    [process.env.VITE_STRIPE_PRICE_STARTER_MONTHLY]: { tier: "starter", venueLimit: 1,   scanLimit: 999999 },
-    [process.env.VITE_STRIPE_PRICE_STARTER_ANNUAL]:  { tier: "starter", venueLimit: 1,   scanLimit: 999999 },
-    [process.env.VITE_STRIPE_PRICE_GROWTH_MONTHLY]:  { tier: "growth",  venueLimit: 3,   scanLimit: 999999 },
-    [process.env.VITE_STRIPE_PRICE_GROWTH_ANNUAL]:   { tier: "growth",  venueLimit: 3,   scanLimit: 999999 },
-    [process.env.VITE_STRIPE_PRICE_PRO_MONTHLY]:     { tier: "pro",     venueLimit: 999, scanLimit: 999999 },
-    [process.env.VITE_STRIPE_PRICE_PRO_ANNUAL]:      { tier: "pro",     venueLimit: 999, scanLimit: 999999 },
+    [process.env.VITE_STRIPE_PRICE_STARTER_MONTHLY]: { tier: "starter", venueLimit: 1,  scanLimit: 30 },
+    [process.env.VITE_STRIPE_PRICE_STARTER_ANNUAL]:  { tier: "starter", venueLimit: 1,  scanLimit: 30 },
+    [process.env.VITE_STRIPE_PRICE_GROWTH_MONTHLY]:  { tier: "growth",  venueLimit: 3,  scanLimit: 300 },
+    [process.env.VITE_STRIPE_PRICE_GROWTH_ANNUAL]:   { tier: "growth",  venueLimit: 3,  scanLimit: 300 },
+    [process.env.VITE_STRIPE_PRICE_PRO_MONTHLY]:     { tier: "pro",     venueLimit: 10, scanLimit: 1000 },
+    [process.env.VITE_STRIPE_PRICE_PRO_ANNUAL]:      { tier: "pro",     venueLimit: 10, scanLimit: 1000 },
   };
   return map[priceId] ?? null;
 }
@@ -155,7 +155,7 @@ export default async function handler(req, res) {
             tier: "free",
             status: "canceled",
             venue_limit: 1,
-            scan_limit: 10,
+            scan_limit: 0,
             stripe_subscription_id: null,
             current_period_end: null,
           })

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { PLANS } from '../config/plans.js';
+import { useSubscriptionGate } from '../hooks/useSubscriptionGate.js';
+import TrialBanner from '../components/TrialBanner.jsx';
 
 // ─── Design tokens (matches App.jsx) ─────────────────────────────────────────
 const C = {
@@ -31,8 +33,7 @@ export default function PricingPage({ user, subscription }) {
   const [billing, setBilling] = useState('monthly');
   const [loading, setLoading] = useState(null);
   const [error, setError] = useState('');
-
-  const currentTier = subscription?.tier ?? 'free';
+  const { tier: currentTier, isTrial } = useSubscriptionGate(subscription);
 
   const handleCheckout = async (planKey) => {
     const plan = PLANS[planKey];
@@ -60,13 +61,17 @@ export default function PricingPage({ user, subscription }) {
     <div style={{ padding: '48px 32px', maxWidth: 960, margin: '0 auto' }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
+      <TrialBanner subscription={subscription} hideAction />
+
       {/* ── Heading ──────────────────────────────────────────────────────── */}
       <div style={{ textAlign: 'center', marginBottom: 40 }}>
         <h1 style={{ margin: '0 0 12px', fontSize: 32, fontWeight: 800, color: C.text }}>
           Simple, transparent pricing
         </h1>
         <p style={{ margin: 0, fontSize: 15, color: C.textSub }}>
-          14-day free trial on all paid plans. No credit card required to start.
+          {isTrial
+            ? 'Your 7-day trial includes full Growth-tier access. Pick a plan below to continue after it ends.'
+            : 'Choose the plan that fits your business. All prices in EUR.'}
         </p>
       </div>
 
@@ -106,7 +111,7 @@ export default function PricingPage({ user, subscription }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
         {PAID_PLANS.map(planKey => {
           const plan = PLANS[planKey];
-          const isCurrent = currentTier === planKey;
+          const isCurrentPlan = currentTier === planKey;
           const isPopular = plan.popular;
           const price = billing === 'monthly' ? plan.monthlyPrice : plan.annualPrice;
           const perMonthEquiv = billing === 'annual' ? Math.floor(plan.annualPrice / 12) : null;
@@ -126,7 +131,6 @@ export default function PricingPage({ user, subscription }) {
                 boxShadow: isPopular ? `0 0 0 1px ${C.accent}44, 0 8px 32px ${C.accent}22` : 'none',
               }}
             >
-              {/* Popular banner */}
               {isPopular && (
                 <div style={{ background: C.accent, color: '#fff', textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: '.8px', textTransform: 'uppercase', padding: '6px 0' }}>
                   Most Popular
@@ -134,12 +138,10 @@ export default function PricingPage({ user, subscription }) {
               )}
 
               <div style={{ padding: '28px 24px 24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                {/* Plan name */}
                 <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 16 }}>
                   {plan.name}
                 </div>
 
-                {/* Price */}
                 <div style={{ marginBottom: 24 }}>
                   {billing === 'annual' ? (
                     <>
@@ -159,7 +161,6 @@ export default function PricingPage({ user, subscription }) {
                   )}
                 </div>
 
-                {/* Feature list */}
                 <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px', flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {plan.features.map(f => (
                     <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, fontSize: 13, color: C.textSub }}>
@@ -169,16 +170,15 @@ export default function PricingPage({ user, subscription }) {
                   ))}
                 </ul>
 
-                {/* CTA button */}
                 <button
-                  disabled={isCurrent || isLoading}
-                  onClick={() => !isCurrent && !isLoading && handleCheckout(planKey)}
+                  disabled={isCurrentPlan || isLoading}
+                  onClick={() => !isCurrentPlan && !isLoading && handleCheckout(planKey)}
                   style={{
                     width: '100%',
                     padding: '12px 0',
                     borderRadius: 10,
                     border: 'none',
-                    cursor: isCurrent || isLoading ? 'not-allowed' : 'pointer',
+                    cursor: isCurrentPlan || isLoading ? 'not-allowed' : 'pointer',
                     fontWeight: 700,
                     fontSize: 14,
                     display: 'flex',
@@ -186,17 +186,17 @@ export default function PricingPage({ user, subscription }) {
                     justifyContent: 'center',
                     gap: 8,
                     transition: 'all .15s',
-                    opacity: isCurrent ? 0.55 : 1,
-                    background: isCurrent ? C.surfaceL : isPopular ? C.accent : C.accentDim,
-                    color: isCurrent ? C.textSub : isPopular ? '#fff' : C.accent,
+                    opacity: isCurrentPlan ? 0.55 : 1,
+                    background: isCurrentPlan ? C.surfaceL : isPopular ? C.accent : C.accentDim,
+                    color: isCurrentPlan ? C.textSub : isPopular ? '#fff' : C.accent,
                   }}
                 >
                   {isLoading ? (
                     <><Spinner size={14} /> Redirecting…</>
-                  ) : isCurrent ? (
-                    'Current Plan'
+                  ) : isCurrentPlan ? (
+                    isTrial ? '✨ Trial Active' : 'Current Plan'
                   ) : (
-                    'Start free trial'
+                    isTrial ? 'Subscribe Now' : 'Choose Plan'
                   )}
                 </button>
               </div>
@@ -205,9 +205,8 @@ export default function PricingPage({ user, subscription }) {
         })}
       </div>
 
-      {/* ── Footer note ──────────────────────────────────────────────────── */}
       <p style={{ textAlign: 'center', marginTop: 32, fontSize: 13, color: C.textMuted }}>
-        All plans include a 14-day free trial. Cancel anytime. Prices in EUR.
+        Cancel anytime. Prices in EUR.
       </p>
     </div>
   );

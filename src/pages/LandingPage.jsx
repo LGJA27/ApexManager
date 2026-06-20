@@ -1,16 +1,12 @@
 // IMAGES NEEDED — add paths to LANDING_IMAGES below as assets become available
-// hero-dashboard         ✓ /images/hero-dashboard.png  (desktop browser, dashboard view)
 // hero-mobile            ✓ /images/hero-mobile.png
 // feature-invoice-scan   ✓ /images/feature-invoice-scan.png
 // feature-sales          ✓ /images/feature-sales.png
 // feature-analytics      ✓ /images/feature-analytics.png
 // feature-audit          ✓ /images/feature-audit.png
 // feature-multivenue     — Phone screenshot: venue switcher dropdown showing multiple venues
-// testimonial-avatar-1   — Miguel Santos portrait photo
-// testimonial-avatar-2   — Ana Rodrigues portrait photo
-// testimonial-avatar-3   — Carlos Ferreira portrait photo
-// before-chaos           — Scattered paper invoices / messy Excel screenshot
-// after-dashboard        ✓ /images/after-dashboard.png
+//
+// hero-dashboard         ✓ /images/hero-dashboard.png
 
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -48,23 +44,6 @@ function useScrollReveal(threshold = 0.15) {
   return [ref, revealed];
 }
 
-function useCounter(end, duration = 1500, active = false) {
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    if (!active || end === 0) return;
-    let t0 = null;
-    const tick = (ts) => {
-      if (!t0) t0 = ts;
-      const p = Math.min((ts - t0) / duration, 1);
-      setVal(Math.round(end * (1 - Math.pow(1 - p, 3))));
-      if (p < 1) requestAnimationFrame(tick);
-      else setVal(end);
-    };
-    requestAnimationFrame(tick);
-  }, [active, end, duration]);
-  return val;
-}
-
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
   bg:        '#0D0D12',
@@ -98,7 +77,10 @@ const LANDING_IMAGES = {
   'feature-sales': '/images/feature-sales.png',
   'feature-analytics': '/images/feature-analytics.png',
   'feature-audit': '/images/feature-audit.png',
-  'after-dashboard': '/images/after-dashboard.png',
+};
+
+const LANDING_VIDEOS = {
+  // 'hero-video': '/videos/hero-demo.mp4',
 };
 
 // ─── ImagePlaceholder ─────────────────────────────────────────────────────────
@@ -142,8 +124,29 @@ function ImagePlaceholder({ imageId, aspectRatio = '16/9', label }) {
 }
 
 // ─── Browser frame chrome ─────────────────────────────────────────────────────
-function BrowserFrame({ imageId, label, children, overlay }) {
+function BrowserFrame({ imageId, label, children, overlay, isVideo }) {
   const { t } = useTranslation();
+  const videoSrc = LANDING_VIDEOS?.[imageId];
+
+  const renderContent = () => {
+    if (children) return children;
+    if (isVideo) {
+      return videoSrc ? (
+        <video
+          src={videoSrc}
+          autoPlay
+          muted
+          loop
+          playsInline
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      ) : (
+        <ImagePlaceholder imageId={imageId} aspectRatio="16/9" label={label} />
+      );
+    }
+    return <ImagePlaceholder imageId={imageId} aspectRatio="16/9" label={label} />;
+  };
+
   return (
     <div style={{
       borderRadius: 12, overflow: 'hidden',
@@ -164,7 +167,7 @@ function BrowserFrame({ imageId, label, children, overlay }) {
         </div>
       </div>
       {/* Content */}
-      {children || <ImagePlaceholder imageId={imageId} aspectRatio="16/9" label={label} />}
+      {renderContent()}
       {/* Overlay badge */}
       {overlay}
     </div>
@@ -218,17 +221,6 @@ function RevealItem({ children, delay = 0, y = 36, x = 0, scale = 1, duration = 
       transition: `opacity ${duration}s ease ${delay}s, transform ${duration}s cubic-bezier(0.22,1,0.36,1) ${delay}s`,
     }}>
       {children}
-    </div>
-  );
-}
-
-// ─── Stat pill with counting animation ───────────────────────────────────────
-function StatPill({ target, format, label, active }) {
-  const count = useCounter(target, 1500, active);
-  return (
-    <div style={{ background: C.surfaceL, border: `1px solid ${C.border}`, borderRadius: 99, padding: '12px 28px', display: 'flex', alignItems: 'center', gap: 10 }}>
-      <span style={{ fontSize: 20, fontWeight: 800, color: C.accent, fontVariantNumeric: 'tabular-nums' }}>{format(count)}</span>
-      <span style={{ fontSize: 13, color: C.textSub }}>{label}</span>
     </div>
   );
 }
@@ -289,14 +281,6 @@ function getFaqs(t) {
     { q: t('landing.faq4Q'), a: t('landing.faq4A') },
     { q: t('landing.faq5Q'), a: t('landing.faq5A') },
     { q: t('landing.faq6Q'), a: t('landing.faq6A') },
-  ];
-}
-
-function getTestimonials(t) {
-  return [
-    { quote: t('landing.testimonial1Quote'), name: t('landing.testimonial1Name'), role: t('landing.testimonial1Role'), business: t('landing.testimonial1Business') },
-    { quote: t('landing.testimonial2Quote'), name: t('landing.testimonial2Name'), role: t('landing.testimonial2Role'), business: t('landing.testimonial2Business') },
-    { quote: t('landing.testimonial3Quote'), name: t('landing.testimonial3Name'), role: t('landing.testimonial3Role'), business: t('landing.testimonial3Business') },
   ];
 }
 
@@ -584,16 +568,6 @@ export default function LandingPage() {
 
   const [scrolled, setScrolled] = useState(false);
 
-  const statsRef = useRef(null);
-  const [statsActive, setStatsActive] = useState(false);
-  useEffect(() => {
-    const el = statsRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setStatsActive(true); io.disconnect(); } }, { threshold: 0.5 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 60);
     window.addEventListener('scroll', fn, { passive: true });
@@ -606,12 +580,6 @@ export default function LandingPage() {
   const vPad = isMobile ? '64px 0' : '88px 0';
   const featureCards = getFeatureCards(t);
   const faqs = getFaqs(t);
-  const testimonials = getTestimonials(t);
-  const problemCards = [
-    { icon: '💸', titleKey: 'landing.problem1Title', subKey: 'landing.problem1Sub' },
-    { icon: '📦', titleKey: 'landing.problem2Title', subKey: 'landing.problem2Sub' },
-    { icon: '📉', titleKey: 'landing.problem3Title', subKey: 'landing.problem3Sub' },
-  ];
 
   return (
     <div style={{ background: C.bg, color: C.text, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", minHeight: '100vh', overflowX: 'hidden' }}>
@@ -663,142 +631,123 @@ export default function LandingPage() {
       </motion.nav>
 
       {/* ── HERO ──────────────────────────────────────────────────────────────── */}
-      <section style={{ position: 'relative', overflow: isMobile ? 'hidden' : 'visible', padding: isMobile ? '56px 0 40px' : '100px 0 0' }}>
+      <section style={{ position: 'relative', overflow: isMobile ? 'hidden' : 'visible', padding: isMobile ? '90px 0 40px' : '140px 0 60px' }}>
         <RadialGlow size={900} />
-        {/* Centered text content */}
-        <motion.div variants={heroContainer} initial="hidden" animate="show"
-          style={{ ...inner(680), textAlign: 'center', position: 'relative', zIndex: 1 }}
-        >
-          <motion.div variants={fadeIn} style={{ marginBottom: 24 }}>
-            <span style={{ display: 'inline-block', background: C.accentDim, color: C.accent, fontSize: 11, fontWeight: 700, padding: '5px 14px', borderRadius: 99, border: `1px solid ${C.accent}44`, letterSpacing: '.6px', textTransform: 'uppercase' }}>
-              {t('landing.nowWithAI')}
-            </span>
-          </motion.div>
-          <motion.div variants={fadeUp}>
-            <span style={{ display: 'block', fontSize: isMobile ? '36px' : isTablet ? '52px' : '68px', fontWeight: 900, lineHeight: 1.1, color: C.text }}>
-              {t('landing.hero1')}
-            </span>
-          </motion.div>
-          <motion.div variants={fadeUp} style={{ marginBottom: isMobile ? 18 : 20 }}>
-            <span style={{ display: 'block', fontSize: isMobile ? '36px' : isTablet ? '52px' : '68px', fontWeight: 900, lineHeight: 1.1, color: C.accent }}>
-              {t('landing.hero2')}
-            </span>
-          </motion.div>
-          <motion.p variants={fadeIn} style={{ fontSize: isMobile ? 15 : 18, color: C.textSub, lineHeight: 1.75, margin: isMobile ? '0 0 28px' : '0 0 36px' }}>
-            {t('landing.heroSub')}
-          </motion.p>
-          <motion.div variants={scaleFade} style={{ display: 'flex', gap: 12, justifyContent: 'center', flexDirection: isMobile ? 'column' : 'row', alignItems: 'center', marginBottom: 16 }}>
-            <Link to="/register" className="cta-btn" style={{ display: 'inline-block', padding: isMobile ? '13px 24px' : '15px 36px', borderRadius: 12, fontWeight: 700, fontSize: isMobile ? 15 : 17, background: C.accent, color: '#fff', width: isMobile ? '100%' : undefined, textAlign: 'center' }}>
-              {t('landing.startFree')}
-            </Link>
-            <button onClick={() => scrollTo('features')} style={{ padding: isMobile ? '13px 24px' : '15px 36px', borderRadius: 12, fontWeight: 700, fontSize: isMobile ? 15 : 17, background: 'transparent', color: C.textSub, border: `1px solid ${C.border}`, cursor: 'pointer', width: isMobile ? '100%' : undefined, transition: 'opacity .15s' }}>
-              {t('landing.seeHow')}
-            </button>
-          </motion.div>
-          {isMobile && <InstallAppButton style={{ marginTop: 16 }} />}
-          <motion.div variants={fadeIn} style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.8 }}>
-            {t('landing.trustLine')}
-          </motion.div>
-        </motion.div>
-
-        {/* Large browser frame hero mockup + overlapping phone mockup */}
-        <div style={{ ...inner(1100), marginTop: isMobile ? 40 : 64, paddingBottom: isMobile ? 0 : 56, position: 'relative', zIndex: 1 }}>
-          <div style={{ perspective: '1200px', perspectiveOrigin: '50% 40%', position: 'relative' }}>
-            <motion.div
-              initial={{ opacity: 0, y: 80 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.35 }}
-              style={{ transform: 'rotateX(4deg)', transformOrigin: 'top center' }}
-            >
-              <BrowserFrame imageId="hero-dashboard" label={t('landing.heroDashboardLabel')} />
+        <div style={{
+          ...inner(1200),
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: 'center',
+          gap: isMobile ? 40 : 56,
+          position: 'relative',
+          zIndex: 1,
+        }}>
+          <motion.div
+            initial="hidden"
+            animate="show"
+            variants={heroContainer}
+            style={{ flex: isMobile ? 'none' : '0 0 46%', textAlign: isMobile ? 'center' : 'left' }}
+          >
+            <motion.div variants={fadeIn} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: C.accentDim, border: `1px solid ${C.accent}33`,
+              borderRadius: 99, padding: '6px 14px', fontSize: 11,
+              fontWeight: 700, color: C.accent, letterSpacing: 0.6,
+              marginBottom: 20,
+            }}>
+              ⚡ {t('landing.heroEyebrow')}
             </motion.div>
 
-            {!isMobile && (
+            <motion.h1 variants={fadeUp} style={{
+              fontSize: isMobile ? 32 : 46, fontWeight: 800,
+              color: C.text, lineHeight: 1.15, margin: '0 0 8px',
+            }}>
+              {t('landing.hero1')}
+            </motion.h1>
+            <motion.h1 variants={fadeUp} style={{
+              fontSize: isMobile ? 32 : 46, fontWeight: 800,
+              color: C.accent, lineHeight: 1.15, margin: '0 0 22px',
+            }}>
+              {t('landing.hero2')}
+            </motion.h1>
+
+            <motion.p variants={fadeIn} style={{
+              fontSize: isMobile ? 15 : 17, color: C.textSub,
+              lineHeight: 1.6, margin: '0 0 28px',
+              maxWidth: isMobile ? '100%' : 460,
+            }}>
+              {t('landing.heroSub')}
+            </motion.p>
+
+            <motion.div variants={fadeUp} style={{
+              display: 'flex', flexDirection: isMobile ? 'column' : 'row',
+              gap: 12, marginBottom: 18,
+              justifyContent: isMobile ? 'center' : 'flex-start',
+            }}>
+              <Link to="/register" className="cta-btn" style={{
+                display: 'inline-block', padding: isMobile ? '13px 24px' : '15px 36px',
+                borderRadius: 12, fontWeight: 700, fontSize: isMobile ? 15 : 17,
+                background: C.accent, color: '#fff', width: isMobile ? '100%' : undefined, textAlign: 'center',
+              }}>
+                {t('landing.startFree')}
+              </Link>
+              <button onClick={() => scrollTo('features')} style={{
+                padding: isMobile ? '13px 24px' : '15px 36px', borderRadius: 12, fontWeight: 700,
+                fontSize: isMobile ? 15 : 17, background: 'transparent', color: C.textSub,
+                border: `1px solid ${C.border}`, cursor: 'pointer', width: isMobile ? '100%' : undefined,
+              }}>
+                {t('landing.seeHow')}
+              </button>
+            </motion.div>
+
+            {isMobile && <InstallAppButton style={{ marginBottom: 16 }} />}
+
+            <motion.p variants={fadeIn} style={{
+              fontSize: 12, color: C.textMuted,
+              textAlign: isMobile ? 'center' : 'left',
+            }}>
+              {t('landing.trustLine')}
+            </motion.p>
+          </motion.div>
+
+          {!isMobile && (
+            <motion.div
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
+              style={{ flex: '1 1 54%', position: 'relative' }}
+            >
+              <BrowserFrame imageId="hero-dashboard" label={t('landing.heroDashboardLabel')} />
+
               <motion.div
-                initial={{ opacity: 0, y: 60, x: 20 }}
-                animate={{ opacity: 1, y: 0, x: 0 }}
-                transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.55 }}
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.5 }}
                 style={{
-                  position: 'absolute',
-                  bottom: -36,
-                  right: isTablet ? -8 : -28,
+                  position: 'absolute', bottom: -30, left: -20,
+                  transform: 'scale(0.72)', transformOrigin: 'bottom left',
                   zIndex: 2,
-                  transform: 'scale(0.82)',
-                  transformOrigin: 'bottom right',
                 }}
               >
                 <PhoneMockup imageId="hero-mobile" label={t('landing.heroMobileLabel')} />
               </motion.div>
-            )}
-          </div>
-          {/* Gradient fade at bottom to blend into next section */}
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 140, background: `linear-gradient(to bottom, transparent, ${C.bg})`, pointerEvents: 'none' }} />
-        </div>
-      </section>
+            </motion.div>
+          )}
 
-      {/* ── SOCIAL PROOF BAR ──────────────────────────────────────────────────── */}
-      <section style={{ borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, background: C.surface, padding: isMobile ? '28px 0' : '36px 0' }}>
-        <div style={{ ...inner(1100) }}>
-          <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 20, fontWeight: 500, letterSpacing: '.4px', textTransform: 'uppercase', textAlign: 'center' }}>
-            {t('landing.trustedBy')}
-          </div>
-          <div ref={statsRef} style={{ display: 'flex', justifyContent: isDesktop ? 'space-evenly' : 'center', gap: 16, flexWrap: 'wrap' }}>
-            <RevealItem delay={0} y={20}><StatPill target={2300} format={v => `€${(v/1000).toFixed(1)}M`} label={t('landing.trustedStat1')} active={statsActive} /></RevealItem>
-            <RevealItem delay={0.1} y={20}><StatPill target={4800} format={v => v.toLocaleString()} label={t('landing.trustedStat2')} active={statsActive} /></RevealItem>
-            <RevealItem delay={0.2} y={20}><StatPill target={320} format={v => `${v}+`} label={t('landing.trustedStat3')} active={statsActive} /></RevealItem>
-          </div>
-        </div>
-      </section>
-
-      {/* ── PROBLEM SECTION ───────────────────────────────────────────────────── */}
-      <section style={{ padding: vPad }}>
-        <div style={{ ...inner(1100), textAlign: 'center' }}>
-          <SectionHeader title={t('landing.problemTitle')} />
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16 }}>
-            {problemCards.map(({ icon, titleKey, subKey }, i) => (
-              <RevealItem key={titleKey} delay={i * 0.13} y={36}>
-                <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.accent}`, borderRadius: 14, padding: '28px 24px', textAlign: 'left' }}>
-                  <div style={{ fontSize: 28, marginBottom: 12 }}>{icon}</div>
-                  <p style={{ fontSize: 15, color: C.text, lineHeight: 1.5, margin: '0 0 8px', fontWeight: 600 }}>{t(titleKey)}</p>
-                  <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.7, margin: 0 }}>{t(subKey)}</p>
-                </div>
-              </RevealItem>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── BEFORE / AFTER ────────────────────────────────────────────────────── */}
-      <section style={{ padding: vPad, background: C.surface, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
-        <div style={{ ...inner(1100) }}>
-          <SectionHeader title={t('landing.beforeAfterTitle')} sub={t('landing.beforeAfterSub')} />
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isDesktop ? 32 : 20 }}>
-            {/* Before */}
-            <RevealItem delay={0} y={32}>
-              <div style={{ background: `${C.red}0A`, border: `1px solid ${C.red}25`, borderRadius: 16, overflow: 'hidden' }}>
-                <ImagePlaceholder imageId="before-chaos" aspectRatio="4/3" label={t('landing.beforeImageLabel')} />
-                <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 16 }}>😰</span>
-                  <span style={{ fontSize: 14, color: `${C.red}CC`, fontWeight: 500 }}>{t('landing.beforeLabel')}</span>
-                </div>
-              </div>
-            </RevealItem>
-            {/* After */}
-            <RevealItem delay={0.15} y={32}>
-              <div style={{ background: `${C.green}0A`, border: `1px solid ${C.green}25`, borderRadius: 16, overflow: 'hidden' }}>
-                <ImagePlaceholder imageId="after-dashboard" aspectRatio="4/3" label={t('landing.afterImageLabel')} />
-                <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 16 }}>✨</span>
-                  <span style={{ fontSize: 14, color: `${C.green}CC`, fontWeight: 500 }}>{t('landing.afterLabel')}</span>
-                </div>
-              </div>
-            </RevealItem>
-          </div>
+          {isMobile && (
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.7 }}
+            >
+              <PhoneMockup imageId="hero-mobile" label={t('landing.heroMobileLabel')} />
+            </motion.div>
+          )}
         </div>
       </section>
 
       {/* ── FEATURES ─────────────────────────────────────────────────── */}
-      <section id="features" style={{ padding: isMobile ? '60px 0' : '100px 0' }}>
+      <section id="features" style={{ padding: isMobile ? '60px 0' : '80px 0' }}>
         <div style={{ ...inner(1100) }}>
           <motion.div
             initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }}
@@ -862,35 +811,6 @@ export default function LandingPage() {
         <div style={{ ...inner(1000) }}>
           <SectionHeader title={t('landing.pricingTitle')} sub={t('landing.pricingSub')} />
           <LandingPricingCards />
-        </div>
-      </section>
-
-      {/* ── TESTIMONIALS ──────────────────────────────────────────────────────── */}
-      <section style={{ padding: vPad, borderTop: `1px solid ${C.border}` }}>
-        <div style={{ ...inner(1100) }}>
-          <SectionHeader title={t('landing.testimonialTitle')} sub={t('landing.testimonialSub')} />
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2,1fr)' : 'repeat(3,1fr)', gap: 20 }}>
-            {testimonials.map((item, i) => (
-              <RevealItem key={i} delay={i * 0.12} y={28} scale={0.97}>
-                <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '24px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  {/* Stars */}
-                  <div style={{ color: C.amber, fontSize: 14, letterSpacing: 2, marginBottom: 16 }}>★★★★★</div>
-                  {/* Quote */}
-                  <p style={{ fontSize: 15, color: C.text, lineHeight: 1.75, fontStyle: 'italic', margin: '0 0 20px', flex: 1 }}>&ldquo;{item.quote}&rdquo;</p>
-                  {/* Attribution */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
-                      <ImagePlaceholder imageId={`testimonial-avatar-${i + 1}`} aspectRatio="1/1" label={t('landing.testimonialPhotoLabel', { name: item.name })} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{item.name}</div>
-                      <div style={{ fontSize: 12, color: C.textSub }}>{item.role}, {item.business}</div>
-                    </div>
-                  </div>
-                </div>
-              </RevealItem>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -958,7 +878,6 @@ export default function LandingPage() {
                 <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 14 }}>{t('landing.footerCompany')}</div>
                 <div style={{ marginBottom: 9 }}><a href="#contact" className="lp-navlink" style={{ fontSize: isDesktop ? 14 : 13, color: C.textSub }}>{t('landing.contact')}</a></div>
                 <div style={{ fontSize: 12, color: C.textMuted, marginTop: 24 }}>{t('landing.footerCopyright')}</div>
-                <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>{t('landing.footerCompanyLine')}</div>
               </div>
             </div>
           ) : (
@@ -987,7 +906,6 @@ export default function LandingPage() {
             <span style={{ fontSize: 12, color: C.textMuted }}>{t('landing.footerCopyright')}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <LandingLanguageToggle />
-              <span style={{ fontSize: 12, color: C.textMuted }}>{t('landing.footerCompanyLine')}</span>
             </div>
           </div>
         </div>

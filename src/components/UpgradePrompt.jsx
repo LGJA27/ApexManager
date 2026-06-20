@@ -28,10 +28,14 @@ export default function UpgradePrompt({ open, onClose, feature, setPage, venueLi
       title: t('venueLock.modalTitle'),
       description: t('venueLock.modalDescription', { count: venueLimit }),
     },
+    multiScan: {
+      title: "Batch invoice scanning",
+      description: "Batch scanning multiple invoices at once is available on Growth and Pro plans.",
+    },
   };
 
   const { title, description } = copyByFeature[feature] || copyByFeature.range;
-  const showFeatureList = feature !== 'venueLocked';
+  const showFeatureList = feature !== 'venueLocked' && feature !== 'multiScan';
 
   return (
     <div

@@ -84,9 +84,30 @@ function LockedVenuesBanner({ venuesWithLockStatus, onUpgrade }) {
     </div>
   );
 }
+
+function ScanLimitBanner({ isFree, scanLimit, onClose, manualEntryHint = true }) {
+  return (
+    <div style={{ background: "#F0406022", border: "1px solid #F0406044", borderRadius: 10, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+      <span style={{ fontSize: 13, color: C.red }}>
+        {isFree ? (
+          <>AI scanning isn&apos;t available on the Free plan. Upgrade to Starter for 30 scans/month{manualEntryHint ? ", or use manual entry below." : "."}</>
+        ) : (
+          <>You&apos;ve used all {scanLimit} AI scans for this month. Resets on the 1st, or upgrade for a higher limit.</>
+        )}
+      </span>
+      <button type="button" onClick={onClose} style={{ background: "none", border: "none", color: C.red, cursor: "pointer", fontSize: 18, lineHeight: 1, flexShrink: 0 }}>×</button>
+    </div>
+  );
+}
+
+function formatScanLimit(limit) {
+  return limit === 999999 ? "∞" : limit;
+}
+
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 import Logo from "./components/Logo.jsx";
+import TrialBanner from "./components/TrialBanner.jsx";
 import PricingPage from "./pages/PricingPage.jsx";
 import AnalyticsPage from "./pages/AnalyticsPage.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
@@ -183,6 +204,13 @@ const today = () => new Date().toISOString().split("T")[0];
 
 function getTierBadgeStyle(tier) {
   const tiers = {
+    trial: {
+      background: "linear-gradient(135deg, #1a2d44, #0f1a2e)",
+      color: "#3B9EFF",
+      border: "1px solid #3B9EFF55",
+      icon: "✨",
+      label: "Free Trial",
+    },
     free: {
       background: "linear-gradient(135deg, #2A2A36, #1E1E28)",
       color: "#8A8A9A",
@@ -217,11 +245,12 @@ function getTierBadgeStyle(tier) {
 
 function SubscriptionTierBadge({ subscription, onUpgrade }) {
   const { t } = useTranslation();
+  const { isFree, plan } = useSubscriptionGate(subscription);
   const tierStyle = getTierBadgeStyle(subscription?.tier || "free");
-  const isFree = !subscription || subscription.tier === "free";
   const scansUsed = subscription?.scans_used_this_month || 0;
-  const scansTotal = subscription?.scan_limit || 10;
+  const scansTotal = subscription?.scan_limit ?? plan.scanLimit ?? 0;
   const scanPct = scansTotal ? Math.min((scansUsed / scansTotal) * 100, 100) : 0;
+  const scansDisplay = formatScanLimit(scansTotal);
 
   return (
     <div
@@ -236,7 +265,7 @@ function SubscriptionTierBadge({ subscription, onUpgrade }) {
       onClick={isFree && onUpgrade ? onUpgrade : undefined}
       role={isFree && onUpgrade ? "button" : undefined}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isFree ? 0 : 6 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: tierStyle.color, letterSpacing: ".3px" }}>
           <span>{tierStyle.icon}</span>
           <span>{tierStyle.label}</span>
@@ -245,12 +274,20 @@ function SubscriptionTierBadge({ subscription, onUpgrade }) {
           <span style={{ fontSize: 10, color: C.accent, fontWeight: 600, letterSpacing: ".3px" }}>{t("common.upgrade")}</span>
         )}
       </div>
-      <div style={{ fontSize: 10, color: tierStyle.color, opacity: 0.8, marginBottom: 4 }}>
-        {scansUsed}/{scansTotal === 999999 ? "∞" : scansTotal} {t("common.scanLimit")}
-      </div>
-      <div style={{ height: 3, background: "#ffffff11", borderRadius: 99, overflow: "hidden" }}>
-        <div style={{ height: "100%", borderRadius: 99, background: tierStyle.color, width: `${scansTotal === 999999 ? 15 : scanPct}%`, transition: "width 0.3s ease" }} />
-      </div>
+      {isFree ? (
+        <div style={{ fontSize: 10, color: tierStyle.color, opacity: 0.75, marginTop: 4 }}>
+          AI scans require a paid plan
+        </div>
+      ) : (
+        <>
+          <div style={{ fontSize: 10, color: tierStyle.color, opacity: 0.8, marginBottom: 4 }}>
+            {scansUsed}/{scansDisplay} {t("common.scanLimit")}
+          </div>
+          <div style={{ height: 3, background: "#ffffff11", borderRadius: 99, overflow: "hidden" }}>
+            <div style={{ height: "100%", borderRadius: 99, background: tierStyle.color, width: `${scansTotal === 999999 ? 15 : scanPct}%`, transition: "width 0.3s ease" }} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -526,6 +563,135 @@ const inlineCellInputStyle = {
   fontFamily: "inherit",
   boxSizing: "border-box",
 };
+
+const INVOICE_SCAN_PROMPT = `You are analyzing a supplier invoice image for a small business management system. Extract ALL visible data precisely.
+
+Return ONLY a valid JSON object with exactly this structure (use null for any field not visible):
+{
+  "supplierName": "string",
+  "supplierNIF": "string or null",
+  "supplierIBAN": "string or null",
+  "supplierAddress": "string or null",
+  "supplierPhone": "string or null",
+  "date": "YYYY-MM-DD or null",
+  "invoiceNumber": "string or null",
+  "dueDate": "YYYY-MM-DD or null",
+  "items": [
+    {
+      "name": "string",
+      "qty": number,
+      "unit": "string (kg/L/un/g/etc)",
+      "unitPrice": number,
+      "total": number
+    }
+  ],
+  "subtotal": number,
+  "taxRate": number,
+  "tax": number,
+  "total": number,
+  "currency": "EUR"
+}
+
+Rules:
+- All monetary values as numbers without currency symbols
+- Dates in YYYY-MM-DD format only
+- If items are not itemized, return an empty array []
+- taxRate as percentage (e.g. 23 for 23% VAT)
+- Return ONLY the JSON object, no explanation, no markdown`;
+
+const INVOICE_SCAN_SYSTEM_PROMPT = "You are a precise OCR and data extraction engine specialized in Portuguese and Spanish supplier invoices. Extract data exactly as shown. Return only valid JSON.";
+
+async function extractInvoiceFromImage(file) {
+  const b64 = await fileToBase64(file);
+  const raw = await callClaude(INVOICE_SCAN_PROMPT, INVOICE_SCAN_SYSTEM_PROMPT, b64, file.type);
+  const clean = raw.replace(/```json|```/g, "").trim();
+  return JSON.parse(clean);
+}
+
+function InvoiceScanReviewPanel({
+  t, isMobile, venues, formVenueId, onVenueChange,
+  extracted, editItems, onExtractedChange, onLineItemChange,
+  footer, hideVenue = false,
+}) {
+  const { subtotal, tax, total } = computeInvoiceReviewTotals(extracted, editItems);
+  return (
+    <div>
+      {!hideVenue && (
+        <VenueFormFields venues={venues} value={formVenueId} onChange={onVenueChange} messageKey="invoices.selectVenueToSave" />
+      )}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 16 }}>
+        <Input label={t("invoices.supplier")} value={extracted.supplierName || ""} onChange={v => onExtractedChange(p => ({ ...p, supplierName: v }))} />
+        <Input label={t("invoices.nif")} value={extracted.supplierNIF || ""} onChange={v => onExtractedChange(p => ({ ...p, supplierNIF: v }))} placeholder="PT123456789" />
+        <Input label={t("invoices.iban")} value={extracted.supplierIBAN || ""} onChange={v => onExtractedChange(p => ({ ...p, supplierIBAN: v }))} placeholder="PT50 0000…" />
+        <DateInput label={t("invoices.date")} value={extracted.date || ""} onChange={v => onExtractedChange(p => ({ ...p, date: v }))} />
+        <Input label={t("invoices.invoiceNumber")} value={extracted.invoiceNumber || ""} onChange={v => onExtractedChange(p => ({ ...p, invoiceNumber: v }))} placeholder="INV-001" />
+        <DateInput label={t("invoices.dueDate")} value={extracted.dueDate || ""} onChange={v => onExtractedChange(p => ({ ...p, dueDate: v }))} />
+      </div>
+      <AiExtractionNotice variant="invoice" />
+      <div style={{ fontSize: 12, color: C.textSub, fontWeight: 600, marginBottom: 8 }}>{t("invoices.lineItems")}</div>
+      <div className="scroll-x" style={{ border: `1px solid ${C.border}`, borderRadius: 9, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 480 }}>
+          <thead>
+            <tr style={{ background: C.surfaceL }}>
+              {[t("invoices.item"), t("invoices.qty"), t("invoices.unit"), t("invoices.unitPrice"), t("invoices.total")].map(h => (
+                <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: C.textMuted, fontWeight: 500, fontSize: 11 }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {editItems.map((item, i) => (
+              <tr key={i} style={{ borderTop: `1px solid ${C.border}` }}>
+                <td style={{ padding: "6px 8px" }}>
+                  <input type="text" value={item.name || ""} onChange={e => onLineItemChange(i, "name", e.target.value)} style={inlineCellInputStyle} />
+                </td>
+                <td style={{ padding: "6px 8px", width: 72 }}>
+                  <input type="number" value={item.qty ?? ""} onChange={e => onLineItemChange(i, "qty", e.target.value)} style={inlineCellInputStyle} />
+                </td>
+                <td style={{ padding: "6px 8px", width: 72 }}>
+                  <input type="text" value={item.unit || ""} onChange={e => onLineItemChange(i, "unit", e.target.value)} style={inlineCellInputStyle} />
+                </td>
+                <td style={{ padding: "6px 8px", width: 96 }}>
+                  <input type="number" step="0.01" value={item.unitPrice ?? ""} onChange={e => onLineItemChange(i, "unitPrice", e.target.value)} style={inlineCellInputStyle} />
+                </td>
+                <td style={{ padding: "6px 8px", width: 96 }}>
+                  <input type="number" step="0.01" value={item.total ?? ""} onChange={e => onLineItemChange(i, "total", e.target.value)} style={{ ...inlineCellInputStyle, fontWeight: 600 }} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 16, marginTop: 12, fontSize: 14, alignItems: "center", flexWrap: "wrap" }}>
+        <span style={{ color: C.textSub }}>{t("invoices.net")}: {fmtEur(subtotal)}</span>
+        {extracted?.taxRate != null && extracted.taxRate !== "" ? (
+          <span style={{ color: C.textSub }}>{t("invoices.tax")} ({extracted.taxRate}%): {fmtEur(tax)}</span>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ color: C.textSub, fontSize: 13 }}>{t("invoices.tax")}:</span>
+            <input
+              type="number"
+              step="0.01"
+              value={extracted?.tax ?? ""}
+              onChange={e => onExtractedChange(p => ({ ...p, tax: e.target.value === "" ? "" : parseFloat(e.target.value) || 0 }))}
+              style={{ ...inlineCellInputStyle, width: 88 }}
+            />
+          </div>
+        )}
+        <span style={{ color: C.text, fontWeight: 700 }}>{t("invoices.total")}: {fmtEur(total)}</span>
+      </div>
+      {footer}
+    </div>
+  );
+}
+
+function queueStatusIcon(status) {
+  if (status === "pending") return "⏳";
+  if (status === "scanning") return "🔄";
+  if (status === "done") return "✓";
+  if (status === "error") return "⚠";
+  if (status === "skipped") return "—";
+  return "•";
+}
 
 function ScanFirstTimeTip() {
   const { t } = useTranslation();
@@ -1184,6 +1350,7 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
         </div>
       )}
       <AllVenuesBanner venue={venue} />
+      <TrialBanner subscription={subscription} onPricing={() => setPage("pricing")} />
       <LockedVenuesBanner venuesWithLockStatus={venues} onUpgrade={() => setPage("pricing")} />
 
       <div style={{ marginBottom: pick(18, 22) }}>
@@ -1526,6 +1693,8 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
   const w = useWindowWidth();
   const isMobile = w < 768;
   const isWide = w >= 1280;
+  const { canScan, isFree, plan } = useSubscriptionGate(subscription);
+  const scanLimit = subscription?.scan_limit ?? plan.scanLimit ?? 0;
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ date: today(), cash: "", card: "", cashExpenses: "", xpto: "", pos: "", note: "", staff: [] });
   const [scanMode, setScanMode] = useState(false);
@@ -1546,6 +1715,7 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
   const staffForSale = saleVenueId ? staffList.filter(s => s.venue_id === saleVenueId) : [];
 
   const openAddModal = (scan = false) => {
+    if (scan && !canScan()) { setScanLimitReached(true); return; }
     setScanMode(scan);
     setFormVenueId(venue?.id || "");
     setShowAdd(true);
@@ -1618,9 +1788,7 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
   };
 
   const scanReceipt = async (file) => {
-    const used = subscription?.scans_used_this_month ?? 0;
-    const limit = subscription?.scan_limit ?? 10;
-    if (used >= limit) { setScanLimitReached(true); return; }
+    if (!canScan()) { setScanLimitReached(true); return; }
 
     setScanError("");
     setScanLoading(true);
@@ -1641,6 +1809,7 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
         note: data.notes || prev.note,
       }));
       setScanMode(false);
+      const used = subscription?.scans_used_this_month ?? 0;
       const newCount = used + 1;
       supabase.from("subscriptions").update({ scans_used_this_month: newCount }).eq("user_id", subscription.user_id);
       setSubscription(prev => ({ ...prev, scans_used_this_month: newCount }));
@@ -1675,13 +1844,7 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
     <div style={{ padding: pagePad(isMobile, w >= 768 && w < 1024), width: "100%", boxSizing: "border-box" }}>
       <AllVenuesBanner venue={venue} />
       {scanLimitReached && (
-        <div style={{ background: "#F0406022", border: "1px solid #F0406044", borderRadius: 10, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <span style={{ fontSize: 13, color: C.red }}>
-            You've used all {subscription?.scan_limit ?? 10} AI scans for this month. Resets on the 1st.{" "}
-            <strong>Upgrade for unlimited scans.</strong>
-          </span>
-          <button onClick={() => setScanLimitReached(false)} style={{ background: "none", border: "none", color: C.red, cursor: "pointer", fontSize: 18, lineHeight: 1, flexShrink: 0 }}>×</button>
-        </div>
+        <ScanLimitBanner isFree={isFree} scanLimit={scanLimit} onClose={() => setScanLimitReached(false)} />
       )}
       <PageHeader
         title={t("sales.title")}
@@ -2216,16 +2379,24 @@ function SupplierInvoiceGroup({ name, invs, onMarkPaid, onEdit, payingId, isMobi
   );
 }
 
-function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, suppliers, addSupplier, upsertStockItem, venue, venues, onVenueChange, subscription, setSubscription, initialStatusFilter }) {
+function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, suppliers, addSupplier, upsertStockItem, venue, venues, onVenueChange, subscription, setSubscription, initialStatusFilter, setPage }) {
   const { t } = useTranslation();
   const w = useWindowWidth();
   const isMobile = w < 768;
   const isWide = w >= 1280;
+  const { canScan, canMultiScan, scansRemaining, isFree, plan } = useSubscriptionGate(subscription);
+  const scanLimit = subscription?.scan_limit ?? plan.scanLimit ?? 0;
+  const multiScanEnabled = canMultiScan();
+  const fileInputRef = useRef(null);
   const [showScan, setShowScan] = useState(false);
   const [scanLoading, setScanLoading] = useState(false);
   const [scanError, setScanError] = useState("");
   const [extracted, setExtracted] = useState(null);
   const [editItems, setEditItems] = useState([]);
+  const [scanQueue, setScanQueue] = useState([]);
+  const [currentScanIndex, setCurrentScanIndex] = useState(-1);
+  const [expandedQueueId, setExpandedQueueId] = useState(null);
+  const [upgradePrompt, setUpgradePrompt] = useState(null);
   const [showManual, setShowManual] = useState(false);
   const [manualForm, setManualForm] = useState({ supplier: "", invoiceNumber: "", date: today(), dueDate: "", subtotal: "", tax: "", total: "", iban: "", nif: "" });
   const [savingManual, setSavingManual] = useState(false);
@@ -2243,9 +2414,23 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
   const [savingEdit, setSavingEdit] = useState(false);
   const [formVenueId, setFormVenueId] = useState("");
 
-  const openScanModal = () => {
-    setFormVenueId(venue?.id || "");
-    setShowScan(true);
+  const openScanPicker = () => {
+    if (!canScan()) { setScanLimitReached(true); return; }
+    fileInputRef.current?.click();
+  };
+
+  const incrementScanUsage = () => {
+    setSubscription(prev => {
+      const newCount = (prev?.scans_used_this_month ?? 0) + 1;
+      if (prev?.user_id) {
+        supabase.from("subscriptions").update({ scans_used_this_month: newCount }).eq("user_id", prev.user_id);
+      }
+      return { ...prev, scans_used_this_month: newCount };
+    });
+  };
+
+  const revokeQueueThumbs = (queue) => {
+    queue.forEach(item => { if (item.thumbUrl) URL.revokeObjectURL(item.thumbUrl); });
   };
 
   const openManualModal = () => {
@@ -2254,11 +2439,16 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
   };
 
   const closeScanModal = () => {
+    revokeQueueThumbs(scanQueue);
     setShowScan(false);
     setExtracted(null);
     setEditItems([]);
+    setScanQueue([]);
+    setCurrentScanIndex(-1);
+    setExpandedQueueId(null);
     setScanError("");
     setFormVenueId("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const closeManualModal = () => {
@@ -2279,6 +2469,172 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
       return bp - ap || b.invs.length - a.invs.length;
     });
 
+  const processBatchSequentially = async (queue) => {
+    for (let i = 0; i < queue.length; i++) {
+      setCurrentScanIndex(i);
+      setScanQueue(prev => prev.map((item, idx) =>
+        idx === i ? { ...item, status: "scanning", error: null } : item
+      ));
+
+      try {
+        const data = await extractInvoiceFromImage(queue[i].file);
+        setScanQueue(prev => prev.map((item, idx) =>
+          idx === i ? { ...item, status: "done", result: data, editItems: data.items || [] } : item
+        ));
+        incrementScanUsage();
+      } catch (err) {
+        setScanQueue(prev => prev.map((item, idx) =>
+          idx === i ? { ...item, status: "error", error: getScanErrorMessage(err) } : item
+        ));
+      }
+    }
+    setCurrentScanIndex(-1);
+  };
+
+  const handleFileSelect = (e) => {
+    let files = Array.from(e.target.files || []);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (files.length === 0) return;
+
+    if (!canScan()) { setScanLimitReached(true); return; }
+
+    if (!multiScanEnabled) {
+      files = files.slice(0, 1);
+    } else {
+      const remaining = scansRemaining();
+      if (remaining <= 0) { setScanLimitReached(true); return; }
+      if (files.length > remaining) {
+        setScanError(`Only ${remaining} scan${remaining !== 1 ? "s" : ""} remaining this month — ${Math.min(files.length, remaining)} of ${files.length} photos queued.`);
+      }
+      files = files.slice(0, remaining);
+    }
+
+    if (files.length === 0) return;
+
+    setFormVenueId(venue?.id || "");
+    setShowScan(true);
+    setExtracted(null);
+    setEditItems([]);
+    setExpandedQueueId(null);
+
+    if (files.length === 1) {
+      setScanQueue([]);
+      scanInvoice(files[0]);
+      return;
+    }
+
+    const queue = files.map(file => ({
+      id: uid(),
+      file,
+      thumbUrl: URL.createObjectURL(file),
+      status: "pending",
+      result: null,
+      editItems: [],
+      error: null,
+    }));
+    setScanQueue(queue);
+    processBatchSequentially(queue);
+  };
+
+  const retryQueueItem = async (itemId) => {
+    if (!canScan()) { setScanLimitReached(true); return; }
+    const idx = scanQueue.findIndex(item => item.id === itemId);
+    const item = scanQueue[idx];
+    if (!item?.file) return;
+
+    setCurrentScanIndex(idx);
+    setScanQueue(prev => prev.map(q =>
+      q.id === itemId ? { ...q, status: "scanning", error: null } : q
+    ));
+
+    try {
+      const data = await extractInvoiceFromImage(item.file);
+      setScanQueue(prev => prev.map(q =>
+        q.id === itemId ? { ...q, status: "done", result: data, editItems: data.items || [], error: null } : q
+      ));
+      incrementScanUsage();
+    } catch (err) {
+      setScanQueue(prev => prev.map(q =>
+        q.id === itemId ? { ...q, status: "error", error: getScanErrorMessage(err) } : q
+      ));
+    }
+    setCurrentScanIndex(-1);
+  };
+
+  const skipQueueItem = (itemId) => {
+    setScanQueue(prev => prev.map(item =>
+      item.id === itemId ? { ...item, status: "skipped" } : item
+    ));
+    if (expandedQueueId === itemId) setExpandedQueueId(null);
+  };
+
+  const updateQueueExtracted = (itemId, updater) => {
+    setScanQueue(prev => prev.map(item =>
+      item.id === itemId ? { ...item, result: typeof updater === "function" ? updater(item.result) : updater } : item
+    ));
+  };
+
+  const updateQueueLineItem = (itemId, index, field, rawValue) => {
+    setScanQueue(prev => prev.map(item => {
+      if (item.id !== itemId) return item;
+      const editItemsNext = item.editItems.map((line, i) => {
+        if (i !== index) return line;
+        const updated = { ...line };
+        if (field === "name" || field === "unit") {
+          updated[field] = rawValue;
+        } else {
+          const num = parseFloat(rawValue);
+          updated[field] = rawValue === "" ? "" : (Number.isNaN(num) ? line[field] : num);
+          if (field === "qty" || field === "unitPrice") {
+            const qty = parseFloat(field === "qty" ? rawValue : updated.qty) || 0;
+            const unitPrice = parseFloat(field === "unitPrice" ? rawValue : updated.unitPrice) || 0;
+            updated.total = qty * unitPrice;
+          }
+        }
+        return updated;
+      });
+      return { ...item, editItems: editItemsNext };
+    }));
+  };
+
+  const saveOneExtracted = async (data, items, effectiveVenueId) => {
+    const existsByNif = suppliers.find(s => s.nif && s.nif === data.supplierNIF && s.venue_id === effectiveVenueId);
+    if (!existsByNif) {
+      await addSupplier({
+        name: data.supplierName || "Unknown",
+        nif: data.supplierNIF || null,
+        iban: data.supplierIBAN || null,
+        address: data.supplierAddress || null,
+        phone: data.supplierPhone || null,
+        email: null,
+        category: null,
+        venue_id: effectiveVenueId,
+      });
+    }
+
+    await addInvoice({
+      venueId: effectiveVenueId,
+      supplierName: data.supplierName || "Unknown",
+      supplierNif: data.supplierNIF || null,
+      supplierIban: data.supplierIBAN || null,
+      date: data.date || today(),
+      dueDate: data.dueDate || null,
+      invoiceNumber: data.invoiceNumber || "",
+      items,
+      ...computeInvoiceReviewTotals(data, items),
+    });
+
+    for (const item of items) {
+      await upsertStockItem({
+        name: item.name,
+        unit: item.unit || "un",
+        last_price: item.unitPrice,
+        supplier: data.supplierName || "",
+        venue_id: effectiveVenueId,
+      });
+    }
+  };
+
   const handleSupplierSelect = (id) => {
     setSelectedSupplierId(id);
     const sup = suppliers.find(s => s.id === id);
@@ -2286,59 +2642,15 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
   };
 
   const scanInvoice = async (file) => {
-    const used = subscription?.scans_used_this_month ?? 0;
-    const limit = subscription?.scan_limit ?? 10;
-    if (used >= limit) { setScanLimitReached(true); return; }
+    if (!canScan()) { setScanLimitReached(true); return; }
 
     setScanError("");
     setScanLoading(true);
     try {
-      const b64 = await fileToBase64(file);
-      const prompt = `You are analyzing a supplier invoice image for a small business management system. Extract ALL visible data precisely.
-
-Return ONLY a valid JSON object with exactly this structure (use null for any field not visible):
-{
-  "supplierName": "string",
-  "supplierNIF": "string or null",
-  "supplierIBAN": "string or null",
-  "supplierAddress": "string or null",
-  "supplierPhone": "string or null",
-  "date": "YYYY-MM-DD or null",
-  "invoiceNumber": "string or null",
-  "dueDate": "YYYY-MM-DD or null",
-  "items": [
-    {
-      "name": "string",
-      "qty": number,
-      "unit": "string (kg/L/un/g/etc)",
-      "unitPrice": number,
-      "total": number
-    }
-  ],
-  "subtotal": number,
-  "taxRate": number,
-  "tax": number,
-  "total": number,
-  "currency": "EUR"
-}
-
-Rules:
-- All monetary values as numbers without currency symbols
-- Dates in YYYY-MM-DD format only
-- If items are not itemized, return an empty array []
-- taxRate as percentage (e.g. 23 for 23% VAT)
-- Return ONLY the JSON object, no explanation, no markdown`;
-
-      const systemPrompt = `You are a precise OCR and data extraction engine specialized in Portuguese and Spanish supplier invoices. Extract data exactly as shown. Return only valid JSON.`;
-
-      const raw = await callClaude(prompt, systemPrompt, b64, file.type);
-      const clean = raw.replace(/```json|```/g, "").trim();
-      const data = JSON.parse(clean);
+      const data = await extractInvoiceFromImage(file);
       setExtracted(data);
       setEditItems(data.items || []);
-      const newCount = used + 1;
-      supabase.from("subscriptions").update({ scans_used_this_month: newCount }).eq("user_id", subscription.user_id);
-      setSubscription(prev => ({ ...prev, scans_used_this_month: newCount }));
+      incrementScanUsage();
     } catch (e) {
       setScanError(getScanErrorMessage(e));
     }
@@ -2350,45 +2662,24 @@ Rules:
     const effectiveVenueId = formVenueId || venue?.id || "";
     if (!effectiveVenueId) return;
     setSavingExtracted(true);
-
-    const existsByNif = suppliers.find(s => s.nif && s.nif === extracted.supplierNIF && s.venue_id === effectiveVenueId);
-    if (!existsByNif) {
-      await addSupplier({
-        name: extracted.supplierName || "Unknown",
-        nif: extracted.supplierNIF || null,
-        iban: extracted.supplierIBAN || null,
-        address: extracted.supplierAddress || null,
-        phone: extracted.supplierPhone || null,
-        email: null,
-        category: null,
-        venue_id: effectiveVenueId,
-      });
-    }
-
-    await addInvoice({
-      venueId: effectiveVenueId,
-      supplierName: extracted.supplierName || "Unknown",
-      supplierNif: extracted.supplierNIF || null,
-      supplierIban: extracted.supplierIBAN || null,
-      date: extracted.date || today(),
-      dueDate: extracted.dueDate || null,
-      invoiceNumber: extracted.invoiceNumber || "",
-      items: editItems,
-      ...computeInvoiceReviewTotals(extracted, editItems),
-    });
-
-    for (const item of editItems) {
-      await upsertStockItem({
-        name: item.name,
-        unit: item.unit || "un",
-        last_price: item.unitPrice,
-        supplier: extracted.supplierName || "",
-        venue_id: effectiveVenueId,
-      });
-    }
-
+    await saveOneExtracted(extracted, editItems, effectiveVenueId);
     setSavingExtracted(false);
-    setExtracted(null); setEditItems([]); closeScanModal();
+    setExtracted(null);
+    setEditItems([]);
+    closeScanModal();
+  };
+
+  const saveAllExtracted = async () => {
+    const effectiveVenueId = formVenueId || venue?.id || "";
+    if (!effectiveVenueId) return;
+    const doneItems = scanQueue.filter(item => item.status === "done" && item.result);
+    if (doneItems.length === 0) return;
+    setSavingExtracted(true);
+    for (const item of doneItems) {
+      await saveOneExtracted(item.result, item.editItems, effectiveVenueId);
+    }
+    setSavingExtracted(false);
+    closeScanModal();
   };
 
   const saveManual = async () => {
@@ -2470,9 +2761,8 @@ Rules:
   const supplierCount = new Set(byVenue.map(i => i.supplier_name).filter(Boolean)).size;
   const invoiceVenueId = formVenueId || venue?.id || "";
   const suppliersForInvoice = invoiceVenueId ? suppliers.filter(s => s.venue_id === invoiceVenueId) : [];
-  const { subtotal: reviewSubtotal, tax: reviewTax, total: reviewTotal } = extracted
-    ? computeInvoiceReviewTotals(extracted, editItems)
-    : { subtotal: 0, tax: 0, total: 0 };
+  const batchDoneCount = scanQueue.filter(item => item.status === "done" && item.result).length;
+  const isBatchMode = scanQueue.length > 1;
 
   const updateLineItem = (index, field, rawValue) => {
     setEditItems(prev => prev.map((item, i) => {
@@ -2495,15 +2785,17 @@ Rules:
 
   return (
     <div style={{ padding: pagePad(isMobile, w >= 768 && w < 1024), width: "100%", boxSizing: "border-box" }}>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple={multiScanEnabled}
+        onChange={handleFileSelect}
+        style={{ display: "none" }}
+      />
       <AllVenuesBanner venue={venue} />
       {scanLimitReached && (
-        <div style={{ background: "#F0406022", border: "1px solid #F0406044", borderRadius: 10, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <span style={{ fontSize: 13, color: C.red }}>
-            You've used all {subscription?.scan_limit ?? 10} AI scans for this month. Resets on the 1st.{" "}
-            <strong>Upgrade for unlimited scans.</strong>
-          </span>
-          <button onClick={() => setScanLimitReached(false)} style={{ background: "none", border: "none", color: C.red, cursor: "pointer", fontSize: 18, lineHeight: 1, flexShrink: 0 }}>×</button>
-        </div>
+        <ScanLimitBanner isFree={isFree} scanLimit={scanLimit} onClose={() => setScanLimitReached(false)} />
       )}
       <PageHeader
         title={t("invoices.title")}
@@ -2516,7 +2808,9 @@ Rules:
         actions={(
           <>
             <Btn variant="ghost" size={isMobile ? "sm" : "md"} onClick={openManualModal}>{t("invoices.manualEntry")}</Btn>
-            <Btn size={isMobile ? "sm" : "md"} onClick={openScanModal}>{t("invoices.scanInvoice")}</Btn>
+            <Btn size={isMobile ? "sm" : "md"} onClick={openScanPicker}>
+              {multiScanEnabled ? "📷 Scan Invoice(s)" : t("invoices.scanInvoice")}
+            </Btn>
           </>
         )}
       />
@@ -2574,7 +2868,114 @@ Rules:
 
       {/* SCAN MODAL */}
       <Modal open={showScan} onClose={closeScanModal} title={t("invoices.scanTitle")} width={700}>
-        {!extracted ? (
+        {isBatchMode ? (
+          <div>
+            {scanError && (
+              <div style={{ background: "#F5A62322", border: "1px solid #F5A62344", borderRadius: 9, padding: "10px 14px", color: C.amber, fontSize: 13, marginBottom: 16 }}>
+                {scanError}
+              </div>
+            )}
+            {currentScanIndex >= 0 && (
+              <div style={{ fontSize: 13, color: C.textSub, marginBottom: 14, fontWeight: 600 }}>
+                Processing {currentScanIndex + 1} of {scanQueue.length}…
+              </div>
+            )}
+            {currentScanIndex === -1 && batchDoneCount > 0 && (
+              <div style={{ background: C.greenDim, border: `1px solid ${C.green}44`, borderRadius: 9, padding: 12, marginBottom: 16, fontSize: 13, color: C.green }}>
+                ✓ {batchDoneCount} of {scanQueue.length} invoices ready to review
+              </div>
+            )}
+            <VenueFormFields venues={venues} value={formVenueId} onChange={setFormVenueId} messageKey="invoices.selectVenueToSave" />
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+              {scanQueue.map(item => (
+                <div key={item.id} style={{ border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden", background: C.surfaceL }}>
+                  <button
+                    type="button"
+                    onClick={() => item.status === "done" && setExpandedQueueId(id => id === item.id ? null : item.id)}
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
+                      background: expandedQueueId === item.id ? C.surface : "transparent",
+                      border: "none", cursor: item.status === "done" ? "pointer" : "default", textAlign: "left",
+                    }}
+                  >
+                    {item.thumbUrl && (
+                      <img src={item.thumbUrl} alt="" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 6, flexShrink: 0 }} />
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {item.file.name}
+                      </div>
+                      {item.status === "done" && item.result?.supplierName && (
+                        <div style={{ fontSize: 11, color: C.textSub, marginTop: 2 }}>{item.result.supplierName}</div>
+                      )}
+                      {item.status === "error" && (
+                        <div style={{ fontSize: 11, color: C.red, marginTop: 2 }}>{item.error}</div>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 16, flexShrink: 0 }}>{queueStatusIcon(item.status)}</span>
+                  </button>
+                  {item.status === "error" && (
+                    <div style={{ display: "flex", gap: 8, padding: "0 12px 10px" }}>
+                      <Btn size="sm" variant="ghost" onClick={() => retryQueueItem(item.id)}>Retry</Btn>
+                      <Btn size="sm" variant="ghost" onClick={() => skipQueueItem(item.id)}>Skip</Btn>
+                    </div>
+                  )}
+                  {expandedQueueId === item.id && item.status === "done" && item.result && (
+                    <div style={{ padding: "0 12px 12px", borderTop: `1px solid ${C.border}` }}>
+                      <InvoiceScanReviewPanel
+                        t={t}
+                        isMobile={isMobile}
+                        venues={venues}
+                        formVenueId={formVenueId}
+                        onVenueChange={setFormVenueId}
+                        extracted={item.result}
+                        editItems={item.editItems}
+                        onExtractedChange={updater => updateQueueExtracted(item.id, updater)}
+                        onLineItemChange={(i, field, val) => updateQueueLineItem(item.id, i, field, val)}
+                        footer={null}
+                        hideVenue
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {currentScanIndex === -1 && (
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                <Btn variant="ghost" onClick={closeScanModal}>{t("common.cancel")}</Btn>
+                <Btn
+                  variant="green"
+                  loading={savingExtracted}
+                  disabled={!formVenueId || batchDoneCount === 0 || savingExtracted}
+                  onClick={saveAllExtracted}
+                >
+                  Save All ({batchDoneCount})
+                </Btn>
+              </div>
+            )}
+          </div>
+        ) : extracted ? (
+          <div>
+            <div style={{ background: C.greenDim, border: `1px solid ${C.green}44`, borderRadius: 9, padding: 12, marginBottom: 16, fontSize: 13, color: C.green }}>✓ {t("invoices.extracted")}</div>
+            <InvoiceScanReviewPanel
+              t={t}
+              isMobile={isMobile}
+              venues={venues}
+              formVenueId={formVenueId}
+              onVenueChange={setFormVenueId}
+              extracted={extracted}
+              editItems={editItems}
+              onExtractedChange={setExtracted}
+              onLineItemChange={updateLineItem}
+              footer={(
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
+                  <Btn variant="ghost" onClick={() => { setExtracted(null); setEditItems([]); openScanPicker(); }}>{t("invoices.rescan")}</Btn>
+                  <Btn variant="green" loading={savingExtracted} disabled={!formVenueId || savingExtracted} onClick={saveExtracted}>{t("invoices.saveInvoice")}</Btn>
+                </div>
+              )}
+            />
+          </div>
+        ) : (
           <>
             {scanError && (
               <div style={{
@@ -2603,77 +3004,17 @@ Rules:
               </button>
             )}
             <ScanFirstTimeTip />
-            <UploadZone onFile={scanInvoice} loading={scanLoading} label={t("invoices.uploadInvoice")} />
+            {!multiScanEnabled && setPage && (
+              <button
+                type="button"
+                onClick={() => setUpgradePrompt("multiScan")}
+                style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 12, marginBottom: 12, padding: 0, textDecoration: "underline" }}
+              >
+                Scan multiple invoices at once on Growth and Pro →
+              </button>
+            )}
+            <UploadZone onFile={scanInvoice} loading={scanLoading} label={multiScanEnabled ? "Drop invoice photos or click to upload (multiple allowed)" : t("invoices.uploadInvoice")} />
           </>
-        ) : (
-          <div>
-            <div style={{ background: C.greenDim, border: `1px solid ${C.green}44`, borderRadius: 9, padding: 12, marginBottom: 16, fontSize: 13, color: C.green }}>✓ {t("invoices.extracted")}</div>
-            <VenueFormFields venues={venues} value={formVenueId} onChange={setFormVenueId} messageKey="invoices.selectVenueToSave" />
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 16 }}>
-              <Input label={t("invoices.supplier")} value={extracted.supplierName || ""} onChange={v => setExtracted(p => ({ ...p, supplierName: v }))} />
-              <Input label={t("invoices.nif")} value={extracted.supplierNIF || ""} onChange={v => setExtracted(p => ({ ...p, supplierNIF: v }))} placeholder="PT123456789" />
-              <Input label={t("invoices.iban")} value={extracted.supplierIBAN || ""} onChange={v => setExtracted(p => ({ ...p, supplierIBAN: v }))} placeholder="PT50 0000…" />
-              <DateInput label={t("invoices.date")} value={extracted.date || ""} onChange={v => setExtracted(p => ({ ...p, date: v }))} />
-              <Input label={t("invoices.invoiceNumber")} value={extracted.invoiceNumber || ""} onChange={v => setExtracted(p => ({ ...p, invoiceNumber: v }))} placeholder="INV-001" />
-              <DateInput label={t("invoices.dueDate")} value={extracted.dueDate || ""} onChange={v => setExtracted(p => ({ ...p, dueDate: v }))} />
-            </div>
-            <AiExtractionNotice variant="invoice" />
-            <div style={{ fontSize: 12, color: C.textSub, fontWeight: 600, marginBottom: 8 }}>{t("invoices.lineItems")}</div>
-            <div className="scroll-x" style={{ border: `1px solid ${C.border}`, borderRadius: 9, overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 480 }}>
-                <thead>
-                  <tr style={{ background: C.surfaceL }}>
-                    {[t("invoices.item"), t("invoices.qty"), t("invoices.unit"), t("invoices.unitPrice"), t("invoices.total")].map(h => (
-                      <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: C.textMuted, fontWeight: 500, fontSize: 11 }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {editItems.map((item, i) => (
-                    <tr key={i} style={{ borderTop: `1px solid ${C.border}` }}>
-                      <td style={{ padding: "6px 8px" }}>
-                        <input type="text" value={item.name || ""} onChange={e => updateLineItem(i, "name", e.target.value)} style={inlineCellInputStyle} />
-                      </td>
-                      <td style={{ padding: "6px 8px", width: 72 }}>
-                        <input type="number" value={item.qty ?? ""} onChange={e => updateLineItem(i, "qty", e.target.value)} style={inlineCellInputStyle} />
-                      </td>
-                      <td style={{ padding: "6px 8px", width: 72 }}>
-                        <input type="text" value={item.unit || ""} onChange={e => updateLineItem(i, "unit", e.target.value)} style={inlineCellInputStyle} />
-                      </td>
-                      <td style={{ padding: "6px 8px", width: 96 }}>
-                        <input type="number" step="0.01" value={item.unitPrice ?? ""} onChange={e => updateLineItem(i, "unitPrice", e.target.value)} style={inlineCellInputStyle} />
-                      </td>
-                      <td style={{ padding: "6px 8px", width: 96 }}>
-                        <input type="number" step="0.01" value={item.total ?? ""} onChange={e => updateLineItem(i, "total", e.target.value)} style={{ ...inlineCellInputStyle, fontWeight: 600 }} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 16, marginTop: 12, fontSize: 14, alignItems: "center", flexWrap: "wrap" }}>
-              <span style={{ color: C.textSub }}>{t("invoices.net")}: {fmtEur(reviewSubtotal)}</span>
-              {extracted?.taxRate != null && extracted.taxRate !== "" ? (
-                <span style={{ color: C.textSub }}>{t("invoices.tax")} ({extracted.taxRate}%): {fmtEur(reviewTax)}</span>
-              ) : (
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ color: C.textSub, fontSize: 13 }}>{t("invoices.tax")}:</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={extracted?.tax ?? ""}
-                    onChange={e => setExtracted(p => ({ ...p, tax: e.target.value === "" ? "" : parseFloat(e.target.value) || 0 }))}
-                    style={{ ...inlineCellInputStyle, width: 88 }}
-                  />
-                </div>
-              )}
-              <span style={{ color: C.text, fontWeight: 700 }}>{t("invoices.total")}: {fmtEur(reviewTotal)}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
-              <Btn variant="ghost" onClick={() => { setExtracted(null); setEditItems([]); }}>{t("invoices.rescan")}</Btn>
-              <Btn variant="green" loading={savingExtracted} disabled={!formVenueId || savingExtracted} onClick={saveExtracted}>{t("invoices.saveInvoice")}</Btn>
-            </div>
-          </div>
         )}
       </Modal>
 
@@ -2732,7 +3073,7 @@ Rules:
       <div style={{ display: isWide ? "flex" : "block", gap: 24, alignItems: "flex-start" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           {visible.length === 0
-            ? <EmptyState icon="🧾" title={statusFilter === "all" ? t("invoices.noInvoices") : (statusFilter === "pending" ? t("invoices.filterPending") : t("invoices.filterPaid"))} sub={statusFilter === "all" ? t("invoices.noInvoicesSub") : undefined} action={statusFilter === "all" ? <Btn onClick={openScanModal}>{t("invoices.scanFirst")}</Btn> : undefined} />
+            ? <EmptyState icon="🧾" title={statusFilter === "all" ? t("invoices.noInvoices") : (statusFilter === "pending" ? t("invoices.filterPending") : t("invoices.filterPaid"))} sub={statusFilter === "all" ? t("invoices.noInvoicesSub") : undefined} action={statusFilter === "all" ? <Btn onClick={openScanPicker}>{t("invoices.scanFirst")}</Btn> : undefined} />
             : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {supplierGroups.map(g => (
@@ -2769,6 +3110,12 @@ Rules:
         )}
       </div>
       <Toast message={toast} />
+      <UpgradePrompt
+        open={!!upgradePrompt}
+        onClose={() => setUpgradePrompt(null)}
+        feature={upgradePrompt}
+        setPage={setPage}
+      />
     </div>
   );
 }
@@ -3406,16 +3753,19 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
   };
 
   const venueLimit = subscription?.venue_limit ?? 1;
+  const { isFree: isFreeTier, isTrial, plan, trialDaysLeft } = useSubscriptionGate(subscription);
   const tier = subscription?.tier ?? "free";
-  const isFreeTier = tier === "free";
   const tierStyle = getTierBadgeStyle(tier);
   const scansUsed = subscription?.scans_used_this_month ?? 0;
-  const scanLimit = subscription?.scan_limit ?? 10;
-  const scanLimitDisplay = scanLimit === 999999 ? "∞" : scanLimit;
+  const scanLimit = subscription?.scan_limit ?? plan.scanLimit ?? 0;
+  const scanLimitDisplay = formatScanLimit(scanLimit);
   const scanBarWidth = scanLimit === 999999
     ? "15%"
-    : `${Math.min((scansUsed / (scanLimit || 10)) * 100, 100)}%`;
+    : scanLimit > 0
+      ? `${Math.min((scansUsed / scanLimit) * 100, 100)}%`
+      : "0%";
   const isActiveStatus = subscription?.status === "active" || subscription?.status === "trialing";
+  const daysLeft = trialDaysLeft();
 
   const handleAddVenueClick = () => {
     if (venues.length >= venueLimit) {
@@ -3450,6 +3800,7 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
   return (
     <div style={{ padding: isMobile ? 16 : "28px 32px", maxWidth: 700 }}>
       <h1 style={{ margin: isMobile ? "0 0 20px" : "0 0 28px", fontSize: pageTitleSize(isMobile, w >= 768 && w < 1024, false), color: C.text }}>{t("settings.title")}</h1>
+      <TrialBanner subscription={subscription} onPricing={() => setPage("pricing")} />
       <LockedVenuesBanner venuesWithLockStatus={venues} onUpgrade={() => setPage("pricing")} />
 
       <Card style={{ marginBottom: 20 }}>
@@ -3546,28 +3897,36 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
 
           {isFreeTier && (
             <p style={{ margin: "0 0 16px", fontSize: 13, color: C.textSub, lineHeight: 1.65, position: "relative" }}>
-              You are on the free plan — 7 days of data, 10 AI scans/month, 1 venue.
+              You are on the free plan — 7 days of data, manual entry only, 1 venue.
             </p>
           )}
 
-          <div style={{ marginBottom: 16, position: "relative" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.textSub, marginBottom: 6 }}>
-              <span>{t("common.scanLimit")}</span>
-              <span style={{ color: tierStyle.color, fontWeight: 600 }}>{scansUsed}/{scanLimitDisplay}</span>
-            </div>
-            <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
-              <div style={{
-                height: "100%",
-                borderRadius: 99,
-                background: tierStyle.color,
-                width: scanBarWidth,
-                boxShadow: `0 0 8px ${tierStyle.color}66`,
-                transition: "width 0.4s ease",
-              }} />
-            </div>
-          </div>
+          {isTrial && daysLeft != null && (
+            <p style={{ margin: "0 0 16px", fontSize: 13, color: tierStyle.color, lineHeight: 1.65, position: "relative" }}>
+              {daysLeft === 0 ? "Your free trial ends today." : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left in your free trial.`}
+            </p>
+          )}
 
-          {isFreeTier ? (
+          {!isFreeTier && (
+            <div style={{ marginBottom: 16, position: "relative" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.textSub, marginBottom: 6 }}>
+                <span>{t("common.scanLimit")}</span>
+                <span style={{ color: tierStyle.color, fontWeight: 600 }}>{scansUsed}/{scanLimitDisplay}</span>
+              </div>
+              <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+                <div style={{
+                  height: "100%",
+                  borderRadius: 99,
+                  background: tierStyle.color,
+                  width: scanBarWidth,
+                  boxShadow: `0 0 8px ${tierStyle.color}66`,
+                  transition: "width 0.4s ease",
+                }} />
+              </div>
+            </div>
+          )}
+
+          {(isFreeTier || isTrial) ? (
             <SidebarUpgradeButton embedded onClick={() => setPage("pricing")} />
           ) : (
             <>
@@ -3934,7 +4293,7 @@ export default function App() {
           data ?? {
             user_id: user.id,
             tier: "free",
-            scan_limit: 10,
+            scan_limit: 0,
             scans_used_this_month: 0,
             venue_limit: 1,
             status: "active",
@@ -4317,7 +4676,7 @@ export default function App() {
         <div key={page} style={{ animation: "fadeIn .18s ease", width: "100%", boxSizing: "border-box" }}>
           {page === "dashboard" && <DashboardPage {...pageProps} subscription={subscription} setPage={setPage} setInvoicesInitialFilter={setInvoicesInitialFilter} />}
           {page === "sales" && <SalesPage sales={sales} addSale={addSale} updateSale={updateSale} deleteSale={deleteSale} salesLoading={salesLoading} venues={venuesWithLockStatus} venue={venue} onVenueChange={handleVenueChange} subscription={subscription} setSubscription={setSubscription} staffList={staff} />}
-          {page === "invoices" && <InvoicesPage invoices={invoices} addInvoice={addInvoice} updateInvoice={updateInvoice} markInvoicePaid={markInvoicePaid} suppliers={suppliers} addSupplier={addSupplier} upsertStockItem={upsertStockItem} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} subscription={subscription} setSubscription={setSubscription} initialStatusFilter={invoicesInitialFilter} />}
+          {page === "invoices" && <InvoicesPage invoices={invoices} addInvoice={addInvoice} updateInvoice={updateInvoice} markInvoicePaid={markInvoicePaid} suppliers={suppliers} addSupplier={addSupplier} upsertStockItem={upsertStockItem} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} subscription={subscription} setSubscription={setSubscription} initialStatusFilter={invoicesInitialFilter} setPage={setPage} />}
           {page === "expenses" && <ExpensesPage expenses={expenses} addExpense={addExpense} updateExpense={updateExpense} deleteExpense={deleteExpense} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
           {page === "suppliers" && <SuppliersPage suppliers={suppliers} addSupplier={addSupplier} updateSupplier={updateSupplier} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
           {page === "stock" && <StockPage stockItems={stockItems} addStockItem={addStockItem} updateStockItem={updateStockItem} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
