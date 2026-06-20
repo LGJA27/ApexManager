@@ -163,7 +163,8 @@
     "noSuppliersSub": "Os fornecedores são criados automaticamente ao digitalizar faturas, ou adicione manualmente.",
     "totalSpend": "gasto total",
     "invoiceHistory": "Faturas ▾",
-    "selectVenueToSave": "Selecione um estabelecimento para este fornecedor para o poder guardar."
+    "selectVenueToSave": "Selecione um estabelecimento para este fornecedor para o poder guardar.",
+    "confirmDelete": "Eliminar este fornecedor? As faturas existentes mantêm o nome do fornecedor."
   },
   "stock": {
     "title": "Stock & Custos",
@@ -177,7 +178,8 @@
     "items": "itens",
     "noItems": "Ainda sem itens de stock",
     "noItemsSub": "Os itens são preenchidos automaticamente ao digitalizar faturas de fornecedores. Também pode adicioná-los manualmente.",
-    "selectVenueToSave": "Selecione um estabelecimento para guardar este item."
+    "selectVenueToSave": "Selecione um estabelecimento para guardar este item.",
+    "confirmDelete": "Eliminar este item de stock? O histórico de preços será removido."
   },
   "staff": {
     "title": "Equipa",
@@ -259,6 +261,7 @@
     "message": "Mensagem",
     "send": "Enviar →",
     "sent": "Mensagem enviada!",
+    "supportError": "Não foi possível enviar a mensagem. Tente novamente ou contacte-nos diretamente em support@apexmanager.app",
     "deleteAccount": "Eliminar a Minha Conta",
     "deleteAccountSub": "Isto irá eliminar permanentemente a sua conta e todos os seus dados.",
     "noVenues": "Ainda sem estabelecimentos",
@@ -340,6 +343,7 @@
     "contactSub": "Tem uma dúvida ou precisa de ajuda? Envie-nos uma mensagem.",
     "sendMessage": "Enviar Mensagem →",
     "messageSent": "Mensagem enviada! Responderemos em 24 horas.",
+    "contactError": "Não foi possível enviar a mensagem. Tente novamente ou contacte-nos diretamente em support@apexmanager.app",
     "featuresTitle": "Digitalização de Faturas com IA, Vendas Diárias e Análises para Pequenas Empresas",
     "featuresSub": "Digitalize faturas de fornecedores com IA, registe vendas a numerário e cartão, acompanhe custos e exporte relatórios de auditoria — feito para restaurantes, cafés e PME europeias.",
     "feature1Title": "Digitalize Faturas e Acompanhe Preços de Fornecedores com IA",

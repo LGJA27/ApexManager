@@ -3286,7 +3286,7 @@ function ExpensesPage({ expenses, addExpense, updateExpense, deleteExpense, venu
 }
 
 // ─── SUPPLIERS PAGE ──────────────────────────────────────────────────────────
-function SuppliersPage({ suppliers, addSupplier, updateSupplier, venue, venues, onVenueChange }) {
+function SuppliersPage({ suppliers, addSupplier, updateSupplier, deleteSupplier, venue, venues, onVenueChange }) {
   const { t } = useTranslation();
   const w = useWindowWidth();
   const isMobile = w < 768;
@@ -3295,6 +3295,7 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier, venue, venues, 
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState({ name: "", nif: "", iban: "", address: "", phone: "", email: "", category: "" });
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [formVenueId, setFormVenueId] = useState("");
 
@@ -3341,6 +3342,14 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier, venue, venues, 
     });
     setEditId(s.id);
     setShowAdd(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm(t("suppliers.confirmDelete"))) return;
+    setDeletingId(id);
+    await deleteSupplier(id);
+    if (expandedId === id) setExpandedId(null);
+    setDeletingId(null);
   };
 
   const rowGrid = "minmax(0, 1fr) auto minmax(0, 1fr)";
@@ -3406,11 +3415,16 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier, venue, venues, 
                         ? <Badge color={C.accent}>{s.category}</Badge>
                         : <span style={{ fontSize: 12, color: C.textMuted }}>—</span>}
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "flex-end" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
                     <button
                       onClick={ev => { ev.stopPropagation(); edit(s); }}
                       style={{ background: C.accentDim, border: `1px solid ${C.accent}44`, color: C.accent, borderRadius: 7, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
                     >✏ {t("common.edit")}</button>
+                    <button
+                      onClick={ev => { ev.stopPropagation(); handleDelete(s.id); }}
+                      disabled={deletingId === s.id}
+                      style={{ background: "#F0406011", border: "1px solid #F0406033", color: C.red, borderRadius: 7, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, opacity: deletingId === s.id ? 0.4 : 1 }}
+                    >✕</button>
                     <span style={{ fontSize: 11, color: C.textMuted, transition: "transform .2s", display: "inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
                     </div>
                   </div>
@@ -3466,7 +3480,7 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier, venue, venues, 
 }
 
 // ─── STOCK PAGE ──────────────────────────────────────────────────────────────
-function StockPage({ stockItems, addStockItem, updateStockItem, venue, venues, onVenueChange }) {
+function StockPage({ stockItems, addStockItem, updateStockItem, deleteStockItem, venue, venues, onVenueChange }) {
   const { t } = useTranslation();
   const w = useWindowWidth();
   const isMobile = w < 768;
@@ -3475,6 +3489,7 @@ function StockPage({ stockItems, addStockItem, updateStockItem, venue, venues, o
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState({ name: "", unit: "kg", last_price: "", category: "General", supplier: "" });
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [exportMsg, setExportMsg] = useState("");
   const [formVenueId, setFormVenueId] = useState("");
 
@@ -3515,6 +3530,13 @@ function StockPage({ stockItems, addStockItem, updateStockItem, venue, venues, o
     setForm({ name: ing.name, unit: ing.unit, last_price: ing.last_price?.toString() || "", category: ing.category || "General", supplier: ing.supplier || "" });
     setEditId(ing.id);
     setShowAdd(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm(t("stock.confirmDelete"))) return;
+    setDeletingId(id);
+    await deleteStockItem(id);
+    setDeletingId(null);
   };
 
   const exportCSV = () => {
@@ -3597,7 +3619,10 @@ function StockPage({ stockItems, addStockItem, updateStockItem, venue, venues, o
                       {!isMobile && <td style={{ padding: "10px 14px", color: C.textSub, fontSize: 12 }}>{ing.supplier || "—"}</td>}
                       {!isMobile && <td style={{ padding: "10px 14px", color: C.textMuted, fontSize: 12 }}>{ing.last_update || "—"}</td>}
                       <td style={{ padding: "10px 14px" }}>
-                        <button onClick={() => edit(ing)} style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 13 }}>{t("common.edit")}</button>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "nowrap" }}>
+                          <button onClick={() => edit(ing)} style={{ background: C.accentDim, border: `1px solid ${C.accent}44`, color: C.accent, borderRadius: 7, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>✏ {t("common.edit")}</button>
+                          <button onClick={() => handleDelete(ing.id)} disabled={deletingId === ing.id} style={{ background: "#F0406011", border: "1px solid #F0406033", color: C.red, borderRadius: 7, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, opacity: deletingId === ing.id ? 0.4 : 1 }}>✕</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -3684,6 +3709,7 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
   const [supportForm, setSupportForm] = useState({ subject: "Bug Report", message: "" });
   const [supportSaving, setSupportSaving] = useState(false);
   const [supportSuccess, setSupportSuccess] = useState(false);
+  const [supportError, setSupportError] = useState("");
 
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState("");
@@ -3710,16 +3736,32 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
     }
   };
 
-  const sendSupport = () => {
+  const sendSupport = async () => {
     if (!supportForm.message.trim()) return;
     setSupportSaving(true);
-    const body = `From: ${user?.email || "unknown"}\nUser: ${user?.user_metadata?.name || "unknown"}\n\n${supportForm.message}`;
-    window.location.href = `mailto:support@apexmanager.app?subject=${encodeURIComponent(supportForm.subject)}&body=${encodeURIComponent(body)}`;
-    setTimeout(() => {
-      setSupportSaving(false);
+    setSupportError("");
+    setSupportSuccess(false);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: user?.user_metadata?.name || user?.email,
+          email: user?.email,
+          subject: supportForm.subject,
+          message: supportForm.message,
+          source: "Settings Support Form",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send");
       setSupportSuccess(true);
       setSupportForm({ subject: "Bug Report", message: "" });
-    }, 500);
+    } catch {
+      setSupportError(t("settings.supportError"));
+    } finally {
+      setSupportSaving(false);
+    }
   };
 
   // account deletion state
@@ -4068,8 +4110,9 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
               />
             </div>
             {supportSuccess && <div style={{ fontSize: 13, color: C.green, fontWeight: 600 }}>{t("settings.sent")}</div>}
+            {supportError && <div style={{ fontSize: 13, color: C.red }}>{supportError}</div>}
             <div>
-              <Btn onClick={sendSupport} loading={supportSaving} disabled={!supportForm.message.trim()}>{t("settings.send")}</Btn>
+              <Btn onClick={sendSupport} loading={supportSaving} disabled={!supportForm.message.trim() || supportSaving}>{t("settings.send")}</Btn>
             </div>
           </div>
         </Card>
@@ -4408,6 +4451,11 @@ export default function App() {
     return null;
   };
 
+  const deleteSupplier = async (id) => {
+    const { error } = await supabase.from("suppliers").delete().eq("id", id);
+    if (!error) setSuppliers(prev => prev.filter(s => s.id !== id));
+  };
+
   // ── Stock item helpers ───────────────────────────────────────────────────────
   const addStockItem = async ({ name, unit, last_price, category, supplier, venue_id }) => {
     const blocked = guardVenueWrite(venue_id);
@@ -4424,12 +4472,28 @@ export default function App() {
   const updateStockItem = async (id, { name, unit, last_price, category, supplier }) => {
     const price = parseFloat(last_price) || 0;
     const existing = stockItems.find(i => i.id === id);
-    const price_history = [...(existing?.price_history || []), { date: today(), price }];
+    const priceChanged = existing && parseFloat(existing.last_price) !== price;
+    const payload = {
+      name,
+      unit,
+      last_price: price,
+      category,
+      supplier: supplier || null,
+    };
+    if (priceChanged) {
+      payload.last_update = today();
+      payload.price_history = [...(existing?.price_history || []), { date: today(), price }];
+    }
     const { data, error } = await supabase
       .from("stock_items")
-      .update({ name, unit, last_price: price, category, supplier: supplier || null, last_update: today(), price_history })
+      .update(payload)
       .eq("id", id).select().single();
     if (!error && data) setStockItems(prev => prev.map(i => i.id === id ? data : i));
+  };
+
+  const deleteStockItem = async (id) => {
+    const { error } = await supabase.from("stock_items").delete().eq("id", id);
+    if (!error) setStockItems(prev => prev.filter(i => i.id !== id));
   };
 
   const upsertStockItem = async ({ name, unit, last_price, supplier, venue_id }) => {
@@ -4678,8 +4742,8 @@ export default function App() {
           {page === "sales" && <SalesPage sales={sales} addSale={addSale} updateSale={updateSale} deleteSale={deleteSale} salesLoading={salesLoading} venues={venuesWithLockStatus} venue={venue} onVenueChange={handleVenueChange} subscription={subscription} setSubscription={setSubscription} staffList={staff} />}
           {page === "invoices" && <InvoicesPage invoices={invoices} addInvoice={addInvoice} updateInvoice={updateInvoice} markInvoicePaid={markInvoicePaid} suppliers={suppliers} addSupplier={addSupplier} upsertStockItem={upsertStockItem} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} subscription={subscription} setSubscription={setSubscription} initialStatusFilter={invoicesInitialFilter} setPage={setPage} />}
           {page === "expenses" && <ExpensesPage expenses={expenses} addExpense={addExpense} updateExpense={updateExpense} deleteExpense={deleteExpense} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
-          {page === "suppliers" && <SuppliersPage suppliers={suppliers} addSupplier={addSupplier} updateSupplier={updateSupplier} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
-          {page === "stock" && <StockPage stockItems={stockItems} addStockItem={addStockItem} updateStockItem={updateStockItem} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
+          {page === "suppliers" && <SuppliersPage suppliers={suppliers} addSupplier={addSupplier} updateSupplier={updateSupplier} deleteSupplier={deleteSupplier} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
+          {page === "stock" && <StockPage stockItems={stockItems} addStockItem={addStockItem} updateStockItem={updateStockItem} deleteStockItem={deleteStockItem} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
           {page === "staff" && <StaffPage staff={staff} addStaff={addStaff} updateStaff={updateStaff} deleteStaff={deleteStaff} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
           {page === "analytics" && <AnalyticsPage sales={sales} expenses={expenses} invoices={invoices} venues={venuesWithLockStatus} venue={venue} onVenueChange={handleVenueChange} staff={staff} suppliers={suppliers} stockItems={stockItems} subscription={subscription} setPage={setPage} />}
           {page === "settings" && <SettingsPage venues={venuesWithLockStatus} addVenue={addVenue} deleteVenue={deleteVenue} user={user} subscription={subscription} setPage={setPage} />}

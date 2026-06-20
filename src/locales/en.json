@@ -163,7 +163,8 @@
     "noSuppliersSub": "Suppliers are auto-created when you scan invoices, or add them manually.",
     "totalSpend": "total spend",
     "invoiceHistory": "Invoices ▾",
-    "selectVenueToSave": "Select a venue for this supplier to save it."
+    "selectVenueToSave": "Select a venue for this supplier to save it.",
+    "confirmDelete": "Delete this supplier? Existing invoices will keep their supplier name."
   },
   "stock": {
     "title": "Stock & Costs",
@@ -177,7 +178,8 @@
     "items": "items",
     "noItems": "No stock items yet",
     "noItemsSub": "Items are auto-populated when you scan supplier invoices. You can also add them manually.",
-    "selectVenueToSave": "Select a venue for this item to save it."
+    "selectVenueToSave": "Select a venue for this item to save it.",
+    "confirmDelete": "Delete this stock item? Price history for this item will be removed."
   },
   "staff": {
     "title": "Staff",
@@ -259,6 +261,7 @@
     "message": "Message",
     "send": "Send →",
     "sent": "Message sent!",
+    "supportError": "Could not send message. Please try again or email us directly at support@apexmanager.app",
     "deleteAccount": "Delete My Account",
     "deleteAccountSub": "This will permanently delete your account and all your data.",
     "noVenues": "No venues yet",
@@ -340,6 +343,7 @@
     "contactSub": "Have a question or need help? Send us a message.",
     "sendMessage": "Send Message →",
     "messageSent": "Message sent! We'll get back to you within 24 hours.",
+    "contactError": "Could not send message. Please try again or email us directly at support@apexmanager.app",
     "featuresTitle": "AI Invoice Scanning, Sales Tracking & Business Analytics for Small Business",
     "featuresSub": "Scan supplier invoices with AI, log daily cash and card sales, track costs and export audit reports — built for restaurants, cafés and European SMBs.",
     "feature1Title": "Scan Invoices & Track Supplier Prices with AI",

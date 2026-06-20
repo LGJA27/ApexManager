@@ -328,22 +328,37 @@ function ContactSection({ isMobile, inner }) {
     boxSizing: 'border-box',
   };
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess(false);
     if (!form.name.trim() || !form.email.trim() || !form.subject || !form.message.trim()) {
       setError(t('auth.fillFields'));
       return;
     }
     setSaving(true);
     const subjectLabel = t(CONTACT_SUBJECTS.find(s => s.value === form.subject)?.key || 'landing.contactSubjectGeneral');
-    const body = `${t('landing.contactName')}: ${form.name}\n${t('landing.contactEmail')}: ${form.email}\n\n${form.message}`;
-    window.location.href = `mailto:support@apexmanager.app?subject=${encodeURIComponent(subjectLabel)}&body=${encodeURIComponent(body)}`;
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          subject: subjectLabel,
+          message: form.message,
+          source: 'Landing Page',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send');
       setSuccess(true);
       setForm({ name: '', email: '', subject: 'general', message: '' });
-    }, 500);
+    } catch {
+      setError(t('landing.contactError'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
