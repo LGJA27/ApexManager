@@ -33,7 +33,12 @@
     "termsOfService": "Terms of Service",
     "and": "and",
     "privacyPolicy": "Privacy Policy",
-    "tagline": "Business intelligence platform"
+    "tagline": "Business intelligence platform",
+    "checkEmailTitle": "Check your inbox",
+    "checkEmailBody": "We've sent a confirmation link to:",
+    "checkEmailSpam": "Didn't get it? Check your spam folder, or wait a minute and try registering again.",
+    "backToSignIn": "← Back to Sign In",
+    "welcomeToast": "Welcome! Your account is ready 🎉"
   },
   "dashboard": {
     "title": "Dashboard",

@@ -923,6 +923,14 @@ function AuthScreen({ defaultMode = "login" }) {
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showConfirmEmailScreen, setShowConfirmEmailScreen] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
+  const [toast, setToast] = useState("");
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 2500);
+  };
 
   const switchMode = (m) => { setMode(m); setError(""); setTermsAgreed(false); };
 
@@ -940,17 +948,31 @@ function AuthScreen({ defaultMode = "login" }) {
     if (!termsAgreed) return setError(t("auth.termsRequired"));
     setError("");
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { name, agreed_to_terms_at: new Date().toISOString() } },
     });
-    if (error) setError(error.message);
-    else {
-      trackEvent("sign_up", { method: "email" });
-      trackMetaEvent("CompleteRegistration");
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    trackEvent("sign_up", { method: "email" });
+    trackMetaEvent("CompleteRegistration");
+
+    if (data.session) {
+      sessionStorage.setItem("apex_welcome_toast", "1");
+      showToast(t("auth.welcomeToast"));
+      setLoading(false);
+    } else {
+      setRegisteredEmail(email);
+      setShowConfirmEmailScreen(true);
+      setLoading(false);
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -962,7 +984,45 @@ function AuthScreen({ defaultMode = "login" }) {
     }
   };
 
+  if (showConfirmEmailScreen) {
+    return (
+      <>
+        <Toast message={toast} />
+        <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+              <Logo size={40} />
+            </div>
+            <Card>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>📬</div>
+              <h2 style={{ fontSize: 20, color: C.text, margin: "0 0 12px" }}>
+                {t("auth.checkEmailTitle")}
+              </h2>
+              <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.6, margin: "0 0 8px" }}>
+                {t("auth.checkEmailBody")}
+              </p>
+              <p style={{ fontSize: 15, color: C.accent, fontWeight: 600, margin: "0 0 24px" }}>
+                {registeredEmail}
+              </p>
+              <p style={{ fontSize: 12, color: C.textMuted, marginBottom: 20 }}>
+                {t("auth.checkEmailSpam")}
+              </p>
+              <Btn variant="ghost" onClick={() => {
+                setShowConfirmEmailScreen(false);
+                setMode("login");
+              }} style={{ width: "100%", justifyContent: "center" }}>
+                {t("auth.backToSignIn")}
+              </Btn>
+            </Card>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
+    <>
+      <Toast message={toast} />
     <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
@@ -1014,8 +1074,9 @@ function AuthScreen({ defaultMode = "login" }) {
             {mode === "login" ? t("auth.signIn") : t("auth.createAccount")}
           </Btn>
         </Card>
-      </div>
+            </div>
     </div>
+    </>
   );
 }
 
@@ -1108,9 +1169,9 @@ function NavDrawer({ open, onClose, page, setPage, venue, venues, onVenueChange,
             {subscription && (
               <SubscriptionTierBadge subscription={subscription} onUpgrade={() => go("pricing")} />
             )}
-          </div>
+      </div>
           <button onClick={onClose} style={{ background: "none", border: "none", color: C.textSub, cursor: "pointer", fontSize: 22, lineHeight: 1, padding: "4px 6px", minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-        </div>
+    </div>
         {venues.length > 0 && (
           <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.border}` }}>
             <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.8, color: C.textMuted, marginBottom: 6 }}>{t("common.venue")}</div>
@@ -1214,7 +1275,7 @@ function Sidebar({ page, setPage, venue, venues, onVenueChange, user, onLogout, 
         {mainNavItems.map(n => {
           const active = page === n.id;
           return (
-            <button key={n.id} onClick={() => setPage(n.id)}
+          <button key={n.id} onClick={() => setPage(n.id)}
               onMouseEnter={e => { if (!active) e.currentTarget.style.background = C.surfaceL; }}
               onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
               style={{
@@ -1228,7 +1289,7 @@ function Sidebar({ page, setPage, venue, venues, onVenueChange, user, onLogout, 
               }}>
               <span style={{ fontSize: 14, flexShrink: 0 }}>{n.icon}</span>
               <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{n.label}</span>
-            </button>
+          </button>
           );
         })}
 
@@ -1509,7 +1570,7 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
             <div style={{ fontSize: heroBig, fontWeight: 800, color: C.green, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{fmtEur(totalSales)}</div>
             <div style={{ fontSize: pick(12, 13), color: C.textSub, marginTop: 8 }}>
               {t("sales.cash")} {fmtEur(totalCash)} · {t("sales.card")} {fmtEur(totalCard)}
-            </div>
+      </div>
             <div style={{ fontSize: pick(11, 12), color: C.textMuted, marginTop: 4 }}>
               {t("dashboard.xpto")} {fmtEur(totalXpto)} <span style={{ fontStyle: "italic" }}>({t("dashboard.referenceOnly")})</span>
             </div>
@@ -1558,7 +1619,7 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
       {/* SECTION 3 — Visual money flow (desktop only) */}
       {!isMobile && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: pick(14, 16), marginBottom: pick(14, 18), width: "100%" }}>
-          <Card>
+        <Card>
             <div style={{ fontSize: pick(13, 14), color: C.textSub, marginBottom: pick(12, 14), fontWeight: 600 }}>{t("dashboard.revenueByWeek")}</div>
             <div style={{ position: "relative", height: chartH + 22 }}>
               <div style={{ position: "absolute", left: 0, right: 0, bottom: 22 + (weekAvg / weekMax) * chartH, borderTop: `1px dashed ${C.textMuted}`, zIndex: 1, pointerEvents: "none" }} title={`Avg: ${fmtEur(weekAvg)}`} />
@@ -1568,7 +1629,7 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
                   return (
                     <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", height: "100%", justifyContent: "flex-end" }}>
                       <div title={`${d.label}: ${fmtEur(d.value)}`} style={{ width: "100%", height: `${(d.value / weekMax) * 100}%`, minHeight: d.value > 0 ? 3 : 0, background: above ? C.accent : C.accent + "66", borderRadius: "3px 3px 0 0", transition: "background .15s" }} />
-                    </div>
+          </div>
                   );
                 })}
               </div>
@@ -1579,9 +1640,9 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
               </div>
             </div>
             <div style={{ fontSize: 10, color: C.textMuted, marginTop: 6, textAlign: "right" }}>— avg {fmtEur(weekAvg)}</div>
-          </Card>
+        </Card>
 
-          <Card>
+        <Card>
             <div style={{ fontSize: pick(13, 14), color: C.textSub, marginBottom: pick(12, 14), fontWeight: 600 }}>{t("dashboard.whereRevenueGoes")}</div>
             {totalSales > 0 ? (
               <>
@@ -1608,15 +1669,15 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
                         <span style={{ color: C.textSub }}>{seg.label}</span>
                       </div>
                       <span style={{ color: C.text, fontWeight: 600, flexShrink: 0 }}>{fmtEur(seg.value)}</span>
-                    </div>
-                  ))}
+            </div>
+          ))}
                 </div>
               </>
             ) : (
               <div style={{ color: C.textMuted, fontSize: 13, padding: "20px 0" }}>No revenue data yet.</div>
             )}
-          </Card>
-        </div>
+        </Card>
+      </div>
       )}
 
       {/* SECTION 4 — Pending payments */}
@@ -1838,10 +1899,10 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
     if (error) {
       setSaveError(error.message || "Failed to save. Try again.");
     } else {
-      setShowAdd(false);
+    setShowAdd(false);
       setScanResult(null);
       setFormVenueId("");
-      setForm({ date: today(), cash: "", card: "", cashExpenses: "", xpto: "", pos: "", note: "", staff: [] });
+    setForm({ date: today(), cash: "", card: "", cashExpenses: "", xpto: "", pos: "", note: "", staff: [] });
     }
   };
 
@@ -1995,9 +2056,9 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
         )}
         {scanResult && (
           <>
-            <div style={{ background: C.greenDim, border: `1px solid ${C.green}44`, borderRadius: 9, padding: 12, marginBottom: 16, fontSize: 13, color: C.green }}>
+          <div style={{ background: C.greenDim, border: `1px solid ${C.green}44`, borderRadius: 9, padding: 12, marginBottom: 16, fontSize: 13, color: C.green }}>
               ✓ {t("sales.scanned")}
-            </div>
+          </div>
             <AiExtractionNotice variant="sales" />
           </>
         )}
@@ -2014,14 +2075,14 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
           <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}>
             <div style={{ fontSize: 12, color: C.textSub, marginBottom: 8, fontWeight: 600 }}>{t("sales.staffAttendance")}</div>
             <StaffPicker staffList={staffForSale} selected={form.staff} onChange={v => setForm(p => ({ ...p, staff: v }))} />
-          </div>
+            </div>
           <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label={t("sales.notes")} value={form.note} onChange={v => setForm(p => ({ ...p, note: v }))} placeholder={t("common.optional")} /></div>
-        </div>
+            </div>
         {saveError && <div style={{ color: C.red, fontSize: 12, marginTop: 10 }}>{saveError}</div>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 12 }}>
           <Btn variant="ghost" onClick={() => { setShowAdd(false); setSaveError(""); }}>{t("common.cancel")}</Btn>
           <Btn onClick={save} loading={saving} disabled={!formVenueId || saving}>{t("sales.saveEntry")}</Btn>
-        </div>
+          </div>
       </Modal>
 
       {/* Edit Modal */}
@@ -2037,32 +2098,32 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
             <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}>
               <div style={{ fontSize: 12, color: C.textSub, marginBottom: 8, fontWeight: 600 }}>{t("sales.staffAttendance")}</div>
               <StaffPicker staffList={staffList} selected={editForm.staff || []} onChange={v => setEditForm(p => ({ ...p, staff: v }))} />
-            </div>
+        </div>
             <div style={{ gridColumn: isMobile ? "1" : "1/-1" }}><Input label={t("sales.notes")} value={editForm.note} onChange={v => setEditForm(p => ({ ...p, note: v }))} placeholder={t("common.optional")} /></div>
           </div>
           {editError && <div style={{ color: C.red, fontSize: 12, marginTop: 10 }}>{editError}</div>}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 12 }}>
             <Btn variant="ghost" onClick={() => { setEditSale(null); setEditForm(null); }}>{t("common.cancel")}</Btn>
             <Btn onClick={saveEdit} loading={editSaving} disabled={editSaving}>{t("common.save")}</Btn>
-          </div>
-        </Modal>
+        </div>
+      </Modal>
       )}
 
       <div style={{ display: isWide ? "flex" : "block", gap: 24, alignItems: "flex-start" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          {filtered.length === 0
+      {filtered.length === 0
             ? <EmptyState icon="💳" title={t("sales.noEntries")} sub={t("sales.noEntriesSub")} action={<Btn onClick={() => openAddModal(false)}>{t("sales.addFirst")}</Btn>} />
-            : (
+        : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {[...filtered].sort((a, b) => b.date.localeCompare(a.date)).map(s => {
+            {[...filtered].sort((a, b) => b.date.localeCompare(a.date)).map(s => {
                   const venueName = venues.find(v => v.id === s.venue_id)?.name || "";
-                  return (
+              return (
                     <SaleCard key={s.id} s={s} venueName={venueName} onEdit={openEdit} onDelete={deleteSale} />
                   );
                 })}
-              </div>
+                    </div>
             )}
-        </div>
+                      </div>
         {isWide && (
           <div style={{ width: 260, flexShrink: 0 }}>
             <Card style={{ position: "sticky", top: 20 }}>
@@ -2081,8 +2142,8 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 600, color: isBest ? C.accent : C.text }}>{fmtEur(d.avg)}</span>
                   </div>
-                );
-              })}
+              );
+            })}
               <div style={{ paddingTop: 12, marginTop: 6, borderTop: `1px solid ${C.border}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: 12, color: C.textSub }}>Best day</span>
@@ -2920,7 +2981,7 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
               <div>
                 <div style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>{t("invoices.invoices")}</div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{byVenue.length}</div>
-              </div>
+        </div>
               <div>
                 <div style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>{t("invoices.total")}</div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{fmtEur(sumTotal)}</div>
@@ -2970,7 +3031,7 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
             {scanError && (
               <div style={{ background: "#F5A62322", border: "1px solid #F5A62344", borderRadius: 9, padding: "10px 14px", color: C.amber, fontSize: 13, marginBottom: 16 }}>
                 {scanError}
-              </div>
+            </div>
             )}
             {currentScanIndex >= 0 && (
               <div style={{ fontSize: 13, color: C.textSub, marginBottom: 14, fontWeight: 600 }}>
@@ -3052,7 +3113,7 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
                 >
                   Save All ({batchDoneCount})
                 </Btn>
-              </div>
+            </div>
             )}
           </div>
         ) : extracted ? (
@@ -3069,10 +3130,10 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
               onExtractedChange={setExtracted}
               onLineItemChange={updateLineItem}
               footer={(
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
                   <Btn variant="ghost" onClick={() => { setExtracted(null); setEditItems([]); openScanPicker(); }}>{t("invoices.rescan")}</Btn>
                   <Btn variant="green" loading={savingExtracted} disabled={!formVenueId || savingExtracted} onClick={saveExtracted}>{t("invoices.saveInvoice")}</Btn>
-                </div>
+            </div>
               )}
             />
           </div>
@@ -3093,7 +3154,7 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
               }}>
                 <span>⚠</span>
                 <span>{scanError}</span>
-              </div>
+          </div>
             )}
             {scanError && (
               <button
@@ -3180,9 +3241,9 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
                 {supplierGroups.map(g => (
                   <SupplierInvoiceGroup key={g.name} name={g.name} invs={g.invs} onMarkPaid={handleMarkPaid} onEdit={openEdit} payingId={payingId} isMobile={isMobile} />
                 ))}
-              </div>
-            )}
-        </div>
+                    </div>
+                    )}
+                  </div>
         {isWide && (
           <div style={{ width: 260, flexShrink: 0 }}>
             <Card style={{ position: "sticky", top: 20 }}>
@@ -3191,7 +3252,7 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
                 <div style={{ fontSize: 11, color: C.textSub, marginBottom: 3 }}>{t("invoices.totalSpend")}</div>
                 <div style={{ fontSize: 22, fontWeight: 700, color: C.text }}>{fmtEur(sumTotal)}</div>
                 <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{byVenue.length} {t("invoices.invoices")}</div>
-              </div>
+                  </div>
               <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 11, color: C.textSub, marginBottom: 3 }}>{t("invoices.pending")}</div>
@@ -3205,8 +3266,8 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
               <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
                 <div style={{ fontSize: 11, color: C.textSub, marginBottom: 3 }}>Unique Suppliers</div>
                 <div style={{ fontSize: 20, fontWeight: 600, color: C.accent }}>{supplierCount}</div>
-              </div>
-            </Card>
+                </div>
+              </Card>
           </div>
         )}
       </div>
@@ -3335,27 +3396,27 @@ function ExpensesPage({ expenses, addExpense, updateExpense, deleteExpense, venu
 
       <div style={{ display: isWide ? "flex" : "block", gap: 24, alignItems: "flex-start" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          {filtered.length === 0
+      {filtered.length === 0
             ? <EmptyState icon="💸" title={t("expenses.noExpenses")} sub={t("expenses.noExpensesSub")} action={<Btn onClick={openAddModal}>{t("expenses.addFirst")}</Btn>} />
-            : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {[...filtered].sort((a, b) => b.date.localeCompare(a.date)).map(e => (
-                  <Card key={e.id}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{e.name}</div>
-                        <div style={{ fontSize: 12, color: C.textSub, marginTop: 2 }}>{e.date} · <Badge color={typeColors[e.type] || C.textSub}>{e.type}</Badge> · {e.recurring}</div>
-                      </div>
+        : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[...filtered].sort((a, b) => b.date.localeCompare(a.date)).map(e => (
+              <Card key={e.id}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{e.name}</div>
+                    <div style={{ fontSize: 12, color: C.textSub, marginTop: 2 }}>{e.date} · <Badge color={typeColors[e.type] || C.textSub}>{e.type}</Badge> · {e.recurring}</div>
+                  </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: C.red }}>{fmtEur(e.amount)}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: C.red }}>{fmtEur(e.amount)}</div>
                         <button onClick={() => edit(e)} style={{ background: C.accentDim, border: `1px solid ${C.accent}44`, color: C.accent, borderRadius: 7, padding: "5px 10px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>✏ {t("common.edit")}</button>
                         <button onClick={() => deleteExpense(e.id)} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 16 }}>🗑</button>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
         </div>
         {isWide && (
           <div style={{ width: 260, flexShrink: 0 }}>
@@ -3515,7 +3576,7 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier, deleteSupplier,
                       {s.category
                         ? <Badge color={C.accent}>{s.category}</Badge>
                         : <span style={{ fontSize: 12, color: C.textMuted }}>—</span>}
-                    </div>
+                      </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
                     <button
                       onClick={ev => { ev.stopPropagation(); edit(s); }}
@@ -3528,7 +3589,7 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier, deleteSupplier,
                     >✕</button>
                     <span style={{ fontSize: 11, color: C.textMuted, transition: "transform .2s", display: "inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
                     </div>
-                  </div>
+                    </div>
 
                   {/* ── EXPANDED DETAIL ── */}
                   {isOpen && hasDetails && (
@@ -3537,7 +3598,7 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier, deleteSupplier,
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 600, width: 52, flexShrink: 0 }}>{t("invoices.nif")}</span>
                           <span style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>{s.nif}</span>
-                        </div>
+                  </div>
                       )}
                       {s.iban && (
                         <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
@@ -3573,7 +3634,7 @@ function SuppliersPage({ suppliers, addSupplier, updateSupplier, deleteSupplier,
                 </div>
               );
             })}
-            </div>
+          </div>
           </Card>
         )}
     </div>
@@ -3666,7 +3727,7 @@ function StockPage({ stockItems, addStockItem, updateStockItem, deleteStockItem,
         isWide={false}
         actions={(
           <>
-            {exportMsg && <span style={{ fontSize: 12, color: C.green }}>{exportMsg}</span>}
+          {exportMsg && <span style={{ fontSize: 12, color: C.green }}>{exportMsg}</span>}
             {!isMobile && <Btn variant="ghost" onClick={exportCSV}>📤 {t("common.export")} CSV</Btn>}
             <Btn onClick={openAddModal}>{t("stock.add")}</Btn>
           </>
@@ -3700,35 +3761,35 @@ function StockPage({ stockItems, addStockItem, updateStockItem, deleteStockItem,
         : (
           <Card style={{ padding: 0, overflow: "hidden" }}>
             <div className="scroll-x">
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr style={{ background: C.surfaceL }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: C.surfaceL }}>
                     {(isMobile ? mobileHeaders : desktopHeaders).map(h => (
                       <th key={h} style={{ padding: "10px 14px", textAlign: "left", color: C.textMuted, fontWeight: 500, fontSize: 11, borderBottom: `1px solid ${C.border}`, whiteSpace: "nowrap" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(ing => (
-                    <tr key={ing.id} style={{ borderBottom: `1px solid ${C.border}` }}
-                      onMouseEnter={e => e.currentTarget.style.background = C.surfaceL}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(ing => (
+                  <tr key={ing.id} style={{ borderBottom: `1px solid ${C.border}` }}
+                    onMouseEnter={e => e.currentTarget.style.background = C.surfaceL}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                       <td style={{ padding: "10px 14px", color: C.text, fontWeight: 500, whiteSpace: "nowrap" }}>{ing.name}</td>
                       {!isMobile && <td style={{ padding: "10px 14px" }}><Badge color={C.accent}>{ing.category}</Badge></td>}
-                      <td style={{ padding: "10px 14px", color: C.textSub }}>{ing.unit}</td>
+                    <td style={{ padding: "10px 14px", color: C.textSub }}>{ing.unit}</td>
                       <td style={{ padding: "10px 14px", color: C.amber, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{fmtEur(ing.last_price || 0)}</td>
                       {!isMobile && <td style={{ padding: "10px 14px", color: C.textSub, fontSize: 12 }}>{ing.supplier || "—"}</td>}
                       {!isMobile && <td style={{ padding: "10px 14px", color: C.textMuted, fontSize: 12 }}>{ing.last_update || "—"}</td>}
-                      <td style={{ padding: "10px 14px" }}>
+                    <td style={{ padding: "10px 14px" }}>
                         <div style={{ display: "flex", gap: 6, flexWrap: "nowrap" }}>
                           <button onClick={() => edit(ing)} style={{ background: C.accentDim, border: `1px solid ${C.accent}44`, color: C.accent, borderRadius: 7, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>✏ {t("common.edit")}</button>
                           <button onClick={() => handleDelete(ing.id)} disabled={deletingId === ing.id} style={{ background: "#F0406011", border: "1px solid #F0406033", color: C.red, borderRadius: 7, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, opacity: deletingId === ing.id ? 0.4 : 1 }}>✕</button>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
             </div>
           </Card>
         )}
@@ -3967,17 +4028,17 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
 
       <Card style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-          <div>
+              <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
               Install ApexManager
-            </div>
+                </div>
             <div style={{ fontSize: 12, color: C.textSub, marginTop: 2 }}>
               Add to your home screen for quick access, like a native app
-            </div>
-          </div>
+                  </div>
+              </div>
           <InstallAppButton />
         </div>
-      </Card>
+        </Card>
 
       <div style={{ marginBottom: 28 }}>
         <h2 style={{ fontSize: 15, color: C.text, margin: "0 0 14px", fontWeight: 600 }}>{t("settings.account")}</h2>
@@ -3987,10 +4048,10 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
             <div>
               <div style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{user?.user_metadata?.name}</div>
               <div style={{ fontSize: 13, color: C.textSub }}>{user?.email}</div>
-            </div>
-          </div>
+                </div>
+                </div>
         </Card>
-      </div>
+              </div>
 
       <div style={{ marginBottom: 28 }}>
         <h2 style={{ fontSize: 15, color: C.text, margin: "0 0 14px", fontWeight: 600 }}>{t("settings.language")}</h2>
@@ -4035,7 +4096,7 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
               flexShrink: 0,
             }}>
               {isActiveStatus ? "● Active" : isFreeTier ? t("common.freePlan") : (subscription?.status || "—")}
-            </div>
+    </div>
           </div>
 
           {!isFreeTier && subscription?.current_period_end && (
@@ -4074,7 +4135,7 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.textSub, marginBottom: 6 }}>
                 <span>{t("common.scanLimit")}</span>
                 <span style={{ color: tierStyle.color, fontWeight: 600 }}>{scansUsed}/{scanLimitDisplay}</span>
-              </div>
+            </div>
               <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
                 <div style={{
                   height: "100%",
@@ -4084,7 +4145,7 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
                   boxShadow: `0 0 8px ${tierStyle.color}66`,
                   transition: "width 0.4s ease",
                 }} />
-              </div>
+          </div>
             </div>
           )}
 
@@ -4120,7 +4181,7 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <div style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{v.name}</div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{v.name}</div>
                         {v.isLocked && (
                           <span style={{ background: "#F5A62322", color: "#F5A623", padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 600 }}>
                             🔒 {t("venueLock.readOnlyBadge")}
@@ -4349,8 +4410,10 @@ function DeploymentConfigNotice() {
 
 export default function App() {
   const location = useLocation();
+  const { t } = useTranslation();
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(supabaseConfigured);
+  const [welcomeToast, setWelcomeToast] = useState("");
   const [page, setPage] = useState("dashboard");
   const [invoicesInitialFilter, setInvoicesInitialFilter] = useState(null);
   const [venues, setVenues] = useState([]);
@@ -4428,6 +4491,15 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    if (sessionStorage.getItem("apex_welcome_toast") !== "1") return;
+    sessionStorage.removeItem("apex_welcome_toast");
+    setWelcomeToast(t("auth.welcomeToast"));
+    const id = setTimeout(() => setWelcomeToast(""), 2500);
+    return () => clearTimeout(id);
+  }, [user, t]);
 
   useEffect(() => {
     if (!user) { setVenues([]); return; }
@@ -4803,7 +4875,7 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const globalStyles = (
-    <style>{`
+      <style>{`
       html { font-size: 16px; }
       *, *::before, *::after { box-sizing: border-box; }
       body { margin: 0; background: ${C.bg}; overflow: hidden; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
@@ -4811,7 +4883,7 @@ export default function App() {
       * { -webkit-tap-highlight-color: transparent; }
       button, a, [role="button"], select { touch-action: manipulation; user-select: none; }
       @keyframes shimmer { 0% { left: -100%; } 100% { left: 200%; } }
-      @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
       @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
       @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
       @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
@@ -4819,10 +4891,10 @@ export default function App() {
       @keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
       @keyframes toastIn { from { opacity: 0; transform: translateX(calc(100% + 40px)); } to { opacity: 1; transform: translateX(0); } }
       @keyframes toastInMobile { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
-      ::-webkit-scrollbar { width: 6px; height: 6px; }
-      ::-webkit-scrollbar-track { background: ${C.surface}; }
-      ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 3px; }
-      select option { background: ${C.surface}; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: ${C.surface}; }
+        ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 3px; }
+        select option { background: ${C.surface}; }
       .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
       .apex-btn:not([disabled]):active { transform: scale(0.97) !important; transition: transform 0.08s ease !important; }
       @media (hover: hover) {
@@ -4839,7 +4911,7 @@ export default function App() {
           transition-duration: 0.01ms !important;
         }
       }
-    `}</style>
+      `}</style>
   );
 
   if (!supabaseConfigured) return <DeploymentConfigNotice />;
@@ -4875,6 +4947,7 @@ export default function App() {
     return (
       <>
         {globalStyles}
+        <Toast message={welcomeToast} />
         <VenueGate
           onCreated={async (form) => {
             const v = await addVenue(form);
@@ -4890,6 +4963,7 @@ export default function App() {
   return (
     <div style={{ display: "flex", width: "100vw", height: "100vh", overflow: "hidden", background: C.bg, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: C.text }}>
       {globalStyles}
+      <Toast message={welcomeToast} />
 
       {/* Desktop sidebar */}
       {!isMobile && (

@@ -33,7 +33,12 @@
     "termsOfService": "Termos de Serviço",
     "and": "e",
     "privacyPolicy": "Política de Privacidade",
-    "tagline": "Plataforma de inteligência empresarial"
+    "tagline": "Plataforma de inteligência empresarial",
+    "checkEmailTitle": "Verifique o seu email",
+    "checkEmailBody": "Enviámos um link de confirmação para:",
+    "checkEmailSpam": "Não recebeu? Verifique a pasta de spam, ou aguarde um minuto e tente registar-se novamente.",
+    "backToSignIn": "← Voltar ao Login",
+    "welcomeToast": "Bem-vindo! A sua conta está pronta 🎉"
   },
   "dashboard": {
     "title": "Painel",
