@@ -56,8 +56,9 @@ export default function CookiePolicyPage() {
             <div style={{ fontSize: 14, color: C.textSub, lineHeight: 1.7 }}>
               We use <strong style={{ color: C.text }}>one essential authentication cookie</strong> required
               to keep you logged in, and — only with your explicit consent — analytics
-              cookies from Google Analytics to help us understand how the app
-              is used. You can accept or decline analytics cookies at any time.
+              and marketing cookies (Google Analytics and Meta Pixel) to help us understand
+              how the app is used and measure advertising performance. You can accept or
+              decline these optional cookies at any time.
             </div>
           </div>
         </div>
@@ -112,8 +113,8 @@ export default function CookiePolicyPage() {
           </p>
           <ul style={{ paddingLeft: 20, margin: '6px 0' }}>
             <li style={{ marginBottom: 8 }}>✅ Analytics cookies (Google Analytics) — only with your consent</li>
-            <li style={{ marginBottom: 8 }}>❌ Advertising or marketing cookies</li>
-            <li style={{ marginBottom: 8 }}>❌ Social media tracking buttons</li>
+            <li style={{ marginBottom: 8 }}>✅ Marketing pixels (Meta Pixel) — only with your consent</li>
+            <li style={{ marginBottom: 8 }}>❌ Third-party advertising cookies without your consent</li>
             <li style={{ marginBottom: 8 }}>❌ Cross-site tracking cookies sold to third parties</li>
           </ul>
         </Section>
@@ -146,6 +147,26 @@ export default function CookiePolicyPage() {
           </p>
         </Section>
 
+        <Section title="Marketing Pixels (Optional)">
+          <p>
+            With your consent, we use the <strong style={{ color: C.text }}>Meta Pixel</strong> (Facebook)
+            to measure whether our advertising is effective and to understand conversions such as
+            sign-ups and subscriptions. This helps us improve our marketing without showing you
+            unrelated ads on other websites based on your ApexManager usage.
+          </p>
+          <p>
+            Meta may set the following cookies when you consent:
+          </p>
+          <ul style={{ paddingLeft: 20, margin: '6px 0' }}>
+            <Li><code>_fbp</code> — Browser identifier used by Meta for attribution. Expires after 90 days.</Li>
+            <Li><code>_fbc</code> — Stores click identifiers when you arrive from a Meta ad. Expires after 90 days.</Li>
+          </ul>
+          <p>
+            Data is processed by <strong style={{ color: C.text }}>Meta Platforms Ireland Limited</strong>.
+            See Meta&apos;s privacy policy for details on international transfers and your rights.
+          </p>
+        </Section>
+
         <Section title="4. Legal Basis">
           <p>
             Under the EU ePrivacy Directive and the GDPR, <strong style={{ color: C.text }}>essential cookies do not require
@@ -156,7 +177,7 @@ export default function CookiePolicyPage() {
             Analytics cookies are <strong style={{ color: C.text }}>not
             essential</strong> and require your explicit, opt-in consent
             under the ePrivacy Directive and GDPR. We only load Google
-            Analytics after you click &quot;Accept All&quot; on our cookie banner.
+            Analytics and the Meta Pixel after you click &quot;Accept All&quot; on our cookie banner.
             If you click &quot;Reject Analytics&quot; or take no action, these
             cookies are never set.
           </p>

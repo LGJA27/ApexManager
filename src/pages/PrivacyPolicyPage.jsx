@@ -79,7 +79,7 @@ export default function PrivacyPolicyPage() {
           </ul>
           <p><strong style={{ color: C.text }}>Usage data</strong></p>
           <ul style={{ paddingLeft: 20, margin: '6px 0 14px' }}>
-            <Li>Page views and feature interactions, collected via Google Analytics only if you have given consent via our cookie banner.</Li>
+            <Li>Page views and feature interactions, collected via Google Analytics and the Meta Pixel only if you have given consent via our cookie banner.</Li>
             <Li>Authentication session metadata (login timestamps, session tokens).</Li>
           </ul>
           <p><strong style={{ color: C.text }}>Payment data</strong></p>
@@ -141,6 +141,15 @@ export default function PrivacyPolicyPage() {
               rel="noreferrer" style={{ color: C.accent }}> Google Privacy
               Policy →</a>
             </Li>
+            <Li>
+              <strong style={{ color: C.text }}>Meta Platforms Ireland Limited
+              (Meta Pixel)</strong> — Marketing and conversion measurement,
+              only active with your consent. Used to measure sign-ups and
+              subscriptions from advertising campaigns.{' '}
+              <a href="https://www.facebook.com/privacy/policy/" target="_blank"
+              rel="noreferrer" style={{ color: C.accent }}> Meta Privacy
+              Policy →</a>
+            </Li>
           </ul>
         </Section>
 
@@ -180,12 +189,13 @@ export default function PrivacyPolicyPage() {
             This cookie is strictly necessary for the service to function and does not require consent under ePrivacy Directive rules.
           </p>
           <p>
-            With your explicit consent, we also use <strong style={{ color: C.text }}>Google Analytics</strong> cookies to understand how the app is used.
-            Analytics cookies are optional — they are never loaded unless you click &quot;Accept All&quot; on our cookie banner.
+            With your explicit consent, we also use <strong style={{ color: C.text }}>Google Analytics</strong> and the{' '}
+            <strong style={{ color: C.text }}>Meta Pixel</strong> to understand how the app is used and measure marketing performance.
+            These optional cookies and pixels are never loaded unless you click &quot;Accept All&quot; on our cookie banner.
             You can change your choice at any time in Settings → Privacy &amp; Cookies.
           </p>
           <p>
-            We do not use advertising cookies or sell your data to third-party trackers.
+            We do not sell your personal data to third-party trackers.
             See our <Link to="/cookies" style={{ color: C.accent }}>Cookie Policy</Link> for full details.
           </p>
         </Section>

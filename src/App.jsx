@@ -122,6 +122,7 @@ import PrivacyPolicyPage from "./pages/PrivacyPolicyPage.jsx";
 import TermsOfServicePage from "./pages/TermsOfServicePage.jsx";
 import CookiePolicyPage from "./pages/CookiePolicyPage.jsx";
 import { loadGoogleAnalytics, unloadGoogleAnalytics, trackPageview, trackEvent } from "./lib/analytics.js";
+import { loadMetaPixel, unloadMetaPixel, trackMetaPageView, trackMetaEvent } from "./lib/metaPixel.js";
 import { PLANS } from "./config/plans.js";
 
 // ─── DESIGN TOKENS ───────────────────────────────────────────────────────────
@@ -945,7 +946,10 @@ function AuthScreen({ defaultMode = "login" }) {
       options: { data: { name, agreed_to_terms_at: new Date().toISOString() } },
     });
     if (error) setError(error.message);
-    else trackEvent("sign_up", { method: "email" });
+    else {
+      trackEvent("sign_up", { method: "email" });
+      trackMetaEvent("CompleteRegistration");
+    }
     setLoading(false);
   };
 
@@ -1322,10 +1326,13 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
   useEffect(() => {
     if (!upgradeBanner) return;
     const plan = PLANS[subscription?.tier];
-    trackEvent("purchase", {
+    const payload = {
       currency: "EUR",
       value: plan?.monthlyPrice ?? plan?.price ?? 0,
-    });
+    };
+    trackEvent("purchase", payload);
+    trackMetaEvent("Purchase", payload);
+    trackMetaEvent("Subscribe", payload);
   }, [upgradeBanner, subscription?.tier]);
 
   const now = new Date();
@@ -4383,8 +4390,10 @@ export default function App() {
       if (!consent) return;
       if (consent.analytics === true) {
         loadGoogleAnalytics();
+        loadMetaPixel();
       } else if (consent.analytics === false) {
         unloadGoogleAnalytics();
+        unloadMetaPixel();
       }
     };
 
@@ -4396,6 +4405,7 @@ export default function App() {
   useEffect(() => {
     const path = user ? `/${page}` : location.pathname;
     trackPageview(path);
+    trackMetaPageView();
   }, [user, page, location.pathname]);
 
   useEffect(() => {
