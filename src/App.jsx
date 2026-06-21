@@ -121,6 +121,8 @@ import { useSubscriptionGate } from "./hooks/useSubscriptionGate.js";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage.jsx";
 import TermsOfServicePage from "./pages/TermsOfServicePage.jsx";
 import CookiePolicyPage from "./pages/CookiePolicyPage.jsx";
+import { loadGoogleAnalytics, unloadGoogleAnalytics, trackPageview, trackEvent } from "./lib/analytics.js";
+import { PLANS } from "./config/plans.js";
 
 // ─── DESIGN TOKENS ───────────────────────────────────────────────────────────
 // Deep obsidian dark, electric violet accent, warm amber for revenue,
@@ -154,11 +156,13 @@ const VENUE_TYPE_OPTIONS = [
 ];
 
 // ─── CLAUDE API (proxied through /api/scan) ──────────────────────────────────
-async function callClaude(prompt, systemPrompt, imageBase64, imageType = "image/jpeg") {
+async function callClaude(prompt, systemPrompt, imageBase64, imageType = "image/jpeg", userId) {
+  if (!userId) throw new Error("Not authenticated");
+
   const res = await fetch("/api/scan", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, systemPrompt, imageBase64, imageType }),
+    body: JSON.stringify({ prompt, systemPrompt, imageBase64, imageType, userId }),
   });
 
   if (!res.ok) {
@@ -172,6 +176,7 @@ async function callClaude(prompt, systemPrompt, imageBase64, imageType = "image/
 
 function getScanErrorMessage(error) {
   const msg = error?.message || "";
+  if (msg.includes("Free plan") || msg.includes("Scan limit reached")) return msg;
   if (msg.includes("429")) return "Too many requests. Please wait a moment and try again.";
   if (msg.includes("401")) return "API configuration error. Please contact support.";
   if (msg.includes("JSON")) return "Could not read document clearly. Try a sharper photo with better lighting.";
@@ -601,9 +606,9 @@ Rules:
 
 const INVOICE_SCAN_SYSTEM_PROMPT = "You are a precise OCR and data extraction engine specialized in Portuguese and Spanish supplier invoices. Extract data exactly as shown. Return only valid JSON.";
 
-async function extractInvoiceFromImage(file) {
+async function extractInvoiceFromImage(file, userId) {
   const b64 = await fileToBase64(file);
-  const raw = await callClaude(INVOICE_SCAN_PROMPT, INVOICE_SCAN_SYSTEM_PROMPT, b64, file.type);
+  const raw = await callClaude(INVOICE_SCAN_PROMPT, INVOICE_SCAN_SYSTEM_PROMPT, b64, file.type, userId);
   const clean = raw.replace(/```json|```/g, "").trim();
   return JSON.parse(clean);
 }
@@ -611,7 +616,7 @@ async function extractInvoiceFromImage(file) {
 function InvoiceScanReviewPanel({
   t, isMobile, venues, formVenueId, onVenueChange,
   extracted, editItems, onExtractedChange, onLineItemChange,
-  footer, hideVenue = false,
+  footer, hideVenue = false, hideDisclaimer = false,
 }) {
   const { subtotal, tax, total } = computeInvoiceReviewTotals(extracted, editItems);
   return (
@@ -627,7 +632,7 @@ function InvoiceScanReviewPanel({
         <Input label={t("invoices.invoiceNumber")} value={extracted.invoiceNumber || ""} onChange={v => onExtractedChange(p => ({ ...p, invoiceNumber: v }))} placeholder="INV-001" />
         <DateInput label={t("invoices.dueDate")} value={extracted.dueDate || ""} onChange={v => onExtractedChange(p => ({ ...p, dueDate: v }))} />
       </div>
-      <AiExtractionNotice variant="invoice" />
+      {!hideDisclaimer && <AiExtractionNotice variant="invoice" />}
       <div style={{ fontSize: 12, color: C.textSub, fontWeight: 600, marginBottom: 8 }}>{t("invoices.lineItems")}</div>
       <div className="scroll-x" style={{ border: `1px solid ${C.border}`, borderRadius: 9, overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 480 }}>
@@ -750,8 +755,14 @@ function AiExtractionNotice({ variant }) {
     }}>
       <span style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }}>⚠️</span>
       <span>
-        <strong style={{ color: C.text }}>{t("aiScan.disclaimerTitle")}</strong>{" "}
-        {variant === "invoice" ? t("aiScan.invoiceDisclaimer") : t("aiScan.salesDisclaimer")}
+        {variant === "batch" ? (
+          t("aiScan.batchDisclaimer")
+        ) : (
+          <>
+            <strong style={{ color: C.text }}>{t("aiScan.disclaimerTitle")}</strong>{" "}
+            {variant === "invoice" ? t("aiScan.invoiceDisclaimer") : t("aiScan.salesDisclaimer")}
+          </>
+        )}
       </span>
     </div>
   );
@@ -787,16 +798,69 @@ function EmptyState({ icon, title, sub, action }) {
   );
 }
 
-// ─── COOKIE CONSENT BANNER ───────────────────────────────────────────────────
-function CookieBanner() {
-  const [visible, setVisible] = useState(
-    () => localStorage.getItem("cookie_consent") !== "accepted"
-  );
+// ─── COOKIE CONSENT ──────────────────────────────────────────────────────────
+function readCookieConsent() {
+  try {
+    const raw = localStorage.getItem("cookie_consent");
+    if (!raw) return null;
+    if (raw === "accepted") return { essential: true, analytics: true };
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
 
-  const accept = () => {
-    localStorage.setItem("cookie_consent", "accepted");
+function ToggleSwitch({ checked, onChange, ariaLabel }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      onClick={() => onChange(!checked)}
+      style={{
+        width: 44,
+        height: 24,
+        borderRadius: 99,
+        border: "none",
+        cursor: "pointer",
+        background: checked ? C.accent : C.surfaceL,
+        position: "relative",
+        transition: "background .15s",
+        flexShrink: 0,
+        boxShadow: `inset 0 0 0 1px ${checked ? C.accent : C.border}`,
+      }}
+    >
+      <span style={{
+        position: "absolute",
+        top: 3,
+        left: checked ? 23 : 3,
+        width: 18,
+        height: 18,
+        borderRadius: "50%",
+        background: "#fff",
+        transition: "left .15s",
+      }} />
+    </button>
+  );
+}
+
+function CookieBanner() {
+  const [visible, setVisible] = useState(() => !readCookieConsent());
+
+  const setConsent = (analyticsAllowed) => {
+    const consent = {
+      essential: true,
+      analytics: analyticsAllowed,
+      timestamp: new Date().toISOString(),
+    };
+    localStorage.setItem("cookie_consent", JSON.stringify(consent));
     setVisible(false);
+    window.dispatchEvent(new CustomEvent("cookieConsentUpdated", { detail: consent }));
   };
+
+  const acceptAll = () => setConsent(true);
+  const rejectAnalytics = () => setConsent(false);
 
   if (!visible) return null;
 
@@ -804,28 +868,45 @@ function CookieBanner() {
     <div style={{
       position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 9999,
       background: C.surface, borderTop: `1px solid ${C.border}`,
-      padding: "14px 24px 14px",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      gap: 20, flexWrap: "wrap", fontSize: 13, color: C.textSub,
+      padding: "16px 24px",
       boxShadow: "0 -4px 24px #00000044",
     }}>
-      <span>
-        🍪 We use essential cookies to keep you signed in. No tracking or advertising cookies.
-      </span>
-      <div style={{ display: "flex", gap: 10, flexShrink: 0, alignItems: "center" }}>
-        <Link to="/cookies" style={{ fontSize: 13, color: C.accent, textDecoration: "none", fontWeight: 600 }}>
-          Cookie Policy
-        </Link>
-        <button
-          onClick={accept}
-          style={{
-            background: C.accent, color: "#fff", border: "none",
-            borderRadius: 8, padding: "8px 20px", fontWeight: 700,
-            fontSize: 13, cursor: "pointer",
-          }}
-        >
-          Accept
-        </button>
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "center",
+        gap: 20, flexWrap: "wrap", fontSize: 13, color: C.textSub,
+        maxWidth: 1000, margin: "0 auto",
+      }}>
+        <span style={{ flex: "1 1 320px" }}>
+          🍪 We use essential cookies to keep you signed in, and — only
+          with your permission — analytics cookies to understand how
+          the app is used and improve it.
+        </span>
+        <div style={{ display: "flex", gap: 10, flexShrink: 0, alignItems: "center", flexWrap: "wrap" }}>
+          <Link to="/cookies" style={{ fontSize: 13, color: C.accent, textDecoration: "none", fontWeight: 600 }}>
+            Cookie Policy
+          </Link>
+          <button
+            onClick={rejectAnalytics}
+            style={{
+              background: "transparent", color: C.textSub,
+              border: `1px solid ${C.border}`,
+              borderRadius: 8, padding: "8px 16px", fontWeight: 600,
+              fontSize: 13, cursor: "pointer",
+            }}
+          >
+            Reject Analytics
+          </button>
+          <button
+            onClick={acceptAll}
+            style={{
+              background: C.accent, color: "#fff", border: "none",
+              borderRadius: 8, padding: "8px 20px", fontWeight: 700,
+              fontSize: 13, cursor: "pointer",
+            }}
+          >
+            Accept All
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -864,6 +945,7 @@ function AuthScreen({ defaultMode = "login" }) {
       options: { data: { name, agreed_to_terms_at: new Date().toISOString() } },
     });
     if (error) setError(error.message);
+    else trackEvent("sign_up", { method: "email" });
     setLoading(false);
   };
 
@@ -1236,6 +1318,15 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
   useEffect(() => {
     if (isFree && range !== "7days") setRange("7days");
   }, [isFree, range]);
+
+  useEffect(() => {
+    if (!upgradeBanner) return;
+    const plan = PLANS[subscription?.tier];
+    trackEvent("purchase", {
+      currency: "EUR",
+      value: plan?.monthlyPrice ?? plan?.price ?? 0,
+    });
+  }, [upgradeBanner, subscription?.tier]);
 
   const now = new Date();
   const filtered = sales.filter(s => {
@@ -1796,7 +1887,7 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
       const b64 = await fileToBase64(file);
       const prompt = "Extract daily sales data from this receipt/ticket. Return ONLY valid JSON with fields: cash (number), card (number), total (number), date (YYYY-MM-DD or null), notes (string).";
       const systemPrompt = "You are a data extraction assistant for small business expense and sales management. Extract financial data from receipt images precisely. Return only valid JSON, no markdown.";
-      const result = await callClaude(prompt, systemPrompt, b64, file.type);
+      const result = await callClaude(prompt, systemPrompt, b64, file.type, subscription?.user_id);
       const clean = result.replace(/```json|```/g, "").trim();
       const data = JSON.parse(clean);
       setScanResult(data);
@@ -1809,10 +1900,10 @@ function SalesPage({ sales, addSale, updateSale, deleteSale, salesLoading, venue
         note: data.notes || prev.note,
       }));
       setScanMode(false);
-      const used = subscription?.scans_used_this_month ?? 0;
-      const newCount = used + 1;
-      supabase.from("subscriptions").update({ scans_used_this_month: newCount }).eq("user_id", subscription.user_id);
-      setSubscription(prev => ({ ...prev, scans_used_this_month: newCount }));
+      setSubscription(prev => ({
+        ...prev,
+        scans_used_this_month: (prev?.scans_used_this_month ?? 0) + 1,
+      }));
     } catch (e) {
       setScanError(getScanErrorMessage(e));
     }
@@ -2419,14 +2510,11 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
     fileInputRef.current?.click();
   };
 
-  const incrementScanUsage = () => {
-    setSubscription(prev => {
-      const newCount = (prev?.scans_used_this_month ?? 0) + 1;
-      if (prev?.user_id) {
-        supabase.from("subscriptions").update({ scans_used_this_month: newCount }).eq("user_id", prev.user_id);
-      }
-      return { ...prev, scans_used_this_month: newCount };
-    });
+  const bumpScanUsageOptimistic = () => {
+    setSubscription(prev => ({
+      ...prev,
+      scans_used_this_month: (prev?.scans_used_this_month ?? 0) + 1,
+    }));
   };
 
   const revokeQueueThumbs = (queue) => {
@@ -2477,11 +2565,12 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
       ));
 
       try {
-        const data = await extractInvoiceFromImage(queue[i].file);
+        const data = await extractInvoiceFromImage(queue[i].file, subscription?.user_id);
         setScanQueue(prev => prev.map((item, idx) =>
           idx === i ? { ...item, status: "done", result: data, editItems: data.items || [] } : item
         ));
-        incrementScanUsage();
+        bumpScanUsageOptimistic();
+        trackEvent("invoice_scanned");
       } catch (err) {
         setScanQueue(prev => prev.map((item, idx) =>
           idx === i ? { ...item, status: "error", error: getScanErrorMessage(err) } : item
@@ -2548,11 +2637,12 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
     ));
 
     try {
-      const data = await extractInvoiceFromImage(item.file);
+      const data = await extractInvoiceFromImage(item.file, subscription?.user_id);
       setScanQueue(prev => prev.map(q =>
         q.id === itemId ? { ...q, status: "done", result: data, editItems: data.items || [], error: null } : q
       ));
-      incrementScanUsage();
+      bumpScanUsageOptimistic();
+      trackEvent("invoice_scanned");
     } catch (err) {
       setScanQueue(prev => prev.map(q =>
         q.id === itemId ? { ...q, status: "error", error: getScanErrorMessage(err) } : q
@@ -2647,10 +2737,11 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
     setScanError("");
     setScanLoading(true);
     try {
-      const data = await extractInvoiceFromImage(file);
+      const data = await extractInvoiceFromImage(file, subscription?.user_id);
       setExtracted(data);
       setEditItems(data.items || []);
-      incrementScanUsage();
+      bumpScanUsageOptimistic();
+      trackEvent("invoice_scanned");
     } catch (e) {
       setScanError(getScanErrorMessage(e));
     }
@@ -2886,6 +2977,9 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
               </div>
             )}
             <VenueFormFields venues={venues} value={formVenueId} onChange={setFormVenueId} messageKey="invoices.selectVenueToSave" />
+            {currentScanIndex === -1 && batchDoneCount > 0 && (
+              <AiExtractionNotice variant="batch" />
+            )}
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
               {scanQueue.map(item => (
                 <div key={item.id} style={{ border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden", background: C.surfaceL }}>
@@ -2934,6 +3028,7 @@ function InvoicesPage({ invoices, addInvoice, updateInvoice, markInvoicePaid, su
                         onLineItemChange={(i, field, val) => updateQueueLineItem(item.id, i, field, val)}
                         footer={null}
                         hideVenue
+                        hideDisclaimer
                       />
                     </div>
                   )}
@@ -3714,6 +3809,21 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState("");
 
+  const [consent, setConsentState] = useState(() => readCookieConsent() || {});
+
+  useEffect(() => {
+    const syncConsent = (e) => setConsentState(e.detail || readCookieConsent() || {});
+    window.addEventListener("cookieConsentUpdated", syncConsent);
+    return () => window.removeEventListener("cookieConsentUpdated", syncConsent);
+  }, []);
+
+  const updateAnalyticsConsent = (allowed) => {
+    const updated = { essential: true, analytics: allowed, timestamp: new Date().toISOString() };
+    localStorage.setItem("cookie_consent", JSON.stringify(updated));
+    setConsentState(updated);
+    window.dispatchEvent(new CustomEvent("cookieConsentUpdated", { detail: updated }));
+  };
+
   const handleManageSubscription = async () => {
     setPortalLoading(true);
     setPortalError("");
@@ -3782,11 +3892,15 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
       await supabase.from("stock_items").delete().eq("user_id", user.id);
       await supabase.from("staff").delete().eq("user_id", user.id);
       await supabase.from("subscriptions").delete().eq("user_id", user.id);
-      // TODO: Automate Supabase auth user deletion here once ready.
-      // Options: (a) call a Vercel serverless function that uses the Supabase
-      // Admin API (supabaseAdmin.auth.admin.deleteUser(user.id)), or
-      // (b) create a Supabase Edge Function. For now, the auth record is
-      // deleted manually from the Supabase dashboard (Authentication → Users).
+      const res = await fetch("/api/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to fully delete account.");
+      }
       await supabase.auth.signOut();
     } catch (e) {
       setDeletingAccount(false);
@@ -4092,6 +4206,32 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
       </div>
 
       <div style={{ marginTop: 28 }}>
+        <h2 style={{ fontSize: 15, color: C.text, margin: "0 0 14px", fontWeight: 600 }}>Privacy & Cookies</h2>
+        <Card>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>
+            Privacy & Cookies
+          </div>
+          <div style={{ fontSize: 12, color: C.textSub, marginBottom: 14 }}>
+            Control which optional cookies we&apos;re allowed to use.{" "}
+            <Link to="/cookies" style={{ color: C.accent, textDecoration: "none", fontWeight: 600 }}>Cookie Policy</Link>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>Analytics cookies</div>
+              <div style={{ fontSize: 11, color: C.textMuted }}>
+                Helps us understand app usage to improve the product
+              </div>
+            </div>
+            <ToggleSwitch
+              checked={!!consent.analytics}
+              onChange={updateAnalyticsConsent}
+              ariaLabel="Analytics cookies"
+            />
+          </div>
+        </Card>
+      </div>
+
+      <div style={{ marginTop: 28 }}>
         <h2 style={{ fontSize: 15, color: C.text, margin: "0 0 14px", fontWeight: 600 }}>{t("settings.support")}</h2>
         <Card>
           <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 4 }}>{t("settings.contactSupport")}</div>
@@ -4236,6 +4376,27 @@ export default function App() {
     }
     return null;
   }, [venuesWithLockStatus]);
+
+  useEffect(() => {
+    const checkConsent = () => {
+      const consent = readCookieConsent();
+      if (!consent) return;
+      if (consent.analytics === true) {
+        loadGoogleAnalytics();
+      } else if (consent.analytics === false) {
+        unloadGoogleAnalytics();
+      }
+    };
+
+    checkConsent();
+    window.addEventListener("cookieConsentUpdated", checkConsent);
+    return () => window.removeEventListener("cookieConsentUpdated", checkConsent);
+  }, []);
+
+  useEffect(() => {
+    const path = user ? `/${page}` : location.pathname;
+    trackPageview(path);
+  }, [user, page, location.pathname]);
 
   useEffect(() => {
     if (!supabase) {

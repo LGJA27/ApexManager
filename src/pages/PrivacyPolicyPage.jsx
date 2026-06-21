@@ -43,7 +43,7 @@ export default function PrivacyPolicyPage() {
       <main style={{ maxWidth: 760, margin: '0 auto', padding: '52px 24px 80px' }}>
         <div style={{ marginBottom: 44 }}>
           <h1 style={{ fontSize: 30, fontWeight: 900, color: C.text, margin: '0 0 10px' }}>Privacy Policy</h1>
-          <p style={{ fontSize: 13, color: C.textMuted, margin: 0 }}>Last updated: June 2026</p>
+          <p style={{ fontSize: 13, color: C.textMuted, margin: 0 }}>Last updated: 15 June 2026</p>
         </div>
 
         <Section title="1. Who We Are">
@@ -79,7 +79,7 @@ export default function PrivacyPolicyPage() {
           </ul>
           <p><strong style={{ color: C.text }}>Usage data</strong></p>
           <ul style={{ paddingLeft: 20, margin: '6px 0 14px' }}>
-            <Li>Page views and feature interactions (collected by Supabase anonymous analytics, if enabled).</Li>
+            <Li>Page views and feature interactions, collected via Google Analytics only if you have given consent via our cookie banner.</Li>
             <Li>Authentication session metadata (login timestamps, session tokens).</Li>
           </ul>
           <p><strong style={{ color: C.text }}>Payment data</strong></p>
@@ -132,6 +132,15 @@ export default function PrivacyPolicyPage() {
               AI-extracted data may contain errors and should be reviewed by the user before relying on it for accounting or tax purposes.
               <a href="https://www.anthropic.com/privacy" target="_blank" rel="noreferrer" style={{ color: C.accent }}> Anthropic Privacy Policy →</a>
             </Li>
+            <Li>
+              <strong style={{ color: C.text }}>Google Ireland Limited
+              (Google Analytics)</strong> — Website usage analytics, only
+              active with your consent. Data is processed under the EU-U.S.
+              Data Privacy Framework. IP addresses are anonymized.{' '}
+              <a href="https://policies.google.com/privacy" target="_blank"
+              rel="noreferrer" style={{ color: C.accent }}> Google Privacy
+              Policy →</a>
+            </Li>
           </ul>
         </Section>
 
@@ -144,6 +153,7 @@ export default function PrivacyPolicyPage() {
             <Li><strong style={{ color: C.text }}>Right to data portability</strong> — You can export your data in a machine-readable format upon request.</Li>
             <Li><strong style={{ color: C.text }}>Right to object</strong> — You can object to the processing of your personal data in certain circumstances.</Li>
             <Li><strong style={{ color: C.text }}>Right to restrict processing</strong> — You can request that we limit how we use your data.</Li>
+            <Li><strong style={{ color: C.text }}>Right to withdraw consent</strong> — Where we rely on your consent (such as for analytics cookies), you may withdraw that consent at any time without affecting the lawfulness of processing before its withdrawal.</Li>
           </ul>
           <p style={{ marginTop: 14 }}>
             To exercise any of these rights, contact us at{' '}
@@ -170,7 +180,12 @@ export default function PrivacyPolicyPage() {
             This cookie is strictly necessary for the service to function and does not require consent under ePrivacy Directive rules.
           </p>
           <p>
-            We do not use advertising cookies, analytics cookies, or any third-party tracking cookies.
+            With your explicit consent, we also use <strong style={{ color: C.text }}>Google Analytics</strong> cookies to understand how the app is used.
+            Analytics cookies are optional — they are never loaded unless you click &quot;Accept All&quot; on our cookie banner.
+            You can change your choice at any time in Settings → Privacy &amp; Cookies.
+          </p>
+          <p>
+            We do not use advertising cookies or sell your data to third-party trackers.
             See our <Link to="/cookies" style={{ color: C.accent }}>Cookie Policy</Link> for full details.
           </p>
         </Section>

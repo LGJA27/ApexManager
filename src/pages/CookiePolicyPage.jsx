@@ -14,6 +14,10 @@ const C = {
   textMuted:'#55556A',
 };
 
+function Li({ children }) {
+  return <li style={{ marginBottom: 6 }}>{children}</li>;
+}
+
 function Section({ title, children }) {
   return (
     <section style={{ marginBottom: 44 }}>
@@ -41,7 +45,7 @@ export default function CookiePolicyPage() {
       <main style={{ maxWidth: 760, margin: '0 auto', padding: '52px 24px 80px' }}>
         <div style={{ marginBottom: 44 }}>
           <h1 style={{ fontSize: 30, fontWeight: 900, color: C.text, margin: '0 0 10px' }}>Cookie Policy</h1>
-          <p style={{ fontSize: 13, color: C.textMuted, margin: 0 }}>Last updated: June 2026</p>
+          <p style={{ fontSize: 13, color: C.textMuted, margin: 0 }}>Last updated: 15 June 2026</p>
         </div>
 
         {/* Quick summary */}
@@ -50,8 +54,10 @@ export default function CookiePolicyPage() {
           <div>
             <div style={{ fontWeight: 700, color: C.green, marginBottom: 4 }}>The short version</div>
             <div style={{ fontSize: 14, color: C.textSub, lineHeight: 1.7 }}>
-              We use <strong style={{ color: C.text }}>one single cookie</strong> — an authentication session cookie required
-              to keep you logged in. We use <strong style={{ color: C.text }}>no advertising, analytics, or tracking cookies</strong>.
+              We use <strong style={{ color: C.text }}>one essential authentication cookie</strong> required
+              to keep you logged in, and — only with your explicit consent — analytics
+              cookies from Google Analytics to help us understand how the app
+              is used. You can accept or decline analytics cookies at any time.
             </div>
           </div>
         </div>
@@ -105,12 +111,39 @@ export default function CookiePolicyPage() {
             We deliberately do not use any of the following:
           </p>
           <ul style={{ paddingLeft: 20, margin: '6px 0' }}>
+            <li style={{ marginBottom: 8 }}>✅ Analytics cookies (Google Analytics) — only with your consent</li>
             <li style={{ marginBottom: 8 }}>❌ Advertising or marketing cookies</li>
-            <li style={{ marginBottom: 8 }}>❌ Analytics cookies (e.g. Google Analytics, Meta Pixel)</li>
-            <li style={{ marginBottom: 8 }}>❌ Cross-site tracking cookies</li>
-            <li style={{ marginBottom: 8 }}>❌ Social media buttons that set cookies</li>
-            <li style={{ marginBottom: 8 }}>❌ Any third-party cookies on this domain</li>
+            <li style={{ marginBottom: 8 }}>❌ Social media tracking buttons</li>
+            <li style={{ marginBottom: 8 }}>❌ Cross-site tracking cookies sold to third parties</li>
           </ul>
+        </Section>
+
+        <Section title="Analytics Cookies (Optional)">
+          <p>
+            With your consent, we use <strong style={{ color: C.text }}>
+            Google Analytics</strong> to understand how visitors use
+            ApexManager — which pages are visited, how long sessions last,
+            and general usage patterns. This helps us improve the product.
+          </p>
+          <p>
+            Google Analytics sets the following cookies when you consent:
+          </p>
+          <ul style={{ paddingLeft: 20, margin: '6px 0' }}>
+            <Li><code>_ga</code> — Distinguishes unique users. Expires after 2 years.</Li>
+            <Li><code>_ga_[container-id]</code> — Persists session state. Expires after 2 years.</Li>
+          </ul>
+          <p>
+            We have enabled IP anonymization, so Google Analytics does not
+            store your full IP address. Data is processed by Google Ireland
+            Limited under the EU-U.S. Data Privacy Framework.
+          </p>
+          <p>
+            You can decline analytics cookies when you first visit, or
+            change your choice at any time in{' '}
+            <Link to="/settings" style={{ color: C.accent }}>Settings →
+            Privacy &amp; Cookies</Link> (if logged in), or by clicking
+            &quot;Cookie Policy&quot; in the footer to re-trigger the consent banner.
+          </p>
         </Section>
 
         <Section title="4. Legal Basis">
@@ -120,7 +153,12 @@ export default function CookiePolicyPage() {
             authentication cookie falls into this category.
           </p>
           <p>
-            We do not display a cookie consent banner because we have no non-essential cookies to ask consent for.
+            Analytics cookies are <strong style={{ color: C.text }}>not
+            essential</strong> and require your explicit, opt-in consent
+            under the ePrivacy Directive and GDPR. We only load Google
+            Analytics after you click &quot;Accept All&quot; on our cookie banner.
+            If you click &quot;Reject Analytics&quot; or take no action, these
+            cookies are never set.
           </p>
         </Section>
 
@@ -148,8 +186,9 @@ export default function CookiePolicyPage() {
 
         <Section title="6. Changes to This Policy">
           <p>
-            If we ever introduce new cookies (for example, an opt-in analytics service), we will update this policy,
-            update the "Last updated" date, and notify you by email if the new cookies require your consent.
+            If we introduce new cookies or change how we use existing ones, we will update this policy,
+            update the &quot;Last updated&quot; date, and — where required — ask for your consent again before
+            loading any new non-essential cookies.
           </p>
         </Section>
 

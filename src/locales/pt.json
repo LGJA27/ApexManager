@@ -277,6 +277,7 @@
     "disclaimerTitle": "A extração por IA não é perfeita.",
     "invoiceDisclaimer": "Fotos desfocadas, má iluminação ou faturas manuscritas podem causar erros de leitura. Verifique os dados do fornecedor, valores e impostos abaixo antes de guardar.",
     "salesDisclaimer": "Confirme que os valores de numerário, cartão e total abaixo correspondem ao seu recibo antes de guardar.",
+    "batchDisclaimer": "A extração por IA não é perfeita, especialmente com várias fotografias. Revise cada item abaixo antes de clicar em Guardar Tudo — toque em qualquer fatura digitalizada para verificar os detalhes.",
     "tipTitle": "Dica para melhores resultados:",
     "tipBody": "Tire fotos com boa iluminação, mantenha o recibo plano e certifique-se de que todo o texto está focado. Pode sempre editar qualquer detalhe após a digitalização."
   },

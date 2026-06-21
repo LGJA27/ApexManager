@@ -277,6 +277,7 @@
     "disclaimerTitle": "AI extraction isn't perfect.",
     "invoiceDisclaimer": "Blurry photos, poor lighting or handwritten invoices can cause reading errors. Please double-check the supplier details, amounts and tax values below before saving.",
     "salesDisclaimer": "Please verify the cash, card and total amounts below match your actual receipt before saving.",
+    "batchDisclaimer": "AI extraction isn't perfect, especially across multiple photos. Review each item below before clicking Save All — tap any scanned item to check its details.",
     "tipTitle": "Tip for best results:",
     "tipBody": "Take photos in good lighting, keep the receipt flat, and make sure all text is in focus. You can always edit any detail after scanning."
   },

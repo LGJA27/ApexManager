@@ -1,3 +1,5 @@
+import { createClient } from "@supabase/supabase-js";
+
 // Proxies Anthropic vision requests — set ANTHROPIC_API_KEY in Vercel env vars.
 
 export default async function handler(req, res) {
@@ -5,14 +7,43 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { imageBase64, imageType, prompt, systemPrompt } = req.body ?? {};
+  const { imageBase64, imageType, prompt, systemPrompt, userId } = req.body ?? {};
 
-  console.log("Scan request received, image size:",
-    imageBase64 ? Math.round(imageBase64.length / 1024) + "KB" : "none");
-  console.log("API key present:", !!process.env.ANTHROPIC_API_KEY);
+  if (!userId) {
+    return res.status(400).json({ error: "Missing userId" });
+  }
 
   if (!imageBase64 || !prompt) {
     return res.status(400).json({ error: "Missing imageBase64 or prompt" });
+  }
+
+  const supabaseUrl = process.env.VITE_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return res.status(500).json({ error: "Server misconfiguration: missing environment variables" });
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  const { data: sub } = await supabase
+    .from("subscriptions")
+    .select("tier, scan_limit, scans_used_this_month")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!sub || sub.tier === "free") {
+    return res.status(403).json({ error: "AI scanning is not available on the Free plan." });
+  }
+
+  const used = sub.scans_used_this_month ?? 0;
+  const limit = sub.scan_limit ?? 0;
+  if (used >= limit) {
+    return res.status(403).json({ error: "Scan limit reached for this billing period." });
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: "Server misconfiguration: missing ANTHROPIC_API_KEY" });
   }
 
   try {
@@ -59,6 +90,11 @@ export default async function handler(req, res) {
 
     const data = await response.json();
     const text = data.content?.map(b => b.text || "").join("") || "";
+
+    await supabase
+      .from("subscriptions")
+      .update({ scans_used_this_month: used + 1 })
+      .eq("user_id", userId);
 
     return res.status(200).json({ result: text });
   } catch (error) {
