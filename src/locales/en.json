@@ -38,7 +38,22 @@
     "checkEmailBody": "We've sent a confirmation link to:",
     "checkEmailSpam": "Didn't get it? Check your spam folder, or wait a minute and try registering again.",
     "backToSignIn": "← Back to Sign In",
-    "welcomeToast": "Welcome! Your account is ready 🎉"
+    "welcomeToast": "Welcome! Your account is ready 🎉",
+    "forgotPassword": "Forgot password?",
+    "forgotPasswordTitle": "Reset your password",
+    "forgotPasswordBody": "Enter your email and we'll send you a link to reset your password.",
+    "sendResetLink": "Send reset link",
+    "resetEmailTitle": "Check your inbox",
+    "resetEmailBody": "We've sent a password reset link to:",
+    "resetEmailSpam": "Didn't get it? Check your spam folder. Links expire after 1 hour.",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "updatePassword": "Update password",
+    "passwordUpdatedTitle": "Password updated",
+    "passwordUpdatedBody": "Your password has been changed. You can now sign in with your new password.",
+    "passwordMismatch": "Passwords do not match.",
+    "invalidResetLink": "This reset link is invalid or has expired.",
+    "requestNewLink": "Request a new link"
   },
   "dashboard": {
     "title": "Dashboard",

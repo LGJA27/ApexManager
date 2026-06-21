@@ -38,7 +38,22 @@
     "checkEmailBody": "Enviámos um link de confirmação para:",
     "checkEmailSpam": "Não recebeu? Verifique a pasta de spam, ou aguarde um minuto e tente registar-se novamente.",
     "backToSignIn": "← Voltar ao Login",
-    "welcomeToast": "Bem-vindo! A sua conta está pronta 🎉"
+    "welcomeToast": "Bem-vindo! A sua conta está pronta 🎉",
+    "forgotPassword": "Esqueceu a palavra-passe?",
+    "forgotPasswordTitle": "Repor palavra-passe",
+    "forgotPasswordBody": "Introduza o seu email e enviaremos um link para repor a palavra-passe.",
+    "sendResetLink": "Enviar link de reposição",
+    "resetEmailTitle": "Verifique o seu email",
+    "resetEmailBody": "Enviámos um link de reposição para:",
+    "resetEmailSpam": "Não recebeu? Verifique a pasta de spam. Os links expiram após 1 hora.",
+    "newPassword": "Nova palavra-passe",
+    "confirmPassword": "Confirmar palavra-passe",
+    "updatePassword": "Atualizar palavra-passe",
+    "passwordUpdatedTitle": "Palavra-passe atualizada",
+    "passwordUpdatedBody": "A sua palavra-passe foi alterada. Já pode entrar com a nova palavra-passe.",
+    "passwordMismatch": "As palavras-passe não coincidem.",
+    "invalidResetLink": "Este link é inválido ou expirou.",
+    "requestNewLink": "Pedir novo link"
   },
   "dashboard": {
     "title": "Painel",

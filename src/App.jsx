@@ -208,6 +208,11 @@ const fmt = (n, dec = 2) => (typeof n === "number" ? n : parseFloat(n) || 0).toL
 const fmtEur = n => `€${fmt(n)}`;
 const today = () => new Date().toISOString().split("T")[0];
 
+function getAppUrl() {
+  const url = import.meta.env.VITE_APP_URL || window.location.origin;
+  return url.replace(/\/$/, "");
+}
+
 function getTierBadgeStyle(tier) {
   const tiers = {
     trial: {
@@ -916,7 +921,7 @@ function CookieBanner() {
 // ─── AUTH SCREEN ─────────────────────────────────────────────────────────────
 function AuthScreen({ defaultMode = "login" }) {
   const { t } = useTranslation();
-  const [mode, setMode] = useState(defaultMode);
+  const [mode, setMode] = useState(defaultMode === "forgot" ? "login" : defaultMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -924,6 +929,8 @@ function AuthScreen({ defaultMode = "login" }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showConfirmEmailScreen, setShowConfirmEmailScreen] = useState(false);
+  const [showForgotPasswordScreen, setShowForgotPasswordScreen] = useState(defaultMode === "forgot");
+  const [showResetEmailSent, setShowResetEmailSent] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [toast, setToast] = useState("");
 
@@ -932,7 +939,13 @@ function AuthScreen({ defaultMode = "login" }) {
     setTimeout(() => setToast(""), 2500);
   };
 
-  const switchMode = (m) => { setMode(m); setError(""); setTermsAgreed(false); };
+  const switchMode = (m) => {
+    setMode(m);
+    setError("");
+    setTermsAgreed(false);
+    setShowForgotPasswordScreen(false);
+    setShowResetEmailSent(false);
+  };
 
   const login = async () => {
     if (!email || !password) return;
@@ -940,6 +953,24 @@ function AuthScreen({ defaultMode = "login" }) {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) setError(error.message);
+    setLoading(false);
+  };
+
+  const sendPasswordReset = async () => {
+    if (!email) return setError(t("auth.fillFields"));
+    setError("");
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${getAppUrl()}/reset-password`,
+    });
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+    setRegisteredEmail(email);
+    setShowForgotPasswordScreen(false);
+    setShowResetEmailSent(true);
     setLoading(false);
   };
 
@@ -977,12 +1008,92 @@ function AuthScreen({ defaultMode = "login" }) {
 
   const handleKeyDown = (e) => {
     if (e.key !== "Enter" || loading) return;
-    if (mode === "login") {
+    if (showForgotPasswordScreen) {
+      sendPasswordReset();
+    } else if (mode === "login") {
       login();
     } else {
       register();
     }
   };
+
+  if (showResetEmailSent) {
+    return (
+      <>
+        <Toast message={toast} />
+        <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+              <Logo size={40} />
+            </div>
+            <Card>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>🔑</div>
+              <h2 style={{ fontSize: 20, color: C.text, margin: "0 0 12px" }}>
+                {t("auth.resetEmailTitle")}
+              </h2>
+              <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.6, margin: "0 0 8px" }}>
+                {t("auth.resetEmailBody")}
+              </p>
+              <p style={{ fontSize: 15, color: C.accent, fontWeight: 600, margin: "0 0 24px" }}>
+                {registeredEmail}
+              </p>
+              <p style={{ fontSize: 12, color: C.textMuted, marginBottom: 20 }}>
+                {t("auth.resetEmailSpam")}
+              </p>
+              <Btn variant="ghost" onClick={() => {
+                setShowResetEmailSent(false);
+                setMode("login");
+              }} style={{ width: "100%", justifyContent: "center" }}>
+                {t("auth.backToSignIn")}
+              </Btn>
+            </Card>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (showForgotPasswordScreen) {
+    return (
+      <>
+        <Toast message={toast} />
+        <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ width: "100%", maxWidth: 400 }}>
+            <div style={{ textAlign: "center", marginBottom: 36 }}>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
+                <Logo size={40} />
+              </div>
+              <p style={{ color: C.textSub, margin: 0, fontSize: 14 }}>{t("auth.tagline")}</p>
+            </div>
+            <Card>
+              <h2 style={{ fontSize: 18, color: C.text, margin: "0 0 8px" }}>{t("auth.forgotPasswordTitle")}</h2>
+              <p style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, margin: "0 0 20px" }}>
+                {t("auth.forgotPasswordBody")}
+              </p>
+              <div onKeyDown={handleKeyDown}>
+                <Input label={t("auth.email")} value={email} onChange={setEmail} type="email" placeholder="you@yourbusiness.com" />
+              </div>
+              {error && <div style={{ color: C.red, fontSize: 12, marginTop: 12 }}>⚠ {error}</div>}
+              <Btn
+                onClick={sendPasswordReset}
+                loading={loading}
+                style={{ width: "100%", justifyContent: "center", marginTop: 16 }}
+                size="lg"
+              >
+                {t("auth.sendResetLink")}
+              </Btn>
+              <Btn variant="ghost" onClick={() => {
+                setShowForgotPasswordScreen(false);
+                setError("");
+              }} style={{ width: "100%", justifyContent: "center", marginTop: 8 }}>
+                {t("auth.backToSignIn")}
+              </Btn>
+            </Card>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   if (showConfirmEmailScreen) {
     return (
@@ -1045,6 +1156,17 @@ function AuthScreen({ defaultMode = "login" }) {
             {mode === "register" && <Input label={t("auth.fullName")} value={name} onChange={setName} placeholder="João Silva" />}
             <Input label={t("auth.email")} value={email} onChange={setEmail} type="email" placeholder="you@yourbusiness.com" />
             <Input label={t("auth.password")} value={password} onChange={setPassword} type="password" placeholder="••••••••" />
+            {mode === "login" && (
+              <div style={{ textAlign: "right", marginTop: -8 }}>
+                <button
+                  type="button"
+                  onClick={() => { setError(""); setShowForgotPasswordScreen(true); }}
+                  style={{ background: "none", border: "none", color: C.accent, fontSize: 12, cursor: "pointer", padding: 0 }}
+                >
+                  {t("auth.forgotPassword")}
+                </button>
+              </div>
+            )}
           </div>
           {mode === "register" && (
             <label style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 16, cursor: "pointer" }}>
@@ -1076,6 +1198,138 @@ function AuthScreen({ defaultMode = "login" }) {
         </Card>
             </div>
     </div>
+    </>
+  );
+}
+
+function ResetPasswordScreen() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const verifySession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!cancelled) {
+        setSessionReady(!!session);
+        setChecking(false);
+      }
+    };
+
+    verifySession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || session) {
+        setSessionReady(!!session);
+        setChecking(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const updatePassword = async () => {
+    if (!password || !confirmPassword) return setError(t("auth.fillFields"));
+    if (password.length < 6) return setError(t("auth.passwordLength"));
+    if (password !== confirmPassword) return setError(t("auth.passwordMismatch"));
+    setError("");
+    setLoading(true);
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+    if (updateError) {
+      setError(updateError.message);
+      setLoading(false);
+      return;
+    }
+    await supabase.auth.signOut();
+    window.history.replaceState({}, "", "/reset-password");
+    setSuccess(true);
+    setLoading(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key !== "Enter" || loading || !sessionReady || success) return;
+    updatePassword();
+  };
+
+  const authShell = (content) => (
+    <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ width: "100%", maxWidth: 400 }}>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
+            <Logo size={40} />
+          </div>
+          <p style={{ color: C.textSub, margin: 0, fontSize: 14 }}>{t("auth.tagline")}</p>
+        </div>
+        <Card>{content}</Card>
+      </div>
+    </div>
+  );
+
+  if (checking) {
+    return authShell(<div style={{ display: "flex", justifyContent: "center", padding: 24 }}><Spinner size={28} /></div>);
+  }
+
+  if (success) {
+    return authShell(
+      <>
+        <div style={{ fontSize: 48, marginBottom: 16, textAlign: "center" }}>✅</div>
+        <h2 style={{ fontSize: 20, color: C.text, margin: "0 0 12px", textAlign: "center" }}>
+          {t("auth.passwordUpdatedTitle")}
+        </h2>
+        <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.6, margin: "0 0 24px", textAlign: "center" }}>
+          {t("auth.passwordUpdatedBody")}
+        </p>
+        <Btn onClick={() => navigate("/signin")} style={{ width: "100%", justifyContent: "center" }} size="lg">
+          {t("auth.signIn")}
+        </Btn>
+      </>
+    );
+  }
+
+  if (!sessionReady) {
+    return authShell(
+      <>
+        <div style={{ fontSize: 48, marginBottom: 16, textAlign: "center" }}>⚠️</div>
+        <h2 style={{ fontSize: 18, color: C.text, margin: "0 0 12px", textAlign: "center" }}>
+          {t("auth.invalidResetLink")}
+        </h2>
+        <Btn onClick={() => navigate("/forgot-password")} style={{ width: "100%", justifyContent: "center", marginBottom: 8 }} size="lg">
+          {t("auth.requestNewLink")}
+        </Btn>
+        <Btn variant="ghost" onClick={() => navigate("/signin")} style={{ width: "100%", justifyContent: "center" }}>
+          {t("auth.backToSignIn")}
+        </Btn>
+      </>
+    );
+  }
+
+  return authShell(
+    <>
+      <h2 style={{ fontSize: 18, color: C.text, margin: "0 0 20px" }}>{t("auth.forgotPasswordTitle")}</h2>
+      <div onKeyDown={handleKeyDown} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <Input label={t("auth.newPassword")} value={password} onChange={setPassword} type="password" placeholder="••••••••" />
+        <Input label={t("auth.confirmPassword")} value={confirmPassword} onChange={setConfirmPassword} type="password" placeholder="••••••••" />
+      </div>
+      {error && <div style={{ color: C.red, fontSize: 12, marginTop: 12 }}>⚠ {error}</div>}
+      <Btn
+        onClick={updatePassword}
+        loading={loading}
+        style={{ width: "100%", justifyContent: "center", marginTop: 16 }}
+        size="lg"
+      >
+        {t("auth.updatePassword")}
+      </Btn>
     </>
   );
 }
@@ -4916,6 +5170,10 @@ export default function App() {
 
   if (!supabaseConfigured) return <DeploymentConfigNotice />;
 
+  if (location.pathname === "/reset-password") {
+    return <><ResetPasswordScreen /><CookieBanner /></>;
+  }
+
   if (authLoading || venuesLoading) {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -4930,6 +5188,7 @@ export default function App() {
     let PageEl;
     if (path === "/signin")   PageEl = <AuthScreen defaultMode="login" />;
     else if (path === "/register") PageEl = <AuthScreen defaultMode="register" />;
+    else if (path === "/forgot-password") PageEl = <AuthScreen defaultMode="forgot" />;
     else if (path === "/privacy")  PageEl = <PrivacyPolicyPage />;
     else if (path === "/terms")    PageEl = <TermsOfServicePage />;
     else if (path === "/cookies")  PageEl = <CookiePolicyPage />;
