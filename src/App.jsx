@@ -1332,7 +1332,6 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
     };
     trackEvent("purchase", payload);
     trackMetaEvent("Purchase", payload);
-    trackMetaEvent("Subscribe", payload);
   }, [upgradeBanner, subscription?.tier]);
 
   const now = new Date();
