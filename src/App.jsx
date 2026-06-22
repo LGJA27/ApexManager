@@ -122,7 +122,7 @@ import PrivacyPolicyPage from "./pages/PrivacyPolicyPage.jsx";
 import TermsOfServicePage from "./pages/TermsOfServicePage.jsx";
 import CookiePolicyPage from "./pages/CookiePolicyPage.jsx";
 import { loadGoogleAnalytics, unloadGoogleAnalytics, trackPageview, trackEvent } from "./lib/analytics.js";
-import { loadMetaPixel, unloadMetaPixel, trackMetaPageView, trackMetaEvent } from "./lib/metaPixel.js";
+import { loadMetaPixel, unloadMetaPixel, trackMetaPageView, trackMetaEvent, trackMetaPurchase, PENDING_PURCHASE_KEY } from "./lib/metaPixel.js";
 import { PLANS } from "./config/plans.js";
 
 // ─── DESIGN TOKENS ───────────────────────────────────────────────────────────
@@ -1625,13 +1625,13 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
   const { isFree } = useSubscriptionGate(subscription);
   const [upgradePrompt, setUpgradePrompt] = useState(null);
   const [range, setRange] = useState(isFree ? "7days" : "month");
-  const [upgradeBanner, setUpgradeBanner] = useState(() => {
+  const PAID_TIERS = ["starter", "growth", "pro"];
+  const [upgradeCheckout, setUpgradeCheckout] = useState(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("upgraded") === "true") {
-      window.history.replaceState({}, "", window.location.pathname);
-      return true;
-    }
-    return false;
+    if (params.get("upgraded") !== "true") return null;
+    const sessionId = params.get("session_id");
+    window.history.replaceState({}, "", window.location.pathname);
+    return { sessionId };
   });
 
   useEffect(() => {
@@ -1639,15 +1639,38 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
   }, [isFree, range]);
 
   useEffect(() => {
-    if (!upgradeBanner) return;
-    const plan = PLANS[subscription?.tier];
-    const payload = {
+    if (!upgradeCheckout) return;
+
+    let pending = null;
+    try {
+      const raw = sessionStorage.getItem(PENDING_PURCHASE_KEY);
+      pending = raw ? JSON.parse(raw) : null;
+    } catch { /* ignore corrupt storage */ }
+
+    const tierFromSub = PAID_TIERS.includes(subscription?.tier) ? subscription.tier : null;
+    const tier = tierFromSub || pending?.tier;
+    if (!tier) return;
+
+    const plan = PLANS[tier];
+    if (!plan) return;
+
+    const value = pending?.value ?? plan.monthlyPrice ?? plan.price ?? 0;
+    const content_name = pending?.planName ?? `${plan.name} Plan`;
+    const dedupId = upgradeCheckout.sessionId || `${tier}_${pending?.billing || "monthly"}_${value}`;
+
+    const tracked = trackMetaPurchase({
+      value,
       currency: "EUR",
-      value: plan?.monthlyPrice ?? plan?.price ?? 0,
-    };
-    trackEvent("purchase", payload);
-    trackMetaEvent("Purchase", payload);
-  }, [upgradeBanner, subscription?.tier]);
+      content_name,
+      content_type: "product",
+      dedupId,
+    });
+
+    if (tracked) {
+      trackEvent("purchase", { currency: "EUR", value, items: [{ item_name: content_name }] });
+      sessionStorage.removeItem(PENDING_PURCHASE_KEY);
+    }
+  }, [upgradeCheckout, subscription?.tier]);
 
   const now = new Date();
   const filtered = sales.filter(s => {
@@ -1753,12 +1776,12 @@ function DashboardPage({ venues, sales, expenses, invoices, venue, subscription,
 
   return (
     <div style={{ padding: pad, width: "100%", boxSizing: "border-box" }}>
-      {upgradeBanner && (
+      {upgradeCheckout && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: C.greenDim, border: `1px solid ${C.green}44`, borderRadius: 10, padding: "12px 14px", marginBottom: 16, fontSize: 13 }}>
           <span style={{ color: C.green, fontWeight: 600 }}>
             🎉 Welcome to <span style={{ textTransform: "capitalize" }}>{subscription?.tier}</span>! Your plan is now active.
           </span>
-          <button onClick={() => setUpgradeBanner(false)} style={{ background: "none", border: "none", color: C.green, cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "0 4px" }}>×</button>
+          <button onClick={() => setUpgradeCheckout(null)} style={{ background: "none", border: "none", color: C.green, cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "0 4px" }}>×</button>
         </div>
       )}
       <AllVenuesBanner venue={venue} />

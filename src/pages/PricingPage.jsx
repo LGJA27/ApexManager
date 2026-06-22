@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PLANS } from '../config/plans.js';
+import { PENDING_PURCHASE_KEY } from '../lib/metaPixel.js';
 import { useSubscriptionGate } from '../hooks/useSubscriptionGate.js';
 import TrialBanner from '../components/TrialBanner.jsx';
 
@@ -50,6 +51,16 @@ export default function PricingPage({ user, subscription }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Checkout failed');
+
+      const price = billing === 'monthly' ? plan.monthlyPrice : plan.annualPrice;
+      sessionStorage.setItem(PENDING_PURCHASE_KEY, JSON.stringify({
+        tier: planKey,
+        planName: `${plan.name} Plan`,
+        billing,
+        value: price,
+        currency: 'EUR',
+      }));
+
       window.location.href = data.url;
     } catch (err) {
       setError(err.message);

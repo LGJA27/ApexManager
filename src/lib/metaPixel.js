@@ -42,3 +42,23 @@ export function trackMetaPageView() {
 export function trackMetaEvent(name, params = {}) {
   if (window.fbq) window.fbq("track", name, params);
 }
+
+export const PENDING_PURCHASE_KEY = "apex_pending_purchase";
+
+/** Fire Meta Purchase once per unique checkout (deduped via sessionStorage). */
+export function trackMetaPurchase({ value, currency = "EUR", content_name, content_type = "product", dedupId }) {
+  if (!dedupId || !window.fbq) return false;
+
+  const key = `apex_meta_purchase_${dedupId}`;
+  if (sessionStorage.getItem(key)) return false;
+
+  window.fbq("track", "Purchase", {
+    value: Number(value),
+    currency,
+    content_name,
+    content_type,
+  });
+
+  sessionStorage.setItem(key, "1");
+  return true;
+}

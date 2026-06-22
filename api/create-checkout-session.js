@@ -54,7 +54,7 @@ export default async function handler(req, res) {
       mode: "subscription",
       customer: stripeCustomerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appUrl}/dashboard?upgraded=true`,
+      success_url: `${appUrl.replace(/\/$/, "")}/dashboard?upgraded=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/pricing`,
       // Trial is handled in-app at signup (DB trigger), not via Stripe trial
       allow_promotion_codes: true,
