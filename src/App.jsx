@@ -4108,8 +4108,9 @@ function VenueGate({ onCreated }) {
 }
 
 // ─── SETTINGS PAGE ───────────────────────────────────────────────────────────
-function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPage }) {
+function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPage, onAccountDeleted }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const w = useWindowWidth();
   const isMobile = w < 768;
   const [showAdd, setShowAdd] = useState(false);
@@ -4204,28 +4205,30 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
     setDeletingAccount(true);
     setDeleteAccountError("");
     try {
-      // Delete all venues — CASCADE handles sales, invoices, expenses automatically
-      for (const v of venues) {
-        await supabase.from("venues").delete().eq("id", v.id);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error(t("settings.deleteAccountSessionExpired"));
       }
-      // Delete suppliers and stock items without venue (legacy rows)
-      await supabase.from("suppliers").delete().eq("user_id", user.id);
-      await supabase.from("stock_items").delete().eq("user_id", user.id);
-      await supabase.from("staff").delete().eq("user_id", user.id);
-      await supabase.from("subscriptions").delete().eq("user_id", user.id);
+
       const res = await fetch("/api/delete-account", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id }),
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to fully delete account.");
+        throw new Error(data.error || t("settings.deleteAccountFailed"));
       }
+
+      setShowDeleteAccount(false);
+      sessionStorage.setItem("apex_account_deleted", "1");
       await supabase.auth.signOut();
+      onAccountDeleted?.();
+      navigate("/");
     } catch (e) {
       setDeletingAccount(false);
-      setDeleteAccountError(e.message || "Deletion failed. Please try again.");
+      setDeleteAccountError(e.message || t("settings.deleteAccountFailed"));
     }
   };
 
@@ -4664,10 +4667,12 @@ function DeploymentConfigNotice() {
 
 export default function App() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(supabaseConfigured);
   const [welcomeToast, setWelcomeToast] = useState("");
+  const [accountDeletedToast, setAccountDeletedToast] = useState("");
   const [page, setPage] = useState("dashboard");
   const [invoicesInitialFilter, setInvoicesInitialFilter] = useState(null);
   const [venues, setVenues] = useState([]);
@@ -4752,6 +4757,15 @@ export default function App() {
     sessionStorage.removeItem("apex_welcome_toast");
     setWelcomeToast(t("auth.welcomeToast"));
     const id = setTimeout(() => setWelcomeToast(""), 2500);
+    return () => clearTimeout(id);
+  }, [user, t]);
+
+  useEffect(() => {
+    if (user) return;
+    if (sessionStorage.getItem("apex_account_deleted") !== "1") return;
+    sessionStorage.removeItem("apex_account_deleted");
+    setAccountDeletedToast(t("settings.deleteAccountSuccess"));
+    const id = setTimeout(() => setAccountDeletedToast(""), 3000);
     return () => clearTimeout(id);
   }, [user, t]);
 
@@ -5113,6 +5127,13 @@ export default function App() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    navigate("/");
+  };
+
+  const handleAccountDeleted = () => {
+    setVenues([]);
+    setVenueId("");
+    setPage("dashboard");
   };
 
   const handleVenueChange = useCallback((id) => {
@@ -5194,7 +5215,7 @@ export default function App() {
     else if (path === "/cookies")  PageEl = <CookiePolicyPage />;
     else if (path === "/")         PageEl = <LandingPage />;
     else PageEl = <AuthScreen defaultMode="login" />;
-    return <>{PageEl}<CookieBanner /></>;
+    return <>{PageEl}<CookieBanner /><Toast message={accountDeletedToast} /></>;
   }
 
   // also allow authenticated users to view legal pages
@@ -5249,7 +5270,7 @@ export default function App() {
           {page === "stock" && <StockPage stockItems={stockItems} addStockItem={addStockItem} updateStockItem={updateStockItem} deleteStockItem={deleteStockItem} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
           {page === "staff" && <StaffPage staff={staff} addStaff={addStaff} updateStaff={updateStaff} deleteStaff={deleteStaff} venue={venue} venues={venuesWithLockStatus} onVenueChange={handleVenueChange} />}
           {page === "analytics" && <AnalyticsPage sales={sales} expenses={expenses} invoices={invoices} venues={venuesWithLockStatus} venue={venue} onVenueChange={handleVenueChange} staff={staff} suppliers={suppliers} stockItems={stockItems} subscription={subscription} setPage={setPage} />}
-          {page === "settings" && <SettingsPage venues={venuesWithLockStatus} addVenue={addVenue} deleteVenue={deleteVenue} user={user} subscription={subscription} setPage={setPage} />}
+          {page === "settings" && <SettingsPage venues={venuesWithLockStatus} addVenue={addVenue} deleteVenue={deleteVenue} user={user} subscription={subscription} setPage={setPage} onAccountDeleted={handleAccountDeleted} />}
           {page === "pricing" && <PricingPage user={user} subscription={subscription} />}
         </div>
       </main>

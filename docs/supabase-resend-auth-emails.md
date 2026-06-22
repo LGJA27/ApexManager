@@ -355,7 +355,7 @@ Reset your ApexManager password
           <!-- Header / Logo -->
           <tr>
             <td align="center" style="padding:32px 32px 24px;">
-              <img src="https://apexmanager.app/icons/icon-192.png" width="48" height="48" alt="ApexManager" style="display:block;border-radius:10px;" />
+              <img src="https://apexmanager.app/images/email-logo.png" width="48" height="48" alt="ApexManager" style="display:block;border-radius:10px;" />
               <p style="margin:12px 0 0;font-size:20px;line-height:1.2;letter-spacing:-0.3px;">
                 <span style="color:#F0F0F8;font-weight:700;">Apex</span><span style="color:#863bff;font-weight:300;">Manager</span>
               </p>
