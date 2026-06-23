@@ -45,7 +45,7 @@ export default function CookiePolicyPage() {
       <main style={{ maxWidth: 760, margin: '0 auto', padding: '52px 24px 80px' }}>
         <div style={{ marginBottom: 44 }}>
           <h1 style={{ fontSize: 30, fontWeight: 900, color: C.text, margin: '0 0 10px' }}>Cookie Policy</h1>
-          <p style={{ fontSize: 13, color: C.textMuted, margin: 0 }}>Last updated: 15 June 2026</p>
+          <p style={{ fontSize: 13, color: C.textMuted, margin: 0 }}>Last updated: 23 June 2026</p>
         </div>
 
         {/* Quick summary */}
@@ -56,9 +56,10 @@ export default function CookiePolicyPage() {
             <div style={{ fontSize: 14, color: C.textSub, lineHeight: 1.7 }}>
               We use <strong style={{ color: C.text }}>one essential authentication cookie</strong> required
               to keep you logged in, and — only with your explicit consent — analytics
-              and marketing cookies (Google Analytics and Meta Pixel) to help us understand
-              how the app is used and measure advertising performance. You can accept or
-              decline these optional cookies at any time.
+              and marketing technologies (Google Analytics, Meta Pixel, and Meta
+              Conversions API) to help us understand how the app is used and measure
+              advertising performance. You can accept or decline these optional
+              technologies at any time.
             </div>
           </div>
         </div>
@@ -114,6 +115,7 @@ export default function CookiePolicyPage() {
           <ul style={{ paddingLeft: 20, margin: '6px 0' }}>
             <li style={{ marginBottom: 8 }}>✅ Analytics cookies (Google Analytics) — only with your consent</li>
             <li style={{ marginBottom: 8 }}>✅ Marketing pixels (Meta Pixel) — only with your consent</li>
+            <li style={{ marginBottom: 8 }}>✅ Server-side conversion events (Meta Conversions API) — only with your consent</li>
             <li style={{ marginBottom: 8 }}>❌ Third-party advertising cookies without your consent</li>
             <li style={{ marginBottom: 8 }}>❌ Cross-site tracking cookies sold to third parties</li>
           </ul>
@@ -147,21 +149,35 @@ export default function CookiePolicyPage() {
           </p>
         </Section>
 
-        <Section title="Marketing Pixels (Optional)">
+        <Section title="Marketing Pixels &amp; Conversions API (Optional)">
           <p>
-            With your consent, we use the <strong style={{ color: C.text }}>Meta Pixel</strong> (Facebook)
-            to measure whether our advertising is effective and to understand conversions such as
-            sign-ups and subscriptions. This helps us improve our marketing without showing you
-            unrelated ads on other websites based on your ApexManager usage.
+            With your consent, we use <strong style={{ color: C.text }}>Meta</strong> (Facebook/Instagram)
+            marketing tools to measure whether our advertising is effective and to understand conversions such as
+            sign-ups and subscriptions.
           </p>
+          <p><strong style={{ color: C.text }}>Browser Pixel</strong></p>
           <p>
-            Meta may set the following cookies when you consent:
+            The Meta Pixel runs in your browser when you consent. It may set:
           </p>
-          <ul style={{ paddingLeft: 20, margin: '6px 0' }}>
+          <ul style={{ paddingLeft: 20, margin: '6px 0 14px' }}>
             <Li><code>_fbp</code> — Browser identifier used by Meta for attribution. Expires after 90 days.</Li>
             <Li><code>_fbc</code> — Stores click identifiers when you arrive from a Meta ad. Expires after 90 days.</Li>
           </ul>
+          <p><strong style={{ color: C.text }}>Conversions API (server-side)</strong></p>
           <p>
+            When you complete a conversion action (such as registering or subscribing), our server may also
+            send a matching event to Meta. This improves measurement accuracy when browser tracking is limited.
+            We only send these events if you have consented. Data sent may include:
+          </p>
+          <ul style={{ paddingLeft: 20, margin: '6px 0' }}>
+            <Li>Event name and time (e.g. CompleteRegistration, Purchase)</Li>
+            <Li>Page URL where the action occurred</Li>
+            <Li>Your email address in hashed form (SHA-256 — Meta cannot read the plain email)</Li>
+            <Li>IP address and browser user agent (for matching)</Li>
+            <Li><code>_fbp</code> and <code>_fbc</code> cookie values when present</Li>
+          </ul>
+          <p>
+            Browser and server events use a shared event ID so Meta counts each conversion once.
             Data is processed by <strong style={{ color: C.text }}>Meta Platforms Ireland Limited</strong>.
             See Meta&apos;s privacy policy for details on international transfers and your rights.
           </p>
@@ -177,9 +193,10 @@ export default function CookiePolicyPage() {
             Analytics cookies are <strong style={{ color: C.text }}>not
             essential</strong> and require your explicit, opt-in consent
             under the ePrivacy Directive and GDPR. We only load Google
-            Analytics and the Meta Pixel after you click &quot;Accept All&quot; on our cookie banner.
+            Analytics and marketing technologies (Google Analytics, Meta Pixel, and Meta Conversions API)
+            after you click &quot;Accept All&quot; on our cookie banner.
             If you click &quot;Reject Analytics&quot; or take no action, these
-            cookies are never set.
+            are never activated.
           </p>
         </Section>
 

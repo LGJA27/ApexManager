@@ -43,7 +43,7 @@ export default function PrivacyPolicyPage() {
       <main style={{ maxWidth: 760, margin: '0 auto', padding: '52px 24px 80px' }}>
         <div style={{ marginBottom: 44 }}>
           <h1 style={{ fontSize: 30, fontWeight: 900, color: C.text, margin: '0 0 10px' }}>Privacy Policy</h1>
-          <p style={{ fontSize: 13, color: C.textMuted, margin: 0 }}>Last updated: 15 June 2026</p>
+          <p style={{ fontSize: 13, color: C.textMuted, margin: 0 }}>Last updated: 23 June 2026</p>
         </div>
 
         <Section title="1. Who We Are">
@@ -79,7 +79,8 @@ export default function PrivacyPolicyPage() {
           </ul>
           <p><strong style={{ color: C.text }}>Usage data</strong></p>
           <ul style={{ paddingLeft: 20, margin: '6px 0 14px' }}>
-            <Li>Page views and feature interactions, collected via Google Analytics and the Meta Pixel only if you have given consent via our cookie banner.</Li>
+            <Li>Page views and feature interactions, collected via Google Analytics and Meta (browser Pixel and Conversions API) only if you have given consent via our cookie banner.</Li>
+            <Li>For marketing attribution, with your consent we may send hashed email, IP address, browser user agent, and cookie identifiers to Meta for conversion matching.</Li>
             <Li>Authentication session metadata (login timestamps, session tokens).</Li>
           </ul>
           <p><strong style={{ color: C.text }}>Payment data</strong></p>
@@ -96,6 +97,7 @@ export default function PrivacyPolicyPage() {
             <Li>To process subscription payments through Stripe.</Li>
             <Li>To send transactional emails (e.g., account confirmation, password reset).</Li>
             <Li>To respond to support requests.</Li>
+            <Li>To measure advertising performance and optimize campaigns (only with your consent, via Google Analytics and Meta).</Li>
           </ul>
           <p style={{ marginTop: 14 }}>
             We do not sell, rent, or share your personal data with third parties for marketing purposes.
@@ -143,9 +145,13 @@ export default function PrivacyPolicyPage() {
             </Li>
             <Li>
               <strong style={{ color: C.text }}>Meta Platforms Ireland Limited
-              (Meta Pixel)</strong> — Marketing and conversion measurement,
-              only active with your consent. Used to measure sign-ups and
-              subscriptions from advertising campaigns.{' '}
+              (Meta Pixel &amp; Conversions API)</strong> — Marketing and conversion
+              measurement, only active with your consent. We send conversion events
+              from your browser (Pixel) and from our server (Conversions API) to
+              measure sign-ups and subscriptions from advertising. Data may include
+              hashed email, IP address, browser user agent, page URL, and Meta cookie
+              identifiers (_fbp, _fbc). Data may be transferred to Meta in the United
+              States under Meta&apos;s standard contractual clauses.{' '}
               <a href="https://www.facebook.com/privacy/policy/" target="_blank"
               rel="noreferrer" style={{ color: C.accent }}> Meta Privacy
               Policy →</a>
@@ -189,9 +195,11 @@ export default function PrivacyPolicyPage() {
             This cookie is strictly necessary for the service to function and does not require consent under ePrivacy Directive rules.
           </p>
           <p>
-            With your explicit consent, we also use <strong style={{ color: C.text }}>Google Analytics</strong> and the{' '}
-            <strong style={{ color: C.text }}>Meta Pixel</strong> to understand how the app is used and measure marketing performance.
-            These optional cookies and pixels are never loaded unless you click &quot;Accept All&quot; on our cookie banner.
+            With your explicit consent, we also use <strong style={{ color: C.text }}>Google Analytics</strong>, the{' '}
+            <strong style={{ color: C.text }}>Meta Pixel</strong> (browser), and the{' '}
+            <strong style={{ color: C.text }}>Meta Conversions API</strong> (server-side) to understand how the app is used and measure marketing performance.
+            Server-side conversion events are only sent when you have consented and only for key actions such as registration and subscription purchase.
+            These optional technologies are never loaded or activated unless you click &quot;Accept All&quot; on our cookie banner.
             You can change your choice at any time in Settings → Privacy &amp; Cookies.
           </p>
           <p>

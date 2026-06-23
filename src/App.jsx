@@ -123,6 +123,7 @@ import TermsOfServicePage from "./pages/TermsOfServicePage.jsx";
 import CookiePolicyPage from "./pages/CookiePolicyPage.jsx";
 import { loadGoogleAnalytics, unloadGoogleAnalytics, trackPageview, trackEvent } from "./lib/analytics.js";
 import { loadMetaPixel, unloadMetaPixel, trackMetaPageView, trackMetaEvent, trackMetaPurchase, PENDING_PURCHASE_KEY } from "./lib/metaPixel.js";
+import { readCookieConsent } from "./lib/cookieConsent.js";
 import { PLANS } from "./config/plans.js";
 
 // ─── DESIGN TOKENS ───────────────────────────────────────────────────────────
@@ -805,17 +806,6 @@ function EmptyState({ icon, title, sub, action }) {
 }
 
 // ─── COOKIE CONSENT ──────────────────────────────────────────────────────────
-function readCookieConsent() {
-  try {
-    const raw = localStorage.getItem("cookie_consent");
-    if (!raw) return null;
-    if (raw === "accepted") return { essential: true, analytics: true };
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
 function ToggleSwitch({ checked, onChange, ariaLabel }) {
   return (
     <button
@@ -993,7 +983,7 @@ function AuthScreen({ defaultMode = "login" }) {
     }
 
     trackEvent("sign_up", { method: "email" });
-    trackMetaEvent("CompleteRegistration");
+    trackMetaEvent("CompleteRegistration", {}, { email });
 
     if (data.session) {
       sessionStorage.setItem("apex_welcome_toast", "1");
