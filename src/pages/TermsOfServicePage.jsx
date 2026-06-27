@@ -49,7 +49,7 @@ export default function TermsOfServicePage() {
           <p>
             ApexManager is a cloud-based business management platform operated by <strong style={{ color: C.text }}>Luis G. Jardim</strong>
             , NIF 260932361, a sole trader (trabalhador independente) registered in Portugal ("we", "us", "our"). The platform provides tools for
-            AI-powered invoice scanning, daily sales tracking, expense management, supplier directories, stock
+            AI-powered invoice scanning, daily sales tracking, expense management, supplier directories, product
             cost tracking, and business analytics designed for small and medium businesses.
           </p>
           <p>
@@ -83,12 +83,12 @@ export default function TermsOfServicePage() {
 
         <Section title="4. Free Trial">
           <p>
-            New accounts receive a <strong style={{ color: C.text }}>14-day free trial</strong> of the selected paid plan.
+            New accounts receive a <strong style={{ color: C.text }}>7-day free trial</strong> with full Growth-tier features.
             No credit card is required to start the trial.
           </p>
           <ul style={{ paddingLeft: 20, margin: '6px 0' }}>
-            <Li>If you add a payment method and do not cancel before the trial ends, your subscription will automatically convert to a paid plan and your card will be charged.</Li>
-            <Li>If you do not add a payment method, your account will revert to the Free plan at the end of the trial.</Li>
+            <Li>When the trial ends, your account automatically reverts to the Free plan unless you subscribe to a paid plan.</Li>
+            <Li>Paid subscriptions are charged immediately when you choose a plan — there is no second or extended trial on paid plans.</Li>
             <Li>Each user is entitled to one free trial per email address.</Li>
           </ul>
         </Section>

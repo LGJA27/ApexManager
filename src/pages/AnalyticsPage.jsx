@@ -1389,7 +1389,7 @@ export default function AnalyticsPage({ sales, expenses, invoices, venues, venue
           </div>
           {scopedStockItems.some(i => (i.price_history || []).length > 1) && (
             <>
-              <SectionHeading>Stock Price Evolution</SectionHeading>
+              <SectionHeading>{t("analytics.productPriceEvolution")}</SectionHeading>
               <Card style={{ padding: 0, overflow: "hidden", marginBottom: 16 }}>
                 <SortableTable headers={[{ label: "Item" }, { label: "First Price" }, { label: "Latest" }, { label: "Change" }, { label: "Change %" }]}
                   rows={scopedStockItems.filter(i => (i.price_history || []).length > 1).map(i => {

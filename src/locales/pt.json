@@ -8,7 +8,7 @@
     "settings": "Definições",
     "dataBase": "Base de Dados",
     "suppliers": "Fornecedores",
-    "stock": "Stock",
+    "stock": "Produtos",
     "staff": "Equipa",
     "upgrade": "Melhorar Plano",
     "signOut": "Terminar Sessão",
@@ -187,19 +187,19 @@
     "confirmDelete": "Eliminar este fornecedor? As faturas existentes mantêm o nome do fornecedor."
   },
   "stock": {
-    "title": "Stock & Custos",
-    "add": "+ Adicionar Item",
-    "edit": "Editar Item",
-    "name": "Nome do Item *",
+    "title": "Produtos e Preços",
+    "add": "+ Adicionar Produto",
+    "edit": "Editar Produto",
+    "name": "Nome do Produto *",
     "unit": "Unidade",
     "price": "Preço por Unidade",
     "category": "Categoria",
     "supplier": "Fornecedor",
-    "items": "itens",
-    "noItems": "Ainda sem itens de stock",
-    "noItemsSub": "Os itens são preenchidos automaticamente ao digitalizar faturas de fornecedores. Também pode adicioná-los manualmente.",
-    "selectVenueToSave": "Selecione um estabelecimento para guardar este item.",
-    "confirmDelete": "Eliminar este item de stock? O histórico de preços será removido."
+    "items": "produtos",
+    "noItems": "Ainda sem produtos",
+    "noItemsSub": "Os produtos são preenchidos automaticamente ao digitalizar faturas de fornecedores. Também pode adicioná-los manualmente.",
+    "selectVenueToSave": "Selecione um estabelecimento para guardar este produto.",
+    "confirmDelete": "Eliminar este produto? O histórico de preços será removido."
   },
   "staff": {
     "title": "Equipa",
@@ -244,7 +244,8 @@
     "avgDaily": "Média Diária",
     "bestDay": "Melhor Dia",
     "daysActive": "Dias Ativos",
-    "noData": "Sem dados para este período"
+    "noData": "Sem dados para este período",
+    "productPriceEvolution": "Evolução de Preços dos Produtos"
   },
   "audit": {
     "title": "Gerar Relatório de Auditoria",
@@ -348,7 +349,7 @@
     "upgradeToUnlock": "Melhore para desbloquear",
     "venue": "Estabelecimento",
     "upgrade": "MELHORAR",
-    "freeTrial": "14 dias de teste gratuito"
+    "upgradeSubline": "Planos desde €19/mês · Cancele quando quiser"
   },
   "landing": {
     "heroEyebrow": "AUTOMAÇÃO EMPRESARIAL COM IA",
@@ -381,7 +382,7 @@
     "feature5Title": "Gira Várias Localizações de Negócio",
     "feature5Desc": "Uma conta para cada localização. Mude de estabelecimento instantaneamente. Dados sempre separados, visão geral sempre unificada.",
     "pricingTitle": "Preços simples para negócios reais",
-    "pricingSub": "14 dias de teste gratuito em todos os planos pagos. Não é necessário cartão de crédito para começar.",
+    "pricingSub": "Um teste gratuito de 7 dias por conta com acesso Growth completo. Depois, escolha um plano pago ou continue no Free.",
     "monthly": "Mensal",
     "annual": "Anual",
     "save2months": "Poupe 2 meses",
@@ -464,5 +465,93 @@
     "planFeatFullAnalytics": "Análises completas",
     "planFeatPdfReports": "Relatórios PDF",
     "planFeatPrioritySupport": "Suporte prioritário"
+  },
+  "pageTips": {
+    "fabLabel": "Dicas desta página",
+    "gotIt": "Percebi, obrigado",
+    "dashboard": {
+      "title": "O seu Painel",
+      "intro": "Este é o centro financeiro do negócio — entradas, saídas e posição líquida num relance.",
+      "tips": [
+        "Acompanhe receita, custos, margem de lucro e faturas por pagar.",
+        "Use o filtro de datas para ver os últimos 7 dias, mês ou ano.",
+        "Os gráficos mostram para onde vai a receita e como cada semana se compara."
+      ]
+    },
+    "sales": {
+      "title": "Vendas Diárias",
+      "intro": "Registe o numerário e cartão de cada dia — manualmente ou com IA.",
+      "tips": [
+        "Introduza as vendas à mão, ou carregue/fotografe o resumo POS diário e a IA extrai os totais.",
+        "Dica: adicione a equipa em Base de Dados → Equipa primeiro — ajuda ao atribuir vendas, mas é opcional.",
+        "Escolha um estabelecimento no topo se gere mais do que uma localização."
+      ]
+    },
+    "invoices": {
+      "title": "Faturas",
+      "intro": "Registe faturas de fornecedores manualmente ou digitalize-as — a IA lê o documento por si.",
+      "tips": [
+        "Carregue ou fotografe uma fatura e a IA extrai fornecedor, itens, IVA e totais.",
+        "Os fornecedores são guardados automaticamente em Base de Dados → Fornecedores.",
+        "Produtos e preços vão para Base de Dados → Produtos e atualizam quando digitaliza novas faturas.",
+        "Também pode adicionar fornecedores e produtos manualmente na Base de Dados.",
+        "Marque as faturas como pagas quando liquidadas para o lucro no painel estar correto."
+      ]
+    },
+    "expenses": {
+      "title": "Despesas",
+      "intro": "Registe todos os custos do negócio que não são faturas de fornecedores.",
+      "tips": [
+        "Adicione salários, subscrições, renda, utilities, serviços e outros custos fixos ou pontuais.",
+        "Atribua cada despesa a um estabelecimento para relatórios precisos.",
+        "Estes dados alimentam o painel e as análises juntamente com vendas e faturas."
+      ]
+    },
+    "suppliers": {
+      "title": "Fornecedores (Base de Dados)",
+      "intro": "O diretório de fornecedores — criado automaticamente ao digitalizar faturas ou adicionado manualmente.",
+      "tips": [
+        "Cada fornecedor guarda nome, NIF, IBAN, morada e contactos.",
+        "Ao digitalizar faturas, fornecedores correspondentes são criados ou atualizados.",
+        "Associe fornecedores a um estabelecimento para organizar várias localizações."
+      ]
+    },
+    "stock": {
+      "title": "Produtos (Base de Dados)",
+      "intro": "A base de produtos e preços — atualizada sempre que digitaliza uma fatura.",
+      "tips": [
+        "A IA extrai produtos das linhas da fatura e regista alterações de preço.",
+        "Adicione ou edite produtos manualmente — útil para itens ainda sem fatura.",
+        "O histórico de preços ajuda a detetar aumentos de custo a tempo."
+      ]
+    },
+    "staff": {
+      "title": "Equipa (Base de Dados)",
+      "intro": "Lista de pessoas que trabalham em cada estabelecimento.",
+      "tips": [
+        "Adicione nomes, funções, contactos e estado (ativo, férias, baixa).",
+        "Recomendado antes de registar vendas diárias — facilita a atribuição, mas não é obrigatório.",
+        "Os dados da equipa também alimentam análises e relatórios de auditoria."
+      ]
+    },
+    "analytics": {
+      "title": "Análises e Relatórios",
+      "intro": "Análise detalhada de tendências, margens, fornecedores e equipa.",
+      "tips": [
+        "Filtre por datas e estabelecimento para comparar períodos.",
+        "Exporte CSV nos planos pagos.",
+        "Gere um Relatório de Auditoria PDF com as secções que escolher.",
+        "O plano Free mostra os últimos 7 dias — melhore para histórico completo."
+      ]
+    },
+    "settings": {
+      "title": "Definições",
+      "intro": "Gerir conta, estabelecimentos, subscrição e preferências de privacidade.",
+      "tips": [
+        "Adicione ou edite estabelecimentos — cada um tem vendas, faturas e despesas próprias.",
+        "Altere idioma, cookies e instale a app no ecrã inicial.",
+        "Gerir faturação ou melhorar o plano a partir daqui."
+      ]
+    }
   }
 }

@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /sales
+Disallow: /invoices
+Disallow: /expenses
+Disallow: /analytics
+Disallow: /settings
+Disallow: /database
+Disallow: /suppliers
+Disallow: /staff
+Disallow: /stock
+Disallow: /api/
+
+Sitemap: https://apexmanager.app/sitemap.xml

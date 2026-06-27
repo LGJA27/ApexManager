@@ -566,6 +566,52 @@ function SectionHeader({ title, sub }) {
 }
 
 // ─── Main landing page ────────────────────────────────────────────────────────
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ApexManager",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web, iOS, Android",
+  "description": "AI-powered business management app for small businesses. Scan supplier invoices, track daily sales, manage suppliers and generate audit reports.",
+  "url": "https://apexmanager.app",
+  "screenshot": "https://apexmanager.app/og-image.png",
+  "offers": [
+    {
+      "@type": "Offer",
+      "name": "Free Trial",
+      "price": "0",
+      "priceCurrency": "EUR",
+      "description": "7-day free trial with full Growth features",
+    },
+    {
+      "@type": "Offer",
+      "name": "Starter",
+      "price": "19",
+      "priceCurrency": "EUR",
+      "description": "Starter plan, 1 venue, 30 AI scans/month",
+    },
+    {
+      "@type": "Offer",
+      "name": "Growth",
+      "price": "49",
+      "priceCurrency": "EUR",
+      "description": "Growth plan, 3 venues, 300 AI scans/month",
+    },
+    {
+      "@type": "Offer",
+      "name": "Pro",
+      "price": "99",
+      "priceCurrency": "EUR",
+      "description": "Pro plan, 10 venues, 1000 AI scans/month",
+    },
+  ],
+  "author": {
+    "@type": "Person",
+    "name": "Luis G. Jardim",
+  },
+  "inLanguage": ["pt", "en"],
+};
+
 export default function LandingPage() {
   const { t } = useTranslation();
   const w = useWindowWidth();
@@ -579,6 +625,20 @@ export default function LandingPage() {
     const fn = () => setScrolled(window.scrollY > 60);
     window.addEventListener('scroll', fn, { passive: true });
     return () => window.removeEventListener('scroll', fn);
+  }, []);
+
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.text = JSON.stringify(structuredData);
+    script.id = "structured-data";
+    if (!document.getElementById("structured-data")) {
+      document.head.appendChild(script);
+    }
+    return () => {
+      const existing = document.getElementById("structured-data");
+      if (existing) existing.remove();
+    };
   }, []);
 
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });

@@ -113,7 +113,7 @@ export default function UpgradePrompt({ open, onClose, feature, setPage, venueLi
           {t('venueLock.maybeLater')}
         </button>
         {showFeatureList && (
-          <div style={{ fontSize: 12, color: C.textSub, marginTop: 16, opacity: 0.8 }}>{t('common.freeTrial')}</div>
+          <div style={{ fontSize: 12, color: C.textSub, marginTop: 16, opacity: 0.8 }}>{t('common.upgradeSubline')}</div>
         )}
       </div>
     </div>

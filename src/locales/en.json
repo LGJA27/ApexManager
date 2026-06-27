@@ -8,7 +8,7 @@
     "settings": "Settings",
     "dataBase": "Data Base",
     "suppliers": "Suppliers",
-    "stock": "Stock",
+    "stock": "Products",
     "staff": "Staff",
     "upgrade": "Upgrade Plan",
     "signOut": "Sign Out",
@@ -187,19 +187,19 @@
     "confirmDelete": "Delete this supplier? Existing invoices will keep their supplier name."
   },
   "stock": {
-    "title": "Stock & Costs",
-    "add": "+ Add Item",
-    "edit": "Edit Item",
-    "name": "Item Name *",
+    "title": "Products & Prices",
+    "add": "+ Add Product",
+    "edit": "Edit Product",
+    "name": "Product Name *",
     "unit": "Unit",
     "price": "Price per Unit",
     "category": "Category",
     "supplier": "Supplier",
-    "items": "items",
-    "noItems": "No stock items yet",
-    "noItemsSub": "Items are auto-populated when you scan supplier invoices. You can also add them manually.",
-    "selectVenueToSave": "Select a venue for this item to save it.",
-    "confirmDelete": "Delete this stock item? Price history for this item will be removed."
+    "items": "products",
+    "noItems": "No products yet",
+    "noItemsSub": "Products are auto-populated when you scan supplier invoices. You can also add them manually.",
+    "selectVenueToSave": "Select a venue for this product to save it.",
+    "confirmDelete": "Delete this product? Price history for this item will be removed."
   },
   "staff": {
     "title": "Staff",
@@ -244,7 +244,8 @@
     "avgDaily": "Avg Daily Revenue",
     "bestDay": "Best Single Day",
     "daysActive": "Days Active",
-    "noData": "No data for this period"
+    "noData": "No data for this period",
+    "productPriceEvolution": "Product Price Evolution"
   },
   "audit": {
     "title": "Generate Audit Report",
@@ -348,7 +349,7 @@
     "upgradeToUnlock": "Upgrade to unlock",
     "venue": "Venue",
     "upgrade": "UPGRADE",
-    "freeTrial": "14-day free trial"
+    "upgradeSubline": "Plans from €19/mo · Cancel anytime"
   },
   "landing": {
     "heroEyebrow": "AI-POWERED BUSINESS AUTOMATION",
@@ -381,7 +382,7 @@
     "feature5Title": "Manage Multiple Business Locations",
     "feature5Desc": "One account for every location. Switch venues instantly. Data always separated, overview always unified.",
     "pricingTitle": "Simple pricing for real businesses",
-    "pricingSub": "14-day free trial on all paid plans. No credit card required to start.",
+    "pricingSub": "One 7-day free trial per account with full Growth access. After that, choose a paid plan or continue on Free.",
     "monthly": "Monthly",
     "annual": "Annual",
     "save2months": "Save 2 months",
@@ -464,5 +465,93 @@
     "planFeatFullAnalytics": "Full analytics",
     "planFeatPdfReports": "PDF reports",
     "planFeatPrioritySupport": "Priority support"
+  },
+  "pageTips": {
+    "fabLabel": "Tips for this page",
+    "gotIt": "Got it, thanks",
+    "dashboard": {
+      "title": "Your Dashboard",
+      "intro": "This is your financial command centre — money in, money out, and net position at a glance.",
+      "tips": [
+        "Track revenue, costs, profit margin, and pending invoice payments.",
+        "Use the date range filter to zoom into the last 7 days, month, or year.",
+        "Charts show where your revenue goes and how each week compares."
+      ]
+    },
+    "sales": {
+      "title": "Daily Sales",
+      "intro": "Log how much cash and card you took in each day — manually or with AI.",
+      "tips": [
+        "Enter sales by hand, or upload/photograph your daily POS summary and AI will extract the totals.",
+        "Tip: add your staff in Data Base → Staff first — it helps when assigning sales, but it is optional.",
+        "Pick a venue at the top if you manage more than one location."
+      ]
+    },
+    "invoices": {
+      "title": "Invoices",
+      "intro": "Record supplier invoices manually or scan them — AI reads the document for you.",
+      "tips": [
+        "Upload or photograph an invoice and AI extracts supplier, line items, tax, and totals.",
+        "Suppliers are saved automatically in Data Base → Suppliers so invoices group intelligently.",
+        "Products and prices are extracted into Data Base → Products and update when you scan new invoices.",
+        "You can also add suppliers and products manually in Data Base anytime.",
+        "Mark invoices as paid when settled so your dashboard profit stays accurate."
+      ]
+    },
+    "expenses": {
+      "title": "Expenses",
+      "intro": "Track every business cost that is not a supplier invoice.",
+      "tips": [
+        "Add staff wages, subscriptions, rent, utilities, services, and any other recurring or one-off costs.",
+        "Assign each expense to a venue so reports stay accurate across locations.",
+        "These feed into your dashboard and analytics alongside sales and invoices."
+      ]
+    },
+    "suppliers": {
+      "title": "Suppliers (Data Base)",
+      "intro": "Your supplier directory — built automatically from scanned invoices or added by hand.",
+      "tips": [
+        "Each supplier stores name, NIF, IBAN, address, and contact details.",
+        "When you scan invoices, matching suppliers are created or updated for you.",
+        "Link suppliers to a venue to keep multi-location data organised."
+      ]
+    },
+    "stock": {
+      "title": "Products (Data Base)",
+      "intro": "Your product and price database — updated every time you scan a supplier invoice.",
+      "tips": [
+        "AI extracts products from invoice line items and tracks price changes over time.",
+        "Add or edit products manually if you prefer — useful for items not yet on an invoice.",
+        "Price history helps you spot cost increases before they hurt your margins."
+      ]
+    },
+    "staff": {
+      "title": "Staff (Data Base)",
+      "intro": "Keep a roster of people who work at each venue.",
+      "tips": [
+        "Add names, roles, contact details, and status (active, holidays, sick leave).",
+        "Recommended before logging daily sales — makes staff assignment easier, but not required.",
+        "Staff data also powers analytics and audit reports."
+      ]
+    },
+    "analytics": {
+      "title": "Analytics & Reports",
+      "intro": "Deep dive into trends, margins, suppliers, and staff performance.",
+      "tips": [
+        "Filter by date range and venue to compare periods.",
+        "Export data to CSV on paid plans.",
+        "Generate a full Audit Report PDF with the sections you choose.",
+        "Free plan shows the last 7 days — upgrade for full history."
+      ]
+    },
+    "settings": {
+      "title": "Settings",
+      "intro": "Manage your account, venues, subscription, and privacy preferences.",
+      "tips": [
+        "Add or edit venues — each venue keeps its own sales, invoices, and expenses.",
+        "Change language, cookie preferences, and install the app to your home screen.",
+        "Manage billing or upgrade your plan from here."
+      ]
+    }
   }
 }

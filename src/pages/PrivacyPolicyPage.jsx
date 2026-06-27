@@ -75,7 +75,7 @@ export default function PrivacyPolicyPage() {
             <Li>Supplier information (name, NIF, IBAN, address, phone).</Li>
             <Li>Invoice data extracted from uploaded images (supplier, items, prices, tax).</Li>
             <Li>Daily sales logs (cash, card, notes, staff names you enter).</Li>
-            <Li>Expense records and stock cost data.</Li>
+            <Li>Expense records and product price data.</Li>
           </ul>
           <p><strong style={{ color: C.text }}>Usage data</strong></p>
           <ul style={{ paddingLeft: 20, margin: '6px 0 14px' }}>

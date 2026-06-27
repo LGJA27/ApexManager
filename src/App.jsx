@@ -108,6 +108,7 @@ import { useLocation, useNavigate, Link } from "react-router-dom";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 import Logo from "./components/Logo.jsx";
 import TrialBanner from "./components/TrialBanner.jsx";
+import PageTips from "./components/PageTips.jsx";
 import PricingPage from "./pages/PricingPage.jsx";
 import AnalyticsPage from "./pages/AnalyticsPage.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
@@ -338,7 +339,7 @@ function SidebarUpgradeButton({ onClick, embedded = false }) {
       <span style={{ fontSize: 16, position: "relative", zIndex: 1 }}>⚡</span>
       <div style={{ position: "relative", zIndex: 1 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", letterSpacing: ".2px" }}>{t("nav.upgrade")}</div>
-        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", marginTop: 1 }}>{t("common.freeTrial")}</div>
+        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", marginTop: 1 }}>{t("common.upgradeSubline")}</div>
       </div>
     </div>
   );
@@ -3973,7 +3974,7 @@ function StockPage({ stockItems, addStockItem, updateStockItem, deleteStockItem,
     venueStockItems.forEach(i => rows.push([i.name, i.unit, i.last_price, i.category, i.supplier, i.last_update]));
     const csv = rows.map(r => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "stock.csv"; a.click();
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "products.csv"; a.click();
     setExportMsg("Exported ✓");
     setTimeout(() => setExportMsg(""), 2000);
   };
@@ -4628,7 +4629,7 @@ function SettingsPage({ venues, addVenue, deleteVenue, user, subscription, setPa
             <li>All daily sales entries</li>
             <li>All invoices</li>
             <li>All expenses</li>
-            <li>All suppliers and stock items</li>
+            <li>All suppliers and products</li>
           </ul>
           <div style={{ fontSize: 12, color: C.red, marginTop: 10, fontWeight: 700 }}>
             This cannot be undone.
@@ -5295,6 +5296,8 @@ export default function App() {
         setPage={setPage}
         venueLimit={venueLimit}
       />
+
+      <PageTips page={page} isMobile={isMobile} />
 
       {/* Mobile: fixed bottom nav */}
       {isMobile && <BottomNav page={page} setPage={setPage} onOpenDrawer={() => setDrawerOpen(true)} />}
