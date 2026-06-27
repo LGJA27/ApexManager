@@ -45,7 +45,9 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,txt,xml}'],
+        // Don't serve the SPA shell for SEO/static files (otherwise /sitemap.xml shows login)
+        navigateFallbackDenylist: [/^\/api\//, /^\/sitemap\.xml$/, /^\/robots\.txt$/],
         runtimeCaching: [
           {
             urlPattern: ({ url }) =>
